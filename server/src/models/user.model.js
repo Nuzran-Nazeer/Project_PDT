@@ -16,6 +16,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    password: {
+      type: String,
+      required: [true, "password is required"],
+    },
     role: {
       type: String,
       enum: {
@@ -37,7 +41,7 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const User = mongoose.model("User", userSchema);
