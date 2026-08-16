@@ -1,0 +1,4 @@
+# Normalize line endings to LF in the repository, regardless of each
+# machine's core.autocrlf setting. Git still checks files out using
+# whatever the OS/editor expects; only what's stored is fixed.
+* text=auto eol=lf
