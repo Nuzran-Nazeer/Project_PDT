@@ -1,46 +1,9 @@
-import { useEffect, useState } from "react";
+import AppRoutes from "./routes/AppRoutes";
 
+// Root shell. Holds only app-wide wrapping (nav, providers, etc.) as they get
+// added later — the actual screens live in routes/AppRoutes.jsx and pages/.
 function App() {
-  const [status, setStatus] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch("http://localhost:5000/api/status")
-      .then((res) => res.json())
-      .then((data) => setStatus(data))
-      .catch((err) => setError(err.message));
-  }, []);
-
-  return (
-    <div style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h2>Performance & Development Tracker</h2>
-      <p style={{ color: "#666", lineHeight: "1.5" }}>
-        A platform built to manage appraisal (PAR) cycles, gather 360° feedback,
-        and track employee growth plans.
-      </p>
-
-      {/* System Status Section */}
-      <h3>System Status</h3>
-      {error && <p style={{ color: "red" }}>Backend error: {error}</p>}
-      {!status && !error && <p>Checking…</p>}
-      {status && (
-        <ul>
-          <li>Server: {status.server}</li>
-          <li>
-            Database:{" "}
-            <strong
-              style={{
-                color: status.database === "connected" ? "green" : "red",
-              }}
-            >
-              {status.database}
-            </strong>
-          </li>
-          <li>DB name: {status.dbName || "—"}</li>
-        </ul>
-      )}
-    </div>
-  );
+  return <AppRoutes />;
 }
 
 export default App;
