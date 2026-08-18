@@ -1,0 +1,12 @@
+{
+  // Tailwind v4 adds at-rules (@theme, @apply, @variant) that VS Code's built-in
+  // CSS checker does not recognise, so it underlines them as errors in index.css.
+  // They are valid — this just stops the false warnings.
+  "css.lint.unknownAtRules": "ignore",
+
+  // Recommended: install the "Tailwind CSS IntelliSense" extension
+  // (bradlc.vscode-tailwindcss) for class-name autocomplete.
+  "editor.quickSuggestions": {
+    "strings": true
+  }
+}

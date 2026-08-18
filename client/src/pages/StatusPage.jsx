@@ -15,8 +15,8 @@ function StatusPage() {
     <div style={{ fontFamily: "sans-serif", padding: "2rem" }}>
       <h2>Performance & Development Tracker</h2>
       <p style={{ color: "#666", lineHeight: "1.5" }}>
-        A platform built to manage appraisal (PAR) cycles, gather 360° feedback,
-        and track employee growth plans.
+        A platform built to manage appraisal (PAR) cycles, gather 360° feedback, and track
+        employee growth plans.
       </p>
 
       {/* System Status Section */}

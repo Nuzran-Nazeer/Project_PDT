@@ -1,6 +1,8 @@
 // Single place that turns any thrown/next-ed error into an HTTP response.
 // Keeps services and controllers free of status-code handling.
-// eslint-disable-next-line no-unused-vars
+//
+// `next` is unused but must stay: Express only treats a function as an error
+// handler if it declares all four arguments.
 module.exports = (err, req, res, next) => {
   // Mongoose: malformed ObjectId
   if (err.name === "CastError") {
