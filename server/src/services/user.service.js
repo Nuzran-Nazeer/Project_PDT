@@ -35,7 +35,7 @@ exports.updateUser = async (id, data) => {
   const user = await User.findByIdAndUpdate(
     id,
     { name, email, password, role, department, jobTitle, isActive },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   );
   if (!user) throw new AppError("User not found", 404);
   return user;
@@ -43,11 +43,7 @@ exports.updateUser = async (id, data) => {
 
 // Soft delete: keep the record, just mark it inactive.
 exports.deactivateUser = async (id) => {
-  const user = await User.findByIdAndUpdate(
-    id,
-    { isActive: false },
-    { new: true }
-  );
+  const user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
   if (!user) throw new AppError("User not found", 404);
   return user;
 };

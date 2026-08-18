@@ -17,11 +17,13 @@ const protect = asyncHandler(async (req, res, next) => {
 });
 
 // Authorization: allow only the given roles (must run after protect).
-const authorize = (...allowedRoles) => (req, res, next) => {
-  if (!allowedRoles.includes(req.user.role)) {
-    throw new AppError("You do not have permission for this action", 403);
-  }
-  next();
-};
+const authorize =
+  (...allowedRoles) =>
+  (req, res, next) => {
+    if (!allowedRoles.includes(req.user.role)) {
+      throw new AppError("You do not have permission for this action", 403);
+    }
+    next();
+  };
 
 module.exports = { protect, authorize };

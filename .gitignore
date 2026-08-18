@@ -142,5 +142,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Editor settings — personal, not shared with the team
-.vscode/
+# Editor settings — personal by default, except the few we share.
+# Note: this must be `.vscode/*`, not `.vscode/`. Git cannot re-include a file
+# whose parent DIRECTORY is excluded, so ignoring the folder itself would make
+# the exception below silently do nothing.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
