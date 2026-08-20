@@ -1,6 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const {
   GRANTABLE_ROLES,
+  ROLE_PRECEDENCE,
   USER_STATUS,
   LOCATIONS,
   JOB_FAMILIES,
@@ -32,6 +33,10 @@ exports.getConstants = asyncHandler(async (req, res) => {
     jobFamilies: JOB_FAMILIES,
     locations: LOCATIONS,
     roles: GRANTABLE_ROLES,
+    // The landing order, so the client picks the same dashboard the server would.
+    // Kept here rather than hardcoded in React: two copies of an ordering drift, and
+    // a drifted one is invisible — the user simply lands somewhere unexpected.
+    rolePrecedence: ROLE_PRECEDENCE,
     statuses: USER_STATUS,
     rules: {
       employeeIdPattern: EMPLOYEE_ID_PATTERN.source,

@@ -50,21 +50,27 @@ exports.register = async (data) => {
   return { user, token: tokenFor(user) };
 };
 
-exports.login = async ({ email, password }) => {
-  if (!email || !password) {
-    throw new AppError("Email and password are required", 400);
+exports.login = async ({ identifier, email, username, password }) => {
+  // Login accepts either the email address or the generated username.
+  const login = identifier || email || username;
+  if (!login || !password) {
+    throw new AppError("Email or username, and password, are required", 400);
   }
 
+  const key = String(login).toLowerCase().trim();
   const user = await User.findOne({
-    email: String(email).toLowerCase().trim(),
+    $or: [{ email: key }, { username: key }],
   }).select("+password"); // the only query allowed to ask for the password back
 
-  // ONE message for "no such account" and "wrong password". Distinct messages would
-  // let anyone probe which addresses belong to staff — which matters more than usual
-  // in a system whose promise is confidentiality.
-  if (!user || !(await user.comparePassword(password))) {
-    throw new AppError("Invalid credentials", 401);
-  }
+  // ONE message for "no such account", "wrong password" and "account disabled".
+  // Distinct messages would let anyone probe which addresses belong to staff —
+  // which matters more than usual in a system whose promise is confidentiality.
+  //
+  // The status check is folded into the SAME boolean on purpose. Written as its own
+  // `if` with its own error text, an invited or deactivated account gets a different
+  // message from a wrong password, and criterion 4 is silently broken.
+  const ok = user && user.status === "active" && (await user.comparePassword(password));
+  if (!ok) throw new AppError("Invalid credentials", 401);
 
   return { user, token: tokenFor(user) };
 };

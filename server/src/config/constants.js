@@ -17,6 +17,27 @@ const GRANTABLE_ROLES = ["employee", "hr", "head_of_hr", "leadership", "admin"];
 const DERIVED_ROLES = ["supervisor"];
 const ROLES = [...GRANTABLE_ROLES, ...DERIVED_ROLES];
 
+// Which dashboard a multi-role user lands on after signing in: the first role in
+// this list that they hold. It is a ROUTING order, not seniority — the question it
+// answers is "which screen is most useful to this person", not who outranks whom.
+//
+// Head of HR is first as the neutral backstop with the widest view. `employee` is
+// last because everyone holds it, so it is the fallback that always matches.
+// `leadership` sits mid-list only because its position is immaterial: leadership is
+// the top of the chain, is not necessarily appraised, and does not hold a list of
+// other roles alongside it.  (Build decision B7)
+//
+// `supervisor` is here but UNREACHABLE until the org structure exists — it is
+// derived from who leads a unit on a date and is deliberately absent from the token.
+const ROLE_PRECEDENCE = [
+  "head_of_hr",
+  "hr",
+  "leadership",
+  "admin",
+  "supervisor",
+  "employee",
+];
+
 // ---------------------------------------------------------------------------
 // Account status
 // ---------------------------------------------------------------------------
@@ -122,6 +143,7 @@ module.exports = {
   ROLES,
   GRANTABLE_ROLES,
   DERIVED_ROLES,
+  ROLE_PRECEDENCE,
   USER_STATUS,
   LOCATIONS,
   JOB_FAMILIES,
