@@ -1,17 +1,29 @@
 const router = require("express").Router();
 const controller = require("../controllers/user.controller");
-const { validateCreateUser } = require("../validators/user.validator");
+const {
+  validateCreateUser,
+  validateUpdateUser,
+} = require("../validators/user.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
+
+// HR owns people-data. Admin is a technical account and has no part in it —
+// it cannot create, edit or deactivate an employee record.
+//
+// Reading is wider than writing: Head of HR is the neutral backstop, and Leadership
+// needs the roster. HR's own reach is limited to the units they cover, which is a
+// SCOPE check inside the service — the role check below is only a coarse gate.
+const CAN_MANAGE = ["hr"];
+const CAN_READ = ["hr", "head_of_hr", "leadership"];
 
 router
   .route("/")
-  .post(protect, authorize("admin", "hr"), validateCreateUser, controller.createUser)
-  .get(protect, controller.listUsers);
+  .post(protect, authorize(...CAN_MANAGE), validateCreateUser, controller.createUser)
+  .get(protect, authorize(...CAN_READ), controller.listUsers);
 
 router
   .route("/:id")
-  .get(protect, controller.getUser)
-  .put(protect, authorize("admin", "hr"), controller.updateUser)
-  .delete(protect, authorize("admin"), controller.deleteUser);
+  .get(protect, authorize(...CAN_READ), controller.getUser)
+  .put(protect, authorize(...CAN_MANAGE), validateUpdateUser, controller.updateUser)
+  .delete(protect, authorize(...CAN_MANAGE), controller.deleteUser);
 
 module.exports = router;
