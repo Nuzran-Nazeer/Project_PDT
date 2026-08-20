@@ -10,16 +10,79 @@
  */
 @import "tailwindcss";
 
+/* Dark mode is driven by a class, not by the browser setting.
+ *
+ * Out of the box, `dark:` in v4 follows the operating system and nothing else,
+ * which leaves no way to offer a switch. This line repoints it at a `dark` class
+ * on <html>, so `dark:bg-surface` applies whenever that class is present.
+ *
+ * The operating system is deliberately not consulted at all. The app opens DARK
+ * for everyone; the script in index.html adds the class unless the user has
+ * previously switched to light.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Project design tokens.
  *
  * Everything declared inside @theme becomes a Tailwind class automatically.
  * `--color-brand: #4f46e5` gives you `bg-brand`, `text-brand`, `border-brand`,
  * and so on. Add tokens here rather than hard-coding hex values in components,
  * so the whole team is using the same palette.
+ *
+ * The tokens below are SEMANTIC — they are named for the job they do, not the
+ * colour they are. `bg-surface` is right in both themes; `bg-slate-800` is right
+ * in one of them and unreadable in the other, and nothing warns you which.
+ * The values here are the LIGHT theme; the dark values override them further down.
  */
 @theme {
+  /* Brand */
   --color-brand: oklch(0.5 0.1 258);
-  --color-brand-dark: oklch(0.38 0.09 268);
+  --color-brand-hover: oklch(0.44 0.11 258);
+
+  /* Surfaces — `surface` is the page, `raised` is anything sitting on it */
+  --color-surface: oklch(0.985 0.002 258);
+  --color-raised: oklch(1 0 0);
+
+  /* Lines and edges */
+  --color-line: oklch(0.9 0.006 258);
+
+  /* Text — `ink` is body copy, `muted` is secondary text and labels */
+  --color-ink: oklch(0.26 0.012 258);
+  --color-muted: oklch(0.52 0.014 258);
+
+  /* Feedback */
+  --color-danger: oklch(0.55 0.19 25);
+  --color-success: oklch(0.55 0.13 155);
+}
+
+/* The dark theme.
+ *
+ * Only the VALUES change — no utility class is redefined, so every component
+ * written against `bg-surface` or `text-ink` follows automatically and nobody
+ * writes a screen twice.
+ *
+ * Written unlayered and against `:root.dark` on purpose: @theme emits its
+ * variables into a layer, and unlayered CSS always wins over layered CSS, so
+ * these reliably override. That is the same rule the base block below warns
+ * about — here it is being used deliberately rather than tripped over.
+ *
+ * Brand goes LIGHTER in dark mode rather than staying put. A mid-tone brand that
+ * reads well on white does not have enough contrast against a dark surface.
+ */
+:root.dark {
+  --color-brand: oklch(0.7 0.11 258);
+  --color-brand-hover: oklch(0.78 0.1 258);
+
+  --color-surface: oklch(0.19 0.011 258);
+  --color-raised: oklch(0.235 0.013 258);
+
+  --color-line: oklch(0.33 0.014 258);
+
+  --color-ink: oklch(0.95 0.005 258);
+  --color-muted: oklch(0.68 0.012 258);
+
+  --color-danger: oklch(0.7 0.15 25);
+  --color-success: oklch(0.72 0.12 155);
 }
 
 /* Global base styles.
@@ -32,6 +95,21 @@
 @layer base {
   html {
     font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    /* Tells the browser which way to paint the things WE do not style:
+     * scrollbars, the date picker inside <input type="date">, dropdown lists,
+     * autofill backgrounds. Without it those stay light on a dark page, and the
+     * usual reaction is to try to restyle a date picker — which cannot be done.
+     * Overridden below when the dark class is present. */
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
   }
 
   #root {
