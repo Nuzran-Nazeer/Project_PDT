@@ -116,3 +116,48 @@
     min-height: 100svh;
   }
 }
+
+/* Decorative motion on the sign-in screen.
+ *
+ * The original inline styles referenced keyframes named `float1` and `float2`
+ * that were never defined anywhere, so the blobs sat perfectly still and nothing
+ * reported a problem — an unknown animation name is not an error in CSS.
+ *
+ * Kept unlayered because `animation: none` below has to beat the utility, and
+ * honoured only when the visitor has not asked for less motion. Drifting
+ * background shapes are exactly the kind of thing that setting exists for.
+ */
+@keyframes blob-float-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, 40px) scale(1.08);
+  }
+}
+
+@keyframes blob-float-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-40px, -30px) scale(1.06);
+  }
+}
+
+.blob-float-1 {
+  animation: blob-float-1 14s ease-in-out infinite;
+}
+
+.blob-float-2 {
+  animation: blob-float-2 16s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob-float-1,
+  .blob-float-2 {
+    animation: none;
+  }
+}
