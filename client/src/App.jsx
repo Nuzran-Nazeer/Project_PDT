@@ -1,19 +1,20 @@
 import { ThemeProvider } from "./context/ThemeProvider";
-import ThemeToggle from "./components/common/ThemeToggle";
+import { AuthProvider } from "./context/AuthProvider";
 import AppRoutes from "./routes/AppRoutes";
 
-// Root shell. Holds only app-wide wrapping (nav, providers, etc.) as they get
-// added later — the actual screens live in routes/AppRoutes.jsx and pages/.
+// Root shell. Holds only app-wide wrapping — the actual screens live in
+// routes/AppRoutes.jsx and pages/.
 //
-// The toggle is parked here, fixed to the corner, because there is no layout
-// component yet and criterion 1 asks for a control reachable from EVERY screen.
-// Building a layout now would mean inventing navigation nobody has designed.
-// When "Log in" builds the real shell, the toggle moves into it — one line.
+// The theme toggle used to sit here, floating in the corner, because there was
+// no layout to put it in. There is now: it lives in components/layout/AppLayout
+// for signed-in screens, and on the login page itself, which sits outside that
+// layout and would otherwise have no way to switch.
 function App() {
   return (
     <ThemeProvider>
-      <ThemeToggle className="fixed top-4 right-4 z-50" />
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
