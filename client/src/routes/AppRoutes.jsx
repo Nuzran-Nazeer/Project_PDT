@@ -3,6 +3,7 @@ import AppLayout from "../components/layout/AppLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import LandingRedirect from "./LandingRedirect";
 import LoginPage from "../pages/LoginPage";
+import ActivatePage from "../pages/ActivatePage";
 import StatusPage from "../pages/StatusPage";
 import EmployeeDashboard from "../pages/dashboards/EmployeeDashboard";
 import HrDashboard from "../pages/dashboards/HrDashboard";
@@ -19,6 +20,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Public, and it has to be: the person opening it has no account to sign
+          in with yet. The one-time code in the link is their credential. */}
+      <Route path="/activate" element={<ActivatePage />} />
       <Route path="/status" element={<StatusPage />} />
 
       <Route element={<ProtectedRoute />}>

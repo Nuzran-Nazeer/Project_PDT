@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
-import { loginSchema } from "../schemas/loginSchema";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { activateSchema } from "../schemas/activateSchema";
+import { activateAccount } from "../services/invite";
 import ThemeToggle from "../components/common/ThemeToggle";
 
 function EyeIcon({ open }) {
@@ -21,21 +21,33 @@ function EyeIcon({ open }) {
   );
 }
 
-export default function LoginPage() {
-  const [form, setForm] = useState({ identifier: "", password: "" });
+// The public half of the invite. Reached from the link in the email HR sends, by
+// someone who cannot sign in yet — so this page sits OUTSIDE ProtectedRoute and
+// outside AppLayout, which is the signed-in chrome.
+//
+// It cannot greet them by name, and should not be able to. Nothing is fetched
+// before the code is submitted, because an endpoint that confirmed "this code
+// belongs to Nuzran" would answer the question an attacker is asking.
+export default function ActivatePage() {
+  const [searchParams] = useSearchParams();
+
+  // The link carries the code. It is 64 hex characters, so nobody is retyping it —
+  // when the link is intact the field is not shown at all. The paste box below is
+  // for the case where a mail client mangled the URL or the person opened the app
+  // directly, which is common enough to be worth handling.
+  const codeFromLink = searchParams.get("code") || "";
+
+  const [form, setForm] = useState({
+    code: codeFromLink,
+    password: "",
+    confirmPassword: "",
+  });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { signIn } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // Set by the activation page after it finishes, since activation deliberately
-  // does not sign anyone in. Read once into state so it survives the re-render but
-  // does not come back if the user navigates here again later.
-  const [notice] = useState(location.state?.notice || "");
 
   const handleChange = (e) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -48,7 +60,7 @@ export default function LoginPage() {
     setFieldErrors({});
 
     try {
-      await loginSchema.validate(form, { abortEarly: false });
+      await activateSchema.validate(form, { abortEarly: false });
     } catch (validationError) {
       const errors = {};
       validationError.inner.forEach((err) => {
@@ -60,14 +72,19 @@ export default function LoginPage() {
 
     setSubmitting(true);
     try {
-      await signIn(form.identifier, form.password);
-      // Back to wherever they were headed before being sent here, or to the
-      // landing resolver at "/" which works out the right dashboard.
-      navigate(location.state?.from?.pathname || "/", { replace: true });
+      await activateAccount(form.code.trim(), form.password);
+
+      // No session to store: activation deliberately returns no token. They go to
+      // the sign-in screen and use the password they just chose, which is also the
+      // cheapest moment to discover a typo. (Build decision B11)
+      navigate("/login", {
+        replace: true,
+        state: { notice: "Your account is ready. Sign in with your new password." },
+      });
     } catch (err) {
-      // The server's message, shown as-is. It says the same thing for a wrong
-      // password, an account that does not exist and one that is deactivated —
-      // rewording or splitting it here would leak the difference it hides.
+      // The server's message, shown as-is. It says the same thing for a code that
+      // was never issued, one already used and one that has expired — splitting
+      // those apart here would leak the difference it hides.
       setFormError(err.message);
       setSubmitting(false);
     }
@@ -93,60 +110,57 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-[22px] font-bold tracking-tight text-ink">
-            Performance &amp; Development Tracker
+            Set your password
           </h1>
           <p className="mt-1.5 text-center text-[15px] leading-snug text-muted">
-            Welcome back. Please sign in to continue.
+            Your account has been created. Choose a password to finish setting it up.
           </p>
         </div>
 
-        {notice && (
-          <p
-            role="status"
-            className="mt-6 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2.5 text-center text-[13px] text-ink"
-          >
-            {notice}
-          </p>
-        )}
-
         <form onSubmit={handleSubmit} className="mt-8 w-full" noValidate>
-          <div>
-            <label
-              htmlFor="identifier"
-              className="mb-1.5 block text-[13px] font-semibold text-ink"
-            >
-              Email or username
-            </label>
-            <input
-              id="identifier"
-              name="identifier"
-              type="text"
-              autoComplete="username"
-              placeholder="you@altrium.com or perera0241"
-              value={form.identifier}
-              onChange={handleChange}
-              aria-invalid={Boolean(fieldErrors.identifier)}
-              className={inputClass}
-            />
-            {fieldErrors.identifier && (
-              <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.identifier}</p>
-            )}
-          </div>
+          {codeFromLink ? (
+            <p className="rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
+              Using the code from your invite link.
+            </p>
+          ) : (
+            <div>
+              <label
+                htmlFor="code"
+                className="mb-1.5 block text-[13px] font-semibold text-ink"
+              >
+                Invite code
+              </label>
+              <input
+                id="code"
+                name="code"
+                type="text"
+                autoComplete="off"
+                placeholder="Paste the code from your invite email"
+                value={form.code}
+                onChange={handleChange}
+                aria-invalid={Boolean(fieldErrors.code)}
+                className={inputClass}
+              />
+              {fieldErrors.code && (
+                <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.code}</p>
+              )}
+            </div>
+          )}
 
           <div className="mt-4">
             <label
               htmlFor="password"
               className="mb-1.5 block text-[13px] font-semibold text-ink"
             >
-              Password
+              New password
             </label>
             <div className="relative flex items-center">
               <input
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="Enter your password"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
                 value={form.password}
                 onChange={handleChange}
                 aria-invalid={Boolean(fieldErrors.password)}
@@ -166,6 +180,34 @@ export default function LoginPage() {
             )}
           </div>
 
+          <div className="mt-4">
+            <label
+              htmlFor="confirmPassword"
+              className="mb-1.5 block text-[13px] font-semibold text-ink"
+            >
+              Confirm password
+            </label>
+            {/* Deliberately shares the show/hide toggle above rather than adding a
+                second one: two toggles on one form invite the user to reveal one
+                field and not the other, which defeats the point of confirming. */}
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="Type it again"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              aria-invalid={Boolean(fieldErrors.confirmPassword)}
+              className={inputClass}
+            />
+            {fieldErrors.confirmPassword && (
+              <p className="mt-1.5 text-[13px] text-danger">
+                {fieldErrors.confirmPassword}
+              </p>
+            )}
+          </div>
+
           {formError && (
             // `role="alert"` so a screen reader announces it. Without it the
             // message appears silently and a non-sighted user is left waiting.
@@ -182,17 +224,12 @@ export default function LoginPage() {
             disabled={submitting}
             className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Signing in…" : "Sign in"}
+            {submitting ? "Setting up…" : "Set password and continue"}
           </button>
         </form>
 
-        {/* No "forgot password" and no "sign up" link, both deliberately.
-            PDT has no self-registration at all — HR creates every record and the
-            employee activates it with a one-time code, so a sign-up route would
-            be a promise the system cannot keep. The reset link arrives with
-            "Reset a forgotten password"; until then it would go nowhere. */}
         <p className="mt-6 text-center text-[13px] text-muted">
-          Accounts are created by HR. Contact them if you cannot sign in.
+          Codes expire after seven days. If yours no longer works, ask HR for a new one.
         </p>
       </div>
     </div>
