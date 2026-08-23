@@ -20,6 +20,11 @@ router
   .post(protect, authorize(...CAN_MANAGE), validateCreateUser, controller.createUser)
   .get(protect, authorize(...CAN_READ), controller.listUsers);
 
+// Generating an invite is an HR action on an employee record, so it sits with the
+// records rather than with auth — and behind the same gate as editing one. Redeeming
+// it is public and lives in auth.routes.js.
+router.post("/:id/invite", protect, authorize(...CAN_MANAGE), controller.createInvite);
+
 router
   .route("/:id")
   .get(protect, authorize(...CAN_READ), controller.getUser)

@@ -77,9 +77,13 @@ const userSchema = new mongoose.Schema(
       default: "invited",
     },
 
-    // Set when HR generates an invite. Stored here for now; the invite flow itself
-    // is a later story.
-    inviteToken: { type: String, select: false },
+    // Set when HR generates an invite, cleared the moment it is redeemed.
+    //
+    // This holds a SHA-256 HASH of the code, never the code itself — the raw code
+    // exists once, in the response HR reads, and is never stored. `select: false`
+    // keeps the hash out of query results; `index: true` is for the redemption
+    // lookup, which finds the account BY this field. See utils/inviteCode.js.
+    inviteToken: { type: String, select: false, index: true },
     inviteExpiresAt: { type: Date },
 
     // -----------------------------------------------------------------------

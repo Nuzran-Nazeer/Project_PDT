@@ -139,6 +139,19 @@ const EMPLOYEE_ID_PATTERN = /^ALT-\d{4}$/;
 const BCRYPT_COST = 10; // OWASP Password Storage Cheat Sheet: work factor >= 10
 const MIN_PASSWORD_LENGTH = 8;
 
+// ---------------------------------------------------------------------------
+// Invites
+// ---------------------------------------------------------------------------
+// The activation code HR hands a new joiner. 32 random bytes -> 64 hex characters,
+// which is what allows it to be stored as a fast hash rather than a slow one.
+// See utils/inviteCode.js for that reasoning.
+const INVITE_CODE_BYTES = 32;
+
+// How long a code stays usable. Long enough to survive a weekend plus a first day
+// of onboarding, short enough that a forgotten invite is not left open for a month.
+// NOT specified by the design documents — chosen here, 2026-08-23, and one line to change.
+const INVITE_EXPIRY_DAYS = 7;
+
 module.exports = {
   ROLES,
   GRANTABLE_ROLES,
@@ -154,4 +167,6 @@ module.exports = {
   EMPLOYEE_ID_PATTERN,
   BCRYPT_COST,
   MIN_PASSWORD_LENGTH,
+  INVITE_CODE_BYTES,
+  INVITE_EXPIRY_DAYS,
 };
