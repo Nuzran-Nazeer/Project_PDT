@@ -1,5 +1,6 @@
 const asyncHandler = require("../utils/asyncHandler");
 const userService = require("../services/user.service");
+const inviteService = require("../services/invite.service");
 
 // Thin HTTP layer: read the request, call the service, shape the response.
 //
@@ -28,4 +29,11 @@ exports.updateUser = asyncHandler(async (req, res) => {
 // re-render without a second request.
 exports.deleteUser = asyncHandler(async (req, res) => {
   res.json(await userService.deactivateUser(req.params.id));
+});
+
+// Returns the raw code and a ready-to-send email body. This response is the ONLY
+// place the code is ever readable — the database keeps a hash — so HR gets one look
+// at it and re-issuing is the only way back if they lose it.
+exports.createInvite = asyncHandler(async (req, res) => {
+  res.status(201).json(await inviteService.createInvite(req.params.id));
 });
