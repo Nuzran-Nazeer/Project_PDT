@@ -14,3 +14,11 @@ export const activateAccount = (code, password) =>
     method: "POST",
     body: JSON.stringify({ code, password }),
   });
+
+// Issue a one-time code against an employee record. HR only, and the server refuses
+// any account that is not awaiting activation: an active account wanting a new
+// password is a RESET, which is a different story with a different audit trail.
+//
+// The response is the only place the raw code ever exists. Everything after this call
+// reads a hash, so a code that is not copied off this screen is gone.
+export const createInvite = (id) => apiFetch(`/users/${id}/invite`, { method: "POST" });

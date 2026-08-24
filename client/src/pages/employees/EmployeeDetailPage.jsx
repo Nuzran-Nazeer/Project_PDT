@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { deactivateUser, getUser } from "../../services/users";
 import StatusBadge from "../../components/employees/StatusBadge";
+import InvitePanel from "../../components/employees/InvitePanel";
 import { formatDate } from "../../utils/dates";
 
 // One employee record, including the parts nobody types.
@@ -45,6 +46,13 @@ export default function EmployeeDetailPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // An issued invite writes an expiry onto the record, and the panel's own summary
+  // reads it. Refetching keeps the two from disagreeing after a re-issue.
+  const reload = () =>
+    getUser(id)
+      .then(setPerson)
+      .catch(() => {});
 
   const handleDeactivate = async () => {
     setWorking(true);
@@ -140,6 +148,12 @@ export default function EmployeeDetailPage() {
         />
         <Row label="Roles" value={(person.roles || []).join(", ")} />
       </dl>
+
+      {/* Only an account awaiting activation can be invited. An active one already
+          has a password, and a deactivated one belongs to somebody who has left. */}
+      {canManage && person.status === "invited" && (
+        <InvitePanel person={person} onIssued={reload} />
+      )}
 
       {canManage && person.status !== "inactive" && (
         <div className="mt-8 rounded-xl border border-line bg-raised p-5">

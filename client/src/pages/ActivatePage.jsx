@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { activateSchema } from "../schemas/activateSchema";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { activateSchema, CODE_SHAPE_EXACT } from "../schemas/activateSchema";
 import { activateAccount } from "../services/invite";
 import ThemeToggle from "../components/common/ThemeToggle";
 
@@ -32,10 +32,22 @@ export default function ActivatePage() {
   const [searchParams] = useSearchParams();
 
   // The link carries the code. It is 64 hex characters, so nobody is retyping it —
-  // when the link is intact the field is not shown at all. The paste box below is
-  // for the case where a mail client mangled the URL or the person opened the app
+  // when the link is intact the field is not shown at all. The paste box below is for
+  // the case where a mail client mangled the URL or the person opened the app
   // directly, which is common enough to be worth handling.
-  const codeFromLink = searchParams.get("code") || "";
+  const rawCodeFromLink = (searchParams.get("code") || "").trim();
+
+  // Checked BEFORE anything is typed. A link that arrives truncated used to look
+  // perfectly fine: you chose a password, submitted, and only then found out. Someone
+  // who does not stop to read the result walks away believing they are set up, and
+  // discovers otherwise days later when they cannot sign in.
+  //
+  // This only catches a mangled code. Whether a well-formed one has EXPIRED or been
+  // replaced by a re-issue is knowable only on the server, and that check does not
+  // exist yet — so a good-looking dead code is still refused at submit, not on load.
+  const linkCodeUsable = CODE_SHAPE_EXACT.test(rawCodeFromLink);
+  const linkWasMangled = Boolean(rawCodeFromLink) && !linkCodeUsable;
+  const codeFromLink = linkCodeUsable ? rawCodeFromLink : "";
 
   const [form, setForm] = useState({
     code: codeFromLink,
@@ -44,6 +56,10 @@ export default function ActivatePage() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
+  // Set when the server refuses the CODE rather than the password. The form is then
+  // replaced outright: leaving the fields sitting there invites a retry that cannot
+  // possibly work, which is what a used link looked like before.
+  const [linkDead, setLinkDead] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -82,9 +98,20 @@ export default function ActivatePage() {
         state: { notice: "Your account is ready. Sign in with your new password." },
       });
     } catch (err) {
-      // The server's message, shown as-is. It says the same thing for a code that
-      // was never issued, one already used and one that has expired — splitting
-      // those apart here would leak the difference it hides.
+      // The server's message, shown as-is. It says the same thing for a code that was
+      // never issued, one already used and one that has expired — splitting those
+      // apart here would leak the difference it hides.
+      //
+      // THE PAGE CANNOT KNOW A CODE IS SPENT UNTIL IT ASKS, and it must not be able
+      // to: an endpoint that reported whether a code was still live, without
+      // consuming it, is exactly the oracle the single shared message exists to
+      // deny. So the check happens on submit, once, and the answer is final.
+      //
+      // Matching on the message is the weak part. The clean version is a status of
+      // its own from the server — 410 Gone fits, and says nothing about WHICH of the
+      // three causes it was. That is a server-branch change.
+      if (/invite code/i.test(err.message)) setLinkDead(true);
+
       setFormError(err.message);
       setSubmitting(false);
     }
@@ -117,120 +144,150 @@ export default function ActivatePage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 w-full" noValidate>
-          {codeFromLink ? (
-            <p className="rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
-              Using the code from your invite link.
-            </p>
-          ) : (
-            <div>
-              <label
-                htmlFor="code"
-                className="mb-1.5 block text-[13px] font-semibold text-ink"
-              >
-                Invite code
-              </label>
-              <input
-                id="code"
-                name="code"
-                type="text"
-                autoComplete="off"
-                placeholder="Paste the code from your invite email"
-                value={form.code}
-                onChange={handleChange}
-                aria-invalid={Boolean(fieldErrors.code)}
-                className={inputClass}
-              />
-              {fieldErrors.code && (
-                <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.code}</p>
-              )}
-            </div>
-          )}
-
-          <div className="mt-4">
-            <label
-              htmlFor="password"
-              className="mb-1.5 block text-[13px] font-semibold text-ink"
-            >
-              New password
-            </label>
-            <div className="relative flex items-center">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-                value={form.password}
-                onChange={handleChange}
-                aria-invalid={Boolean(fieldErrors.password)}
-                className={`${inputClass} pr-11`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-3 cursor-pointer text-muted hover:text-brand"
-              >
-                <EyeIcon open={showPassword} />
-              </button>
-            </div>
-            {fieldErrors.password && (
-              <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.password}</p>
-            )}
-          </div>
-
-          <div className="mt-4">
-            <label
-              htmlFor="confirmPassword"
-              className="mb-1.5 block text-[13px] font-semibold text-ink"
-            >
-              Confirm password
-            </label>
-            {/* Deliberately shares the show/hide toggle above rather than adding a
-                second one: two toggles on one form invite the user to reveal one
-                field and not the other, which defeats the point of confirming. */}
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              placeholder="Type it again"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              aria-invalid={Boolean(fieldErrors.confirmPassword)}
-              className={inputClass}
-            />
-            {fieldErrors.confirmPassword && (
-              <p className="mt-1.5 text-[13px] text-danger">
-                {fieldErrors.confirmPassword}
-              </p>
-            )}
-          </div>
-
-          {formError && (
-            // `role="alert"` so a screen reader announces it. Without it the
-            // message appears silently and a non-sighted user is left waiting.
+        {linkDead ? (
+          <div className="mt-8">
             <p
               role="alert"
-              className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
+              className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
             >
               {formError}
             </p>
-          )}
+            <p className="mt-4 text-[13px] text-muted">
+              A code works once and expires after seven days. Ask HR to send a new invite,
+              then open the link in that email.
+            </p>
+            <Link
+              to="/login"
+              className="mt-6 block w-full cursor-pointer rounded-lg border border-line py-3 text-center text-sm font-semibold text-ink transition-colors hover:text-brand"
+            >
+              Go to sign in
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-8 w-full" noValidate>
+            {codeFromLink ? (
+              <p className="rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
+                Using the code from your invite link.
+              </p>
+            ) : (
+              <div>
+                {linkWasMangled && (
+                  <p className="mb-4 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
+                    That link looks incomplete — some email apps cut long links in half.
+                    Paste the whole code from your invite email instead.
+                  </p>
+                )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? "Setting up…" : "Set password and continue"}
-          </button>
-        </form>
+                <label
+                  htmlFor="code"
+                  className="mb-1.5 block text-[13px] font-semibold text-ink"
+                >
+                  Invite code
+                </label>
+                <input
+                  id="code"
+                  name="code"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Paste the code from your invite email"
+                  value={form.code}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(fieldErrors.code)}
+                  className={inputClass}
+                />
+                {fieldErrors.code && (
+                  <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.code}</p>
+                )}
+              </div>
+            )}
 
-        <p className="mt-6 text-center text-[13px] text-muted">
-          Codes expire after seven days. If yours no longer works, ask HR for a new one.
-        </p>
+            <div className="mt-4">
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-[13px] font-semibold text-ink"
+              >
+                New password
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="At least 8 characters"
+                  value={form.password}
+                  onChange={handleChange}
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  className={`${inputClass} pr-11`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 cursor-pointer text-muted hover:text-brand"
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.password}</p>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <label
+                htmlFor="confirmPassword"
+                className="mb-1.5 block text-[13px] font-semibold text-ink"
+              >
+                Confirm password
+              </label>
+              {/* Deliberately shares the show/hide toggle above rather than adding a
+                second one: two toggles on one form invite the user to reveal one
+                field and not the other, which defeats the point of confirming. */}
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="Type it again"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                className={inputClass}
+              />
+              {fieldErrors.confirmPassword && (
+                <p className="mt-1.5 text-[13px] text-danger">
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
+            </div>
+
+            {formError && (
+              // `role="alert"` so a screen reader announces it. Without it the
+              // message appears silently and a non-sighted user is left waiting.
+              <p
+                role="alert"
+                className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
+              >
+                {formError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? "Setting up…" : "Set password and continue"}
+            </button>
+          </form>
+        )}
+
+        {!linkDead && (
+          <p className="mt-6 text-center text-[13px] text-muted">
+            Codes expire after seven days. If yours no longer works, ask HR for a new one.
+          </p>
+        )}
       </div>
     </div>
   );
