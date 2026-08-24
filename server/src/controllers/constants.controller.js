@@ -7,6 +7,7 @@ const {
   JOB_FAMILIES,
   DESIGNATIONS,
   DESIGNATION_NAMES,
+  ORG_UNIT_TYPES,
   EMPLOYEE_ID_PATTERN,
   MIN_PASSWORD_LENGTH,
 } = require("../config/constants");
@@ -19,6 +20,11 @@ const {
 // stories are drafted and NOT agreed, so what an administrator needs is not yet
 // decided. Add them when it is, rather than guessing now.
 const RECORD_MANAGING_ROLES = ["hr", "head_of_hr"];
+
+// Who gets the unit-type vocabulary. Only the Head of HR builds the tree, so only
+// the Head of HR needs a type dropdown — HR and Leadership read the tree, and a
+// reader gets the type off the record itself rather than needing the list.
+const TREE_MANAGING_ROLES = ["head_of_hr"];
 
 // The controlled lists, served to the client so a dropdown and a Yup schema can be
 // built from the SAME source the model validates against.
@@ -43,6 +49,7 @@ const RECORD_MANAGING_ROLES = ["hr", "head_of_hr"];
 exports.getConstants = asyncHandler(async (req, res) => {
   const held = req.user?.roles || [];
   const managesRecords = held.some((role) => RECORD_MANAGING_ROLES.includes(role));
+  const managesTree = held.some((role) => TREE_MANAGING_ROLES.includes(role));
 
   const payload = {
     designations: DESIGNATION_NAMES.map((name) => ({
@@ -65,6 +72,10 @@ exports.getConstants = asyncHandler(async (req, res) => {
       employeeIdPattern: EMPLOYEE_ID_PATTERN.source,
       minPasswordLength: MIN_PASSWORD_LENGTH,
     };
+  }
+
+  if (managesTree) {
+    payload.orgUnitTypes = ORG_UNIT_TYPES;
   }
 
   res.json(payload);

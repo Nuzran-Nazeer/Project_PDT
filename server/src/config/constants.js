@@ -48,6 +48,19 @@ const USER_STATUS = ["invited", "active", "inactive"];
 const LOCATIONS = ["Colombo"];
 
 // ---------------------------------------------------------------------------
+// Org unit types
+// ---------------------------------------------------------------------------
+// "team" is deliberately NOT here. In this system a team means only the slice of one
+// unit allocated to one project — it is derived from project assignments, never
+// stored, and never appears in the org tree.  (System spec §0.1)
+//
+// These are LABELS, not depths. Nothing checks that a sub-unit sits under a unit,
+// because the tree is recursive by design: the spec expects it to grow to five levels
+// without a rewrite, and three type names cannot describe five levels. Enforcing
+// type-by-depth would be inventing a rule the design does not have.
+const ORG_UNIT_TYPES = ["company", "unit", "sub-unit"];
+
+// ---------------------------------------------------------------------------
 // Designation -> job family
 // ---------------------------------------------------------------------------
 // The review form is chosen by JOB FAMILY, not designation — otherwise 33 designations
@@ -159,6 +172,7 @@ module.exports = {
   ROLE_PRECEDENCE,
   USER_STATUS,
   LOCATIONS,
+  ORG_UNIT_TYPES,
   JOB_FAMILIES,
   DESIGNATIONS,
   DESIGNATION_NAMES,
