@@ -32,6 +32,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Set by the activation page after it finishes, since activation deliberately
+  // does not sign anyone in. Read once into state so it survives the re-render but
+  // does not come back if the user navigates here again later.
+  const [notice] = useState(location.state?.notice || "");
+
   const handleChange = (e) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
     setFormError("");
@@ -94,6 +99,15 @@ export default function LoginPage() {
             Welcome back. Please sign in to continue.
           </p>
         </div>
+
+        {notice && (
+          <p
+            role="status"
+            className="mt-6 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2.5 text-center text-[13px] text-ink"
+          >
+            {notice}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-8 w-full" noValidate>
           <div>
