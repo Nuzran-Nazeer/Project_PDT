@@ -94,11 +94,9 @@ const assertLeadSitsInParentUnit = async (unit, userId, from) => {
 // Reading
 // ---------------------------------------------------------------------------
 
-// `leadOn` -- who led this unit on this date -- was written here and CUT before
-// committing. Nothing in this story calls it: the filter below answers the same
-// question over HTTP, and the reporting line will want it in a different shape
-// anyway, since it has to resolve upward when a unit has no lead. It is kept
-// verbatim in PDT-BUILD-LOG.md.
+// `leadOn` was cut from here before committing the last story and is RESTORED below,
+// in the different shape that was predicted: it populates the person, because the
+// reporting line answers with a name rather than an id.
 exports.listLeads = async ({ unitId, userId, on } = {}) => {
   const filter = {};
   if (unitId) filter.unitId = unitId;
@@ -118,6 +116,18 @@ exports.getLeadById = async (id) => {
   if (!record) throw new AppError("Leadership record not found", 404);
   return record;
 };
+
+// Who led this unit on this date. Returns null when nobody did -- a real answer,
+// which the reporting line handles by looking at the parent unit instead.
+//
+// The person is populated because every caller wants a name. `select` is explicit
+// rather than open: this record feeds a response that HR and Leadership read, and a
+// bare populate would carry the whole user document into it.
+exports.leadOn = async (unitId, date) =>
+  UnitLead.findOne({ unitId, ...activeOn(toDay(date, "date")) }).populate(
+    "userId",
+    "name employeeId designation",
+  );
 
 // ---------------------------------------------------------------------------
 // Writing

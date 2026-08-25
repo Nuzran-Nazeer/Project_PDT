@@ -71,11 +71,11 @@ const assertNoOverlap = async (userId, from, to, excludeId) => {
 // ---------------------------------------------------------------------------
 // One read shape only, and `on` is what answers "which unit was she in then".
 //
-// Three narrower helpers were written here and CUT before committing --
-// membershipOn, unitIdOn and membersOn. No criterion in this story reaches them:
-// the filter below already serves the as-at question, and the other two exist only
-// for the reporting line. They are in PDT-BUILD-LOG.md, to be pasted back with the
-// story that actually calls them.
+// Three narrower helpers were cut from here before committing the last story. TWO
+// ARE RESTORED BELOW, because the reporting line calls them. `membersOn` -- everyone
+// in a unit on a date -- stays cut: no criterion in the reporting-line story reaches
+// it either, and it is still sitting verbatim in PDT-BUILD-LOG.md for whichever
+// story finally needs a roster.
 exports.listMemberships = async ({ userId, unitId, on } = {}) => {
   const filter = {};
   if (userId) filter.userId = userId;
@@ -96,6 +96,21 @@ exports.getMembershipById = async (id) => {
   const membership = await UnitMembership.findById(id);
   if (!membership) throw new AppError("Membership not found", 404);
   return membership;
+};
+
+// THE query the rest of the system depends on: which unit did this person belong to
+// on this date. Returns null for someone who belonged to no unit then -- which is a
+// real answer, not a missing one. Someone with no unit has no supervisor and is not
+// appraised, so callers must handle null rather than treat it as an error.
+//
+// Safe to call with a Date that is already normalised: toDay re-normalising an
+// existing UTC midnight returns the same instant.
+exports.membershipOn = async (userId, date) =>
+  UnitMembership.findOne({ userId, ...activeOn(toDay(date, "date")) });
+
+exports.unitIdOn = async (userId, date) => {
+  const membership = await exports.membershipOn(userId, date);
+  return membership ? membership.unitId : null;
 };
 
 // ---------------------------------------------------------------------------

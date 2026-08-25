@@ -81,3 +81,13 @@ exports.validateHistoryQuery = (req, res, next) => {
   checkDate(req.query.on, "on", errors, { required: false });
   finish(errors, next);
 };
+
+// The reporting line takes the person in the path and the date in the query. `on` is
+// optional and means today when it is left off; a malformed one is still refused,
+// because silently reading a bad date as today would answer a question nobody asked.
+exports.validateReportingLineQuery = (req, res, next) => {
+  const errors = [];
+  checkId(req.params.userId, "userId", errors);
+  checkDate(req.query.on, "on", errors, { required: false });
+  finish(errors, next);
+};
