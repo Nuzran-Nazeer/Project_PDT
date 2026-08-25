@@ -15,6 +15,7 @@ import SupervisorDashboard from "../pages/dashboards/SupervisorDashboard";
 import EmployeeListPage from "../pages/employees/EmployeeListPage";
 import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import EmployeeFormPage from "../pages/employees/EmployeeFormPage";
+import OrgTreePage from "../pages/org/OrgTreePage";
 
 // The single list of URL -> page mappings. Add new routes here only.
 //
@@ -70,6 +71,18 @@ function AppRoutes() {
           <Route element={<ProtectedRoute allow={["hr"]} />}>
             <Route path="/employees/new" element={<EmployeeFormPage />} />
             <Route path="/employees/:id/edit" element={<EmployeeFormPage />} />
+          </Route>
+
+          {/* Same three roles as the roster, and the same split inside: only the
+              Head of HR shapes the tree, so the page shows its controls to nobody
+              else. One route rather than a separate /organisation/new, because a
+              unit is three fields and creating one from the tree is the criterion.
+
+              An HR officer is supposed to reach only units they cover, and that
+              check does not exist yet — it needs HR coverage, which is assigned
+              later. Every gate here is coarse until then. */}
+          <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
+            <Route path="/organisation" element={<OrgTreePage />} />
           </Route>
 
           {/* Unreachable until the org structure exists — `supervisor` is derived
