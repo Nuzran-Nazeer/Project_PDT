@@ -46,6 +46,24 @@ const toDay = (value, fieldName) => {
   );
 };
 
+// The day after. Lives here because it is the OTHER half of the [from, to)
+// convention, and the one place it is genuinely needed.
+//
+// Most dates in this system arrive as "effective from": a transfer's date is the
+// first day in the new unit, so the old record's `to` is that same date and no
+// arithmetic happens anywhere. Closing things is the exception -- HR supplies a LAST
+// day ("her last working day was the 25th"), and a last day has to become the first
+// uncovered day before it can be stored.
+//
+// Date.UTC normalises out of range values, so the 31st becomes the 1st of the next
+// month and 31 December becomes 1 January without a special case. This is the only
+// day-arithmetic in the codebase; keeping it here is what stops it being reinvented,
+// slightly wrong, in three services.
+const dayAfter = (day) =>
+  new Date(
+    Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1),
+  );
+
 // A period must cover at least one day. `to` equal to `from` covers none, which is a
 // record that is true on no date at all -- always a mistake, never a useful history.
 const assertOrderedRange = (from, to) => {
@@ -69,4 +87,4 @@ const overlapping = (from, to) => {
   return { $and: clauses };
 };
 
-module.exports = { toDay, assertOrderedRange, activeOn, overlapping };
+module.exports = { toDay, dayAfter, assertOrderedRange, activeOn, overlapping };

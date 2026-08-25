@@ -42,6 +42,22 @@ exports.validateCreateUnit = (req, res, next) => {
   next();
 };
 
+// Discontinuing carries one field and it is required. See the controller for why it
+// has no default, unlike a leaver's last working day.
+exports.validateDiscontinueUnit = (req, res, next) => {
+  const { lastDay } = req.body;
+  const errors = [];
+
+  if (lastDay === undefined || lastDay === null || lastDay === "") {
+    errors.push("lastDay is required");
+  } else if (Number.isNaN(new Date(lastDay).getTime())) {
+    errors.push("lastDay is not a valid date");
+  }
+
+  if (errors.length) return next(new AppError(errors.join("; "), 400));
+  next();
+};
+
 exports.validateUpdateUnit = (req, res, next) => {
   normaliseParent(req);
   const { name, type, parentUnitId } = req.body;

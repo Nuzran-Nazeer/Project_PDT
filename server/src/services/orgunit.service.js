@@ -1,5 +1,8 @@
 const OrgUnit = require("../models/orgunit.model");
+const UnitMembership = require("../models/unitmembership.model");
+const UnitLead = require("../models/unitlead.model");
 const AppError = require("../utils/AppError");
+const { toDay, dayAfter, overlapping } = require("../utils/dateRange");
 
 // Business logic for the unit tree. Knows nothing about Express (no req/res here).
 //
@@ -15,8 +18,10 @@ const AppError = require("../utils/AppError");
 // Fields that may be set when a unit is created.
 const CREATABLE_FIELDS = ["name", "type", "parentUnitId"];
 
-// Fields that may be changed afterwards. `active` is absent on purpose: closing a
-// unit is not specified. See the model.
+// Fields that may be changed afterwards. `active` is STILL absent on purpose, but
+// the reason has changed: closing a unit is now specified, and it is a considered
+// operation with three checks in front of it rather than a field anybody may flip on
+// an ordinary edit. It has its own function and its own route.
 const UPDATABLE_FIELDS = ["name", "type", "parentUnitId"];
 
 const pick = (source, fields) =>
@@ -119,6 +124,28 @@ const assertCompanyIsRoot = (type, parentUnitId) => {
 // tree of eight. It is paying for later: the HR coverage screen and the Leadership
 // unit report both list units by name, and two identical rows there are a problem
 // nobody can resolve by looking at them.
+// ---------------------------------------------------------------------------
+// Invariant 5 — nothing new may be hung on a discontinued unit
+// ---------------------------------------------------------------------------
+// Criterion 5 of the closing story. A discontinued unit stays in the tree and stays
+// readable, but it is finished: putting a live sub-unit inside it would recreate the
+// problem discontinuing was meant to end, with people reporting into something that
+// no longer operates.
+//
+// Checked on the PROPOSED parent only. Moving a unit OUT of a discontinued parent is
+// untouched, and has to be -- it is how you rescue a sub-unit.
+const assertParentIsLive = async (parentUnitId) => {
+  if (!parentUnitId) return;
+
+  const parent = await OrgUnit.findById(parentUnitId).select("name active");
+  if (parent && !parent.active) {
+    throw new AppError(
+      `${parent.name} has been discontinued, so nothing new can be placed inside it`,
+      409,
+    );
+  }
+};
+
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const assertNameFreeAmongSiblings = async (name, parentUnitId, excludeId) => {
@@ -149,6 +176,7 @@ exports.createUnit = async (data) => {
 
   if (fields.parentUnitId) {
     await assertParentIsUsable(null, fields.parentUnitId);
+    await assertParentIsLive(fields.parentUnitId);
   } else {
     await assertNoOtherRoot();
   }
@@ -197,6 +225,7 @@ exports.updateUnit = async (id, data) => {
   if (parentChanged) {
     if (nextParent) {
       await assertParentIsUsable(unit._id, nextParent);
+      await assertParentIsLive(nextParent);
     } else {
       // Detaching a unit would make it a second root. Allowed only if it already is
       // the root, which the comparison above has already ruled out.
@@ -212,6 +241,115 @@ exports.updateUnit = async (id, data) => {
   }
 
   Object.assign(unit, fields);
+  await unit.save();
+  return unit;
+};
+
+// ---------------------------------------------------------------------------
+// Discontinuing a unit
+// ---------------------------------------------------------------------------
+// The unit is NOT deleted and does not leave the tree. It is marked closed, and
+// everything recorded about it stays readable, because last year's appraisals were
+// run inside it and they have to keep making sense.
+//
+// `lastDay` is the final day the unit operated. Stored as `to = lastDay + 1` under
+// the [from, to) convention, the same way a leaver's last working day is.
+//
+// ---------------------------------------------------------------------------
+// Why this REFUSES rather than cascading
+// ---------------------------------------------------------------------------
+// The tempting version closes the unit and quietly closes its memberships with it:
+// one click, tidy. It is also the single worst thing this file could do.
+//
+// A person with no unit has NO SUPERVISOR AND IS NOT APPRAISED. So that one click
+// would drop everyone in the unit out of the appraisal cycle, with no error, no
+// warning and nothing visible on any screen. Refusing forces HR to answer "where do
+// these people go?" instead of letting the system answer "nowhere".
+//
+// The same argument covers sub-units, which would otherwise be left hanging off a
+// parent that no longer operates, with the reporting line resolving upward into it.
+//
+// The ONE thing that is closed automatically is the unit's own leadership record, and
+// it is safe for a specific reason: a unit's lead belongs to the unit ABOVE the one
+// they lead, so closing it leaves nobody homeless.
+exports.discontinueUnit = async (id, lastDay) => {
+  const unit = await OrgUnit.findById(id);
+  if (!unit) throw new AppError("Unit not found", 404);
+  if (!unit.active) {
+    throw new AppError(`${unit.name} has already been discontinued`, 409);
+  }
+
+  // The top of the tree is not closeable. It follows from the same rule as the two
+  // checks below -- nothing is discontinued while something depends on it, and the
+  // whole company depends on the root.
+  //
+  // It also closes a trap: `assertNoOtherRoot` does not filter on `active`, so a
+  // discontinued root would still occupy the one root slot and no replacement could
+  // ever be created. You do not close Altrium from inside an HR system.
+  if (!unit.parentUnitId) {
+    throw new AppError(
+      `${unit.name} is the top of the tree and cannot be discontinued`,
+      409,
+    );
+  }
+
+  const finalDay = toDay(lastDay, "lastDay");
+  const closesOn = dayAfter(finalDay);
+
+  // Criterion 2 -- live sub-units. Checked before members because it is the cheaper
+  // query and the more common mistake: units are usually closed top down, and the
+  // message needs to say "start at the bottom".
+  const children = await OrgUnit.find({
+    parentUnitId: unit._id,
+    active: true,
+  }).select("name");
+
+  if (children.length) {
+    const names = children.map((c) => c.name).join(", ");
+    throw new AppError(
+      `${unit.name} still has ${children.length === 1 ? "a sub-unit" : "sub-units"} beneath it: ${names}. Discontinue those first, from the bottom of the tree upward.`,
+      409,
+    );
+  }
+
+  // Criterion 1 -- members. `overlapping(closesOn, null)` catches anyone still in the
+  // unit on the closing day AND anyone whose membership starts after it, which a
+  // plain as-at check would miss on a backfilled record.
+  const members = await UnitMembership.find({
+    unitId: unit._id,
+    ...overlapping(closesOn, null),
+  }).populate("userId", "name");
+
+  if (members.length) {
+    const names = members
+      .map((m) => (m.userId && m.userId.name) || "someone")
+      .join(", ");
+    throw new AppError(
+      `${unit.name} still has ${members.length === 1 ? "a member" : "members"}: ${names}. Move ${members.length === 1 ? "them" : "them all"} to another unit first, or they will be left with no supervisor and no appraisal.`,
+      409,
+    );
+  }
+
+  // Criterion 3 -- the leadership record closes on the same date. Done BEFORE the
+  // unit is marked inactive so that a bad date fails with nothing half-written.
+  const term = await UnitLead.findOne({ unitId: unit._id, to: null });
+  if (term) {
+    if (closesOn.getTime() <= term.from.getTime()) {
+      throw new AppError(
+        `This unit's lead only took over on ${term.from
+          .toISOString()
+          .slice(0, 10)}, so it cannot have closed before then`,
+        400,
+      );
+    }
+    term.to = closesOn;
+    await term.save();
+  }
+
+  // The LAST day it operated, not the day after. `closesOn` is the storage form for a
+  // period's end; this field is a plain fact HR reads back, so it holds what HR typed.
+  unit.active = false;
+  unit.discontinuedOn = finalDay;
   await unit.save();
   return unit;
 };

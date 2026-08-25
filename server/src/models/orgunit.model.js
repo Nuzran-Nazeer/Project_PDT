@@ -39,12 +39,23 @@ const orgUnitSchema = new mongoose.Schema(
       index: true,
     },
 
-    // In the design and therefore on the model, but NOTHING SETS IT FALSE YET and no
-    // route exposes it. Closing a unit is not specified: what happens to its members,
-    // its children and its lead are all open questions, and guessing at them would
-    // produce code that looks reasonable and is wrong. It stays true until a story
-    // decides.
+    // Set false by discontinueUnit() and by nothing else. A discontinued unit is NOT
+    // removed: it stays in the tree, and everything recorded about it stays readable,
+    // because last year's appraisals were run inside it.
     active: { type: Boolean, default: true },
+
+    // The last day the unit operated. Null while it is live.
+    //
+    // ⚠️ NOT IN Docs/PDT-DATA-MODEL.md, which lists four fields for this collection.
+    // Added 2026-08-25 on Nuzran's decision, and THE DATA MODEL IS OWED THE SAME
+    // CHANGE in both copies -- it is his file, not Claude's.
+    //
+    // Why it earns a field. Without it, closing a unit would be the only undated state
+    // change in a system where every other fact is a period with dates on both ends,
+    // and "was this unit live in March" would have no answer. With it, and the
+    // createdAt that timestamps already provides, the tree can be asked about as at a
+    // date like everything else.
+    discontinuedOn: { type: Date, default: null },
   },
   { timestamps: true },
 );

@@ -29,9 +29,19 @@ const assertUserExists = async (userId) => {
   return user;
 };
 
+// Also refuses a DISCONTINUED unit, which is criterion 5 of the closing story: a
+// closed unit is not offered as a destination when moving someone. Only the two
+// write paths call this, so closing a membership inside a discontinued unit still
+// works -- which it must, or a unit closed by mistake could never be unwound.
 const assertUnitExists = async (unitId) => {
-  const unit = await OrgUnit.findById(unitId).select("_id name");
+  const unit = await OrgUnit.findById(unitId).select("_id name active");
   if (!unit) throw new AppError("Unit not found", 404);
+  if (!unit.active) {
+    throw new AppError(
+      `${unit.name} has been discontinued, so nobody can be placed in it`,
+      409,
+    );
+  }
   return unit;
 };
 

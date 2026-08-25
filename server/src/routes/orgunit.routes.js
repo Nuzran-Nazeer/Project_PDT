@@ -3,6 +3,7 @@ const controller = require("../controllers/orgunit.controller");
 const {
   validateCreateUnit,
   validateUpdateUnit,
+  validateDiscontinueUnit,
 } = require("../validators/orgunit.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
@@ -22,12 +23,24 @@ router
   .post(protect, authorize(...CAN_MANAGE), validateCreateUnit, controller.createUnit)
   .get(protect, authorize(...CAN_READ), controller.listUnits);
 
-// No DELETE. Closing a unit is not specified — what happens to its members, its
-// children and its lead are all open — and a soft delete invented here would look
-// perfectly reasonable and be wrong.
+// Still no DELETE, and there never will be one: the unit is somebody's appraisal
+// history. Closing one is now specified and lives on its own route below, because it
+// is a considered operation with three checks in front of it rather than a field
+// anybody may flip on an ordinary edit.
 router
   .route("/:id")
   .get(protect, authorize(...CAN_READ), controller.getUnit)
   .put(protect, authorize(...CAN_MANAGE), validateUpdateUnit, controller.updateUnit);
+
+// Head of HR only, matching who may shape the tree in the first place. An HR officer
+// can move people between units but cannot close one out from under them.
+router
+  .route("/:id/discontinue")
+  .put(
+    protect,
+    authorize(...CAN_MANAGE),
+    validateDiscontinueUnit,
+    controller.discontinueUnit,
+  );
 
 module.exports = router;

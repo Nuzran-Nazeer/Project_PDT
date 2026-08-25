@@ -23,3 +23,13 @@ exports.getUnit = asyncHandler(async (req, res) => {
 exports.updateUnit = asyncHandler(async (req, res) => {
   res.json(await orgUnitService.updateUnit(req.params.id, req.body));
 });
+
+// `lastDay` is the final day the unit operated. Unlike a leaver's last working day
+// it has NO default: a unit closing is a dated event somebody decided on, and
+// silently stamping today onto it would invent the one fact this whole story exists
+// to record honestly.
+exports.discontinueUnit = asyncHandler(async (req, res) => {
+  res.json(
+    await orgUnitService.discontinueUnit(req.params.id, req.body.lastDay),
+  );
+});

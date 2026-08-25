@@ -24,9 +24,24 @@ const assertUserExists = async (userId) => {
   return user;
 };
 
+// ⚠️ The discontinued check goes one step BEYOND criterion 5, which names only "a
+// parent for a new unit" and "a destination when moving someone". Appointing a lead
+// to a unit that no longer operates is the same mistake wearing a third hat -- and
+// discontinuing deliberately closes the leadership record, so allowing a new one
+// straight afterwards would undo the thing that just happened. Flagged rather than
+// assumed: pull it if the criterion is meant to be read strictly.
+//
+// Only `appointLead` calls this. Closing a term inside a discontinued unit is
+// untouched, which is what discontinuing itself relies on.
 const assertUnitExists = async (unitId) => {
-  const unit = await OrgUnit.findById(unitId).select("_id name parentUnitId");
+  const unit = await OrgUnit.findById(unitId).select("_id name parentUnitId active");
   if (!unit) throw new AppError("Unit not found", 404);
+  if (!unit.active) {
+    throw new AppError(
+      `${unit.name} has been discontinued, so it cannot be given a lead`,
+      409,
+    );
+  }
   return unit;
 };
 
