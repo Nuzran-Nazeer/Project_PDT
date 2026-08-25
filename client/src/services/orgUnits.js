@@ -21,3 +21,16 @@ export const createUnit = (data) =>
 
 export const updateUnit = (id, data) =>
   apiFetch(`/org-units/${id}`, { method: "PUT", body: JSON.stringify(data) });
+
+// Closing a unit. `lastDay` is the final day it operated and is REQUIRED — unlike a
+// leaver's last working day it has no default, because a unit closing is a dated
+// event somebody decided on, and stamping today onto it would invent the one fact
+// this story exists to record honestly.
+//
+// There is still no delete. A discontinued unit stays in the tree, marked, and
+// everything recorded about it stays readable.
+export const discontinueUnit = (id, lastDay) =>
+  apiFetch(`/org-units/${id}/discontinue`, {
+    method: "PUT",
+    body: JSON.stringify({ lastDay }),
+  });

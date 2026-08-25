@@ -6,7 +6,7 @@ import {
 } from "../../services/memberships";
 import { listUnits } from "../../services/orgUnits";
 import { moveSchema } from "../../schemas/orgStructureSchema";
-import { formatDate, toDateInput } from "../../utils/dates";
+import { formatDate, toDateInput, todayInput } from "../../utils/dates";
 
 // Where this person sits in the company, and where they sat before.
 //
@@ -22,7 +22,8 @@ import { formatDate, toDateInput } from "../../utils/dates";
 // collection look like a field on the user, which is exactly the mistake the design
 // spent a layer avoiding.
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Local calendar date, not UTC — see the note on todayInput.
+const today = todayInput;
 
 export default function UnitHistoryPanel({ person, canAssign }) {
   const userId = String(person._id);

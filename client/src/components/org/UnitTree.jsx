@@ -72,13 +72,21 @@ export default function UnitTree({ units, selectedId, onSelect }) {
                     : "text-ink hover:bg-surface hover:text-brand"
                 }`}
               >
-                <span className="truncate">{unit.name}</span>
+                {/* A discontinued unit stays in the tree and stays readable — it is
+                    part of somebody's appraisal history. Struck through and faded
+                    rather than hidden, so the shape of the company as it was is
+                    still visible. */}
+                <span
+                  className={`truncate ${unit.active === false ? "text-muted line-through decoration-1" : ""}`}
+                >
+                  {unit.name}
+                </span>
                 <span
                   className={`shrink-0 text-[10px] font-medium uppercase tracking-wider ${
                     selected ? "text-brand/70" : "text-muted"
                   }`}
                 >
-                  {unit.type}
+                  {unit.active === false ? "closed" : unit.type}
                 </span>
               </button>
 

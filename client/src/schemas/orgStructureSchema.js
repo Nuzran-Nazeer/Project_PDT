@@ -18,3 +18,10 @@ export const appointLeadSchema = yup.object({
   userId: yup.string().required("Choose who leads this unit"),
   from: yup.string().required("Choose the date they take over"),
 });
+
+// One field, and it is required with no default. A unit closing is a dated event
+// somebody decided on, so there is no sensible value to prefill: today would be a
+// guess, and this is the one fact the story exists to record honestly.
+export const discontinueSchema = yup.object({
+  lastDay: yup.string().required("Give the last day this unit operated"),
+});

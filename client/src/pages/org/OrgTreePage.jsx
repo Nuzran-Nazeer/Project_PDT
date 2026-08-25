@@ -115,9 +115,15 @@ export default function OrgTreePage() {
   // Which units may be offered as a parent. When editing, the unit itself and
   // everything under it are removed.
   const parentOptions = useMemo(() => {
-    if (mode !== "edit" || !selected) return units;
+    // A discontinued unit is never offered as a parent. The server refuses it, and
+    // putting a live unit inside a closed one would bring the closed one back by the
+    // back door — its sub-tree would be operating again while it is marked shut.
+    const live = units.filter((unit) => unit.active !== false);
+
+    if (mode !== "edit" || !selected) return live;
+
     const blocked = descendantsOf(units, selected._id);
-    return units.filter(
+    return live.filter(
       (unit) =>
         String(unit._id) !== String(selected._id) && !blocked.has(String(unit._id)),
     );
@@ -287,6 +293,8 @@ export default function OrgTreePage() {
                     unit={selected}
                     units={units}
                     canAssign={canAssign}
+                    canManage={canManage}
+                    onChanged={reload}
                   />
                   {canManage && (
                     <button

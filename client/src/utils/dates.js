@@ -43,3 +43,23 @@ export const addMonths = (isoDate, months) => {
   target.setUTCDate(Math.min(day, lastDayOfTarget));
   return target.toISOString().slice(0, 10);
 };
+
+// Today as YYYY-MM-DD in the LOCAL calendar, for prefilling a date input and for
+// asking the server about "as things stand today".
+//
+// Deliberately NOT `new Date().toISOString().slice(0, 10)`, which is today in UTC.
+// Colombo is UTC+5:30, so between midnight and half past five in the morning the UTC
+// date is still yesterday, and every prefilled "today" in the app would be a day
+// behind. This was caught by a test run at 06:00 local, where a membership opened
+// "today" was dated the 25th on a machine reading the 26th.
+//
+// Note this is the opposite choice from toDateInput above, and both are right: that
+// one reads back a date the server STORED at UTC midnight, where slicing the ISO
+// string is what avoids shifting it. This one produces a NEW calendar date from the
+// clock in front of the person typing.
+export const todayInput = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+};

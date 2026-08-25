@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { listMemberships } from "../../services/memberships";
 import { appointLead, listLeads } from "../../services/unitLeads";
 import { listUsers } from "../../services/users";
-import { appointLeadSchema } from "../../schemas/orgStructureSchema";
-import { formatDate } from "../../utils/dates";
+import { discontinueUnit } from "../../services/orgUnits";
+import { appointLeadSchema, discontinueSchema } from "../../schemas/orgStructureSchema";
+import { formatDate, todayInput } from "../../utils/dates";
 
 // One unit: who is in it, who runs it, and the one write that belongs to a unit
 // rather than to a person.
@@ -17,12 +18,18 @@ import { formatDate } from "../../utils/dates";
 // Appointing a lead is the exception, and a real one: a lead is a property of the
 // unit, not of the person.
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Local calendar date, not UTC — see the note on todayInput.
+const today = todayInput;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export default function UnitDetail({ unit, units, canAssign }) {
+export default function UnitDetail({ unit, units, canAssign, canManage, onChanged }) {
   const unitId = String(unit._id);
   const parent = units.find((u) => String(u._id) === String(unit.parentUnitId));
+  const closed = unit.active === false;
+  // The top of the tree is not closeable — the whole company depends on it, and a
+  // discontinued root would hold the only root slot so no replacement could ever be
+  // created. The server refuses it; this keeps the button from being offered.
+  const isRoot = !unit.parentUnitId;
 
   const [members, setMembers] = useState([]);
   const [lead, setLead] = useState(null);
@@ -40,6 +47,12 @@ export default function UnitDetail({ unit, units, canAssign }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [closing, setClosing] = useState(false);
+  const [lastDay, setLastDay] = useState("");
+  const [closeFieldError, setCloseFieldError] = useState("");
+  const [closeError, setCloseError] = useState("");
+  const [closingSaving, setClosingSaving] = useState(false);
 
   // Both reads are "as at today", because the criterion asks for a unit's CURRENT
   // members and CURRENT lead. Browsing a unit as it stood on a past date is
@@ -152,6 +165,35 @@ export default function UnitDetail({ unit, units, canAssign }) {
     }
   };
 
+  const handleDiscontinue = async () => {
+    setCloseError("");
+    setCloseFieldError("");
+
+    try {
+      await discontinueSchema.validate({ lastDay });
+    } catch (validationError) {
+      setCloseFieldError(validationError.message);
+      return;
+    }
+
+    setClosingSaving(true);
+    try {
+      await discontinueUnit(unitId, lastDay);
+      setClosing(false);
+      setReloadKey((key) => key + 1);
+      // The tree itself has to be re-read, not just this panel: the unit is now
+      // struck through in the rail beside us, and the page owns that list.
+      onChanged?.();
+    } catch (err) {
+      // The server's own words, and these are the ones that matter most in this
+      // story: the unit still has members, and they are NAMED, so HR is told where
+      // to move them rather than being told no.
+      setCloseError(err.message);
+    } finally {
+      setClosingSaving(false);
+    }
+  };
+
   const inputClass =
     "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
@@ -165,6 +207,17 @@ export default function UnitDetail({ unit, units, canAssign }) {
         </span>
         {parent && <span className="text-[13px] text-muted">inside {parent.name}</span>}
       </div>
+
+      {/* `discontinuedOn` is the LAST DAY the unit operated, not the day the record
+          closed — the server stores what HR typed for exactly this line to read
+          back. Without a date, closing a unit would be the only undated state change
+          in a system where every other fact is a period. */}
+      {closed && (
+        <p className="mt-2 text-[13px] text-muted">
+          Discontinued — its last day was {formatDate(unit.discontinuedOn)}. It stays in
+          the tree because the appraisal history recorded against it has to stay readable.
+        </p>
+      )}
 
       {error && (
         <p
@@ -184,7 +237,10 @@ export default function UnitDetail({ unit, units, canAssign }) {
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
                 Lead
               </h3>
-              {canAssign && !appointing && (
+              {/* A discontinued unit cannot be given a lead: closing one
+                  deliberately ends its leadership record, and allowing a new one
+                  straight afterwards would undo what had just happened. */}
+              {canAssign && !appointing && !closed && (
                 <button
                   type="button"
                   onClick={startAppoint}
@@ -347,6 +403,92 @@ export default function UnitDetail({ unit, units, canAssign }) {
               </ul>
             )}
           </section>
+
+          {/* Closing the unit. Head of HR only — an HR officer can move people
+              between units but cannot close one out from under them — and never for
+              the root or for a unit that is already closed. */}
+          {canManage && !closed && !isRoot && (
+            <section className="mt-8 border-t border-line pt-5">
+              {!closing ? (
+                <div className="flex flex-wrap items-center gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-ink">Discontinue this unit</p>
+                    <p className="mt-1 text-[13px] text-muted">
+                      It stays in the tree, marked closed. Its members have to be moved
+                      somewhere else first.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setClosing(true)}
+                    className="ml-auto cursor-pointer rounded-lg border border-danger/40 px-3.5 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
+                  >
+                    Discontinue
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-ink">
+                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted — it
+                    stays in the tree marked closed, and whoever leads it has their term
+                    closed on the same date.
+                  </p>
+
+                  <div className="mt-4 max-w-xs">
+                    <label htmlFor="lastDay" className={labelClass}>
+                      Last day it operated
+                    </label>
+                    <input
+                      id="lastDay"
+                      name="lastDay"
+                      type="date"
+                      value={lastDay}
+                      onChange={(e) => {
+                        setLastDay(e.target.value);
+                        setCloseError("");
+                      }}
+                      aria-invalid={Boolean(closeFieldError)}
+                      className={inputClass}
+                    />
+                    {/* Deliberately not prefilled with today. Every other date on
+                        these screens has a sensible default; this one does not,
+                        because a unit closing is a decision with a date somebody
+                        chose, and guessing at it invents the fact being recorded. */}
+                    {closeFieldError && (
+                      <p className="mt-1.5 text-[13px] text-danger">{closeFieldError}</p>
+                    )}
+                  </div>
+
+                  {closeError && (
+                    <p
+                      role="alert"
+                      className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
+                    >
+                      {closeError}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleDiscontinue}
+                      disabled={closingSaving}
+                      className="cursor-pointer rounded-lg bg-danger px-3.5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {closingSaving ? "Closing…" : "Yes, discontinue"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClosing(false)}
+                      className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-ink"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
     </div>
