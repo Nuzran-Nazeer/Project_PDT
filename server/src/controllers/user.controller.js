@@ -27,8 +27,20 @@ exports.updateUser = asyncHandler(async (req, res) => {
 
 // Soft delete. Returns the updated record rather than a message, so the client can
 // re-render without a second request.
+//
+// The record is SPREAD rather than nested under a `user` key, and `warnings` sits
+// alongside it. Nesting would have been tidier and would have broken the merged
+// client, which does `setPerson(await deactivateUser(id))` and reads `.name` off the
+// result. Additive keeps that working while the new field waits for the client half.
+//
+// `lastWorkingDay` is optional and defaults to today inside the service, so the
+// existing client -- which sends no body at all -- keeps behaving exactly as before.
 exports.deleteUser = asyncHandler(async (req, res) => {
-  res.json(await userService.deactivateUser(req.params.id));
+  const { user, warnings } = await userService.deactivateUser(
+    req.params.id,
+    req.body ? req.body.lastWorkingDay : undefined,
+  );
+  res.json({ ...user.toJSON(), warnings });
 });
 
 // Returns the raw code and a ready-to-send email body. This response is the ONLY
