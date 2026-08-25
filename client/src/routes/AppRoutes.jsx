@@ -83,6 +83,10 @@ function AppRoutes() {
               later. Every gate here is coarse until then. */}
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/organisation" element={<OrgTreePage />} />
+            {/* The same screen. A unit in the URL is what makes it linkable and
+                lets it survive a refresh, and the tree stays beside it — which a
+                separate route would have cost. */}
+            <Route path="/organisation/:id" element={<OrgTreePage />} />
           </Route>
 
           {/* Unreachable until the org structure exists — `supervisor` is derived

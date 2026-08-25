@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { createUnit, listUnits, updateUnit } from "../../services/orgUnits";
 import { buildUnitSchema } from "../../schemas/orgUnitSchema";
 import UnitTree from "../../components/org/UnitTree";
+import UnitDetail from "../../components/org/UnitDetail";
 
 // The organisation structure. Head of HR builds it; HR and Leadership read it.
 //
 // It lives at /organisation rather than /head-of-hr/organisation for the same reason
 // the roster lives at /employees: three roles reach it, and naming the route after
 // one of them would be wrong the moment the other two arrive.
+//
+// THE TREE IS A NAVIGATION RAIL, not the content. It started as the wide half of the
+// screen and was inverted when the unit's own page arrived: a tree of five short
+// names needs about fifteen characters of width, while its members, its lead and the
+// appointment form need room. The selected unit is now the page and the tree is how
+// you get to it.
 //
 // CREATING AND EDITING HAPPEN HERE, not on separate routes like /employees/new. A
 // unit is three fields against an employee's ten, and the criterion says a unit is
@@ -18,9 +26,7 @@ import UnitTree from "../../components/org/UnitTree";
 //
 // Styling follows the roster and the record page rather than being invented here:
 // the same header shape, the same `mt-6`/`mt-8` rhythm, the same primary button, the
-// same alert. An earlier version of this file used `hover:opacity-90` on the primary
-// button, which quietly ignored the `--color-brand-hover` token that exists for
-// exactly that state.
+// same alert.
 
 const EMPTY = { name: "", type: "", parentUnitId: "" };
 
@@ -47,18 +53,26 @@ const descendantsOf = (units, rootId) => {
 };
 
 export default function OrgTreePage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const { user, constants } = useAuth();
   const canManage = user?.roles?.includes("head_of_hr");
+  // Wider than shaping the tree: HR places people and appoints leads, Head of HR
+  // does that as well as changing the structure itself. Same split the server makes.
+  const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  // `mode` is what the side panel is doing: nothing, creating, or editing the
-  // selected unit. One value rather than two booleans, because "creating and
-  // editing at once" is not a state that should be representable.
-  const [mode, setMode] = useState("idle");
-  const [selected, setSelected] = useState(null);
+  // What the right-hand side is doing: showing the selected unit, or creating, or
+  // editing it. One value rather than two booleans, because "creating and editing
+  // at once" is not a state that should be representable.
+  //
+  // `forUnit` records which unit was on screen when the form opened. It is what
+  // lets a change of unit close the form by DERIVING the mode below, rather than by
+  // an effect that writes state every time the URL changes.
+  const [formState, setFormState] = useState({ mode: "idle", forUnit: null });
   const [form, setForm] = useState(EMPTY);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
@@ -83,6 +97,19 @@ export default function OrgTreePage() {
     };
   }, []);
 
+  // THE SELECTED UNIT LIVES IN THE URL, not in state. A unit is now a page with
+  // members and a lead on it, so it needs to be linkable and to survive a refresh —
+  // and the tree stays beside it, which a separate route would have cost.
+  const selected = units.find((unit) => String(unit._id) === String(id)) || null;
+
+  // Any change of unit closes whatever the form was doing — including arriving by
+  // URL or the back button, which a click handler would miss.
+  //
+  // Derived, not reset in an effect. The mode is already a function of the URL and
+  // of where the form was opened, and an effect writing state on every change of
+  // `id` is a second render pass for something that can simply be worked out.
+  const mode = formState.forUnit === (id ?? null) ? formState.mode : "idle";
+
   const hasRoot = units.some((unit) => !unit.parentUnitId);
 
   // Which units may be offered as a parent. When editing, the unit itself and
@@ -96,23 +123,17 @@ export default function OrgTreePage() {
     );
   }, [units, mode, selected]);
 
-  const select = (unit) => {
-    setSelected(unit);
-    setMode("idle");
-    setFieldErrors({});
-    setFormError("");
-  };
+  const select = (unit) => navigate(`/organisation/${unit._id}`);
 
   const startCreate = () => {
-    setMode("create");
-    setSelected(null);
+    setFormState({ mode: "create", forUnit: id ?? null });
     setForm(EMPTY);
     setFieldErrors({});
     setFormError("");
   };
 
   const startEdit = () => {
-    setMode("edit");
+    setFormState({ mode: "edit", forUnit: id ?? null });
     setForm({
       name: selected.name || "",
       type: selected.type || "",
@@ -123,7 +144,7 @@ export default function OrgTreePage() {
   };
 
   const cancel = () => {
-    setMode("idle");
+    setFormState({ mode: "idle", forUnit: id ?? null });
     setFieldErrors({});
     setFormError("");
   };
@@ -170,8 +191,11 @@ export default function OrgTreePage() {
           : await updateUnit(selected._id, payload);
 
       await reload();
-      setSelected(saved);
-      setMode("idle");
+      // Navigating rather than selecting: a new unit becomes the page you are on.
+      // The form is closed against the SAVED unit, so it stays closed once the URL
+      // catches up rather than reopening for a moment.
+      setFormState({ mode: "idle", forUnit: String(saved._id) });
+      navigate(`/organisation/${saved._id}`);
     } catch (err) {
       // The server's own words: a second root, a unit inside itself, a company below
       // the top, a name already used by a sibling. Every one names the rule that
@@ -204,7 +228,11 @@ export default function OrgTreePage() {
         </div>
 
         {canManage && units.length > 0 && (
-          <button type="button" onClick={startCreate} className={`ml-auto ${primaryClass}`}>
+          <button
+            type="button"
+            onClick={startCreate}
+            className={`ml-auto ${primaryClass}`}
+          >
             New unit
           </button>
         )}
@@ -232,25 +260,40 @@ export default function OrgTreePage() {
               : "Nobody has built the organisation structure yet. The Head of HR creates it."}
           </p>
           {canManage && (
-            <button type="button" onClick={startCreate} className={`mt-6 ${primaryClass}`}>
+            <button
+              type="button"
+              onClick={startCreate}
+              className={`mt-6 ${primaryClass}`}
+            >
               Create the company
             </button>
           )}
         </div>
       ) : (
-        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
-          <div className="rounded-xl border border-line bg-raised p-3">
+        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
+          <div className="rounded-xl border border-line bg-raised p-2">
             <UnitTree units={units} selectedId={selected?._id} onSelect={select} />
           </div>
 
-          <aside className="rounded-xl border border-line bg-raised p-5">
+          <div className="rounded-xl border border-line bg-raised p-5">
             {mode === "idle" ? (
               selected ? (
                 <>
-                  <p className="text-sm font-semibold text-ink">{selected.name}</p>
-                  <p className="mt-0.5 text-[13px] capitalize text-muted">{selected.type}</p>
+                  {/* Keyed by the unit so switching unit gives a fresh component
+                      rather than one holding the previous unit's members while its
+                      own request is still in flight. */}
+                  <UnitDetail
+                    key={selected._id}
+                    unit={selected}
+                    units={units}
+                    canAssign={canAssign}
+                  />
                   {canManage && (
-                    <button type="button" onClick={startEdit} className={`mt-5 ${secondaryClass}`}>
+                    <button
+                      type="button"
+                      onClick={startEdit}
+                      className={`mt-8 ${secondaryClass}`}
+                    >
                       Edit this unit
                     </button>
                   )}
@@ -258,12 +301,14 @@ export default function OrgTreePage() {
               ) : (
                 <p className="text-[13px] text-muted">
                   {canManage
-                    ? "Select a unit to rename it, change its type, or move it somewhere else."
-                    : "Select a unit to see its details."}
+                    ? "Select a unit to see who is in it, rename it, or move it somewhere else."
+                    : "Select a unit to see who is in it and who leads it."}
                 </p>
               )
             ) : (
-              <form onSubmit={handleSubmit}>
+              // Capped rather than filling the panel: three short fields stretched
+              // across a wide column read as a form nobody finished designing.
+              <form onSubmit={handleSubmit} className="max-w-md">
                 <p className="text-sm font-semibold text-ink">
                   {mode === "create"
                     ? hasRoot
@@ -367,7 +412,7 @@ export default function OrgTreePage() {
                 </div>
               </form>
             )}
-          </aside>
+          </div>
         </div>
       )}
     </section>

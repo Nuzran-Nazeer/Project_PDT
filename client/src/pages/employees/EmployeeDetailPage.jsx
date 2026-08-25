@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { deactivateUser, getUser } from "../../services/users";
 import StatusBadge from "../../components/employees/StatusBadge";
 import InvitePanel from "../../components/employees/InvitePanel";
+import UnitHistoryPanel from "../../components/employees/UnitHistoryPanel";
 import { formatDate } from "../../utils/dates";
 
 // One employee record, including the parts nobody types.
@@ -29,6 +30,10 @@ export default function EmployeeDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canManage = user?.roles?.includes("hr");
+  // Placing and moving people is HR and Head of HR, matching the server. Written
+  // out rather than reusing `canManage` above, which is about editing the record
+  // itself — the two happen to overlap today and are not the same permission.
+  const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [person, setPerson] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -148,6 +153,11 @@ export default function EmployeeDetailPage() {
         />
         <Row label="Roles" value={(person.roles || []).join(", ")} />
       </dl>
+
+      {/* Below the record rather than inside it: a unit is not a field on this
+          person. It is a dated record that outlives the move, which is the whole
+          reason the collection exists. */}
+      <UnitHistoryPanel key={person._id} person={person} canAssign={canAssign} />
 
       {/* Only an account awaiting activation can be invited. An active one already
           has a password, and a deactivated one belongs to somebody who has left. */}
