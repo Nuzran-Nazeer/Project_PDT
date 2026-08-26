@@ -42,13 +42,13 @@ const GROUPS_BY_ROLE = {
 // without being asked for.
 //
 // The group machinery below is story 15's, because one dashboard per person cannot be
-// built without it. The CONTENTS of the other groups belong to their own stories: the
-// HR dashboard is story 16, the supervisor dashboard is story 17, and the rest are
-// Sprint 2. So the registry keeps every group and this list decides which of them a
-// person actually sees.
+// built without it. The CONTENTS of each group belong to their own stories: the
+// supervisor group arrived with story 17, the HR dashboard is story 16, and the rest
+// are Sprint 2. So the registry keeps every group and this list decides which of them
+// a person actually sees.
 //
 // Adding a group here is the last line of its story, not the first.
-const DELIVERED_GROUPS = ["employee"];
+const DELIVERED_GROUPS = ["employee", "supervisor"];
 
 export function sectionGroupsFor(roles, isSupervisor = false) {
   const held = Array.isArray(roles) ? roles : [];

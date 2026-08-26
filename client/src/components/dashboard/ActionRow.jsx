@@ -36,8 +36,11 @@ const ICON_TONES = {
   settings: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
 };
 
-export default function ActionRow({ tab }) {
-  const statuses = SHOW_PLACEHOLDER_FIGURES ? PLACEHOLDER_ROW_STATUS[tab.id] || [] : [];
+// `status` is for a row whose figure is REAL and known to the caller. It beats the
+// placeholder outright, so a true number is never hidden behind an invented one.
+export default function ActionRow({ tab, status }) {
+  const statuses =
+    status || (SHOW_PLACEHOLDER_FIGURES ? PLACEHOLDER_ROW_STATUS[tab.id] || [] : []);
 
   return (
     <Link
