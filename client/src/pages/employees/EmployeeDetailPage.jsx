@@ -4,7 +4,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { deactivateUser, getUser } from "../../services/users";
 import StatusBadge from "../../components/employees/StatusBadge";
 import InvitePanel from "../../components/employees/InvitePanel";
-import { formatDate } from "../../utils/dates";
+import UnitHistoryPanel from "../../components/employees/UnitHistoryPanel";
+import { formatDate, todayInput } from "../../utils/dates";
 
 // One employee record, including the parts nobody types.
 //
@@ -29,12 +30,21 @@ export default function EmployeeDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canManage = user?.roles?.includes("hr");
+  // Placing and moving people is HR and Head of HR, matching the server. Written
+  // out rather than reusing `canManage` above, which is about editing the record
+  // itself — the two happen to overlap today and are not the same permission.
+  const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [person, setPerson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [working, setWorking] = useState(false);
+  // Prefilled with today and editable, because HR processes a leaver AFTER they have
+  // gone. A fortnight of phantom service can flip whether someone was eligible to
+  // review a colleague, so the date has to be HR's to set.
+  const [lastWorkingDay, setLastWorkingDay] = useState(todayInput);
+  const [warnings, setWarnings] = useState([]);
 
   // No setLoading(true) here: the initial state is already `true`, and this screen
   // is only ever reached by mounting it fresh. Setting it inside the effect body
@@ -58,8 +68,12 @@ export default function EmployeeDetailPage() {
     setWorking(true);
     setError("");
     try {
-      const updated = await deactivateUser(id);
+      const updated = await deactivateUser(id, lastWorkingDay);
       setPerson(updated);
+      // Units left with no lead. Shown, never blocking: a person leaving is a fact
+      // that has already happened, and the reporting line resolves upward past a
+      // vacant post anyway, so the unit degrades to reporting one level higher.
+      setWarnings(updated.warnings || []);
       setConfirming(false);
     } catch (err) {
       setError(err.message);
@@ -125,6 +139,28 @@ export default function EmployeeDetailPage() {
         </p>
       )}
 
+      {/* Not an error — the deactivation succeeded. Styled with the neutral tokens
+          rather than the danger ones for that reason: there is no warning colour in
+          the palette, and borrowing `danger` would read as "this failed". */}
+      {warnings.length > 0 && (
+        <div className="mt-6 rounded-xl border border-line bg-raised px-4 py-3">
+          <p className="text-[13px] font-semibold text-ink">
+            Deactivated, with {warnings.length === 1 ? "one thing" : "things"} to note
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {warnings.map((warning) => (
+              <li key={warning} className="text-[13px] text-muted">
+                {warning}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[13px] text-muted">
+            Nobody is left unsupervised: where a unit has no lead, the reporting line
+            resolves upward to the unit above it.
+          </p>
+        </div>
+      )}
+
       <dl className="mt-8 rounded-xl border border-line bg-raised px-5 py-2">
         <Row label="Email" value={person.email} />
         <Row
@@ -148,6 +184,18 @@ export default function EmployeeDetailPage() {
         />
         <Row label="Roles" value={(person.roles || []).join(", ")} />
       </dl>
+
+      {/* Below the record rather than inside it: a unit is not a field on this
+          person. It is a dated record that outlives the move, which is the whole
+          reason the collection exists. */}
+      {/* Keyed on the status as well as the id: deactivating closes the person's
+          membership, so the panel has to re-read rather than keep showing them as a
+          current member of a unit they have just left. */}
+      <UnitHistoryPanel
+        key={`${person._id}-${person.status}`}
+        person={person}
+        canAssign={canAssign}
+      />
 
       {/* Only an account awaiting activation can be invited. An active one already
           has a password, and a deactivated one belongs to somebody who has left. */}
@@ -177,9 +225,29 @@ export default function EmployeeDetailPage() {
             <div>
               <p className="text-sm text-ink">
                 Deactivate <strong>{person.name}</strong>? They will not be able to sign
-                in. The record is kept, because it is part of their appraisal history, and
-                HR can set the account back to active later.
+                in, and their unit membership and any unit they lead are closed on the
+                date below. The record is kept, because it is part of their appraisal
+                history, and HR can set the account back to active later — though that
+                returns them with no unit rather than reopening the old membership.
               </p>
+
+              <div className="mt-4 max-w-xs">
+                <label
+                  htmlFor="lastWorkingDay"
+                  className="mb-1.5 block text-[13px] font-semibold text-ink"
+                >
+                  Last working day
+                </label>
+                <input
+                  id="lastWorkingDay"
+                  name="lastWorkingDay"
+                  type="date"
+                  value={lastWorkingDay}
+                  onChange={(e) => setLastWorkingDay(e.target.value)}
+                  className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none"
+                />
+              </div>
+
               <div className="mt-4 flex gap-3">
                 <button
                   type="button"

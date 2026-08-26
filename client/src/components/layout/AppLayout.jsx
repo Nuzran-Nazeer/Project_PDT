@@ -7,14 +7,22 @@ import ThemeToggle from "../common/ThemeToggle";
 // which is where it was parked until a layout existed.
 //
 // Navigation is still deliberately minimal. Nobody has designed a nav, and the
-// alternative to leaving it out is inventing one — so this is a single link to the
-// only screen that exists beyond the dashboards, not the start of a menu. A built
-// screen nobody can reach is worse than a plain link.
+// alternative to leaving it out is inventing one — so these are plain links to the
+// screens that exist beyond the dashboards, not the start of a menu. A built screen
+// nobody can reach is worse than a plain link, which is the reasoning that added the
+// second one when the organisation tree landed.
+//
+// The two lists are identical today and are kept apart on purpose: the roster and
+// the tree are read by the same three roles by coincidence, not by a shared rule,
+// and collapsing them into one constant would hide that the next screen might not
+// match either.
 const ROSTER_ROLES = ["hr", "head_of_hr", "leadership"];
+const ORG_ROLES = ["hr", "head_of_hr", "leadership"];
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const canSeeRoster = user?.roles?.some((role) => ROSTER_ROLES.includes(role));
+  const canSeeOrg = user?.roles?.some((role) => ORG_ROLES.includes(role));
 
   return (
     <div className="min-h-svh bg-surface text-ink">
@@ -32,6 +40,19 @@ export default function AppLayout() {
               }
             >
               Employees
+            </NavLink>
+          )}
+
+          {canSeeOrg && (
+            <NavLink
+              to="/organisation"
+              className={({ isActive }) =>
+                `text-sm font-medium transition-colors hover:text-brand ${
+                  isActive ? "text-brand" : "text-muted"
+                }`
+              }
+            >
+              Organisation
             </NavLink>
           )}
 

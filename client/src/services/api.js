@@ -47,3 +47,14 @@ export async function apiFetch(path, options = {}) {
   }
   return data;
 }
+
+// Filters -> query string, dropping anything empty so `?unitId=&on=` never reaches
+// the server. The dated collections all take the same three optional filters, and
+// an empty one is a validation error rather than "no filter".
+export const buildQuery = (filters = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(filters).filter(([, value]) => value),
+  ).toString();
+
+  return query ? `?${query}` : "";
+};

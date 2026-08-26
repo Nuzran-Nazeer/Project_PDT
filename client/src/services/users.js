@@ -25,4 +25,18 @@ export const updateUser = (id, data) =>
 
 // A soft delete: the record survives with status `inactive` and drops out of
 // listings. It is somebody's appraisal history and is never removed.
-export const deactivateUser = (id) => apiFetch(`/users/${id}`, { method: "DELETE" });
+//
+// It also CLOSES the dated records that depend on the person — their unit membership
+// and any unit they lead — on `lastWorkingDay`. That date is optional and defaults
+// to today on the server, but HR is asked for it, because a leaver is processed
+// after they have gone and a fortnight of phantom service can flip whether they were
+// eligible to review a colleague.
+//
+// The response is the record plus `warnings`: one for each unit left with no lead.
+// A warning never blocks it. A person leaving is a fact that has already happened
+// and cannot be refused by paperwork — which is exactly why a unit closing can be.
+export const deactivateUser = (id, lastWorkingDay) =>
+  apiFetch(`/users/${id}`, {
+    method: "DELETE",
+    body: JSON.stringify({ lastWorkingDay }),
+  });
