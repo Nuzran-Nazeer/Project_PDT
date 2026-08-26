@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AuthContext } from "./authContext";
-import { login as loginRequest, fetchConstants } from "../services/auth";
+import { login as loginRequest, fetchConstants, fetchMe } from "../services/auth";
 import {
   clearSession,
   getStoredUser,
@@ -26,6 +26,18 @@ export function AuthProvider({ children }) {
   const [constants, setConstants] = useState(null);
   const [constantsReady, setConstantsReady] = useState(false);
 
+  // What the stored user cannot tell us. `supervisor` is not a role anybody is
+  // granted -- a person is one because they lead a unit today -- so it can only
+  // come from the server. Working it out here would be a screen deciding what
+  // somebody is, which is the pattern build rule 1 exists to stop.
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [leadsUnits, setLeadsUnits] = useState([]);
+
+  // Guards must not decide before the answer arrives, or a supervisor refreshing
+  // on their own screen is bounced off it a moment before the app learns they
+  // belong there.
+  const [sessionReady, setSessionReady] = useState(false);
+
   useEffect(() => {
     // No reset branch here: clearing state synchronously inside an effect body
     // causes a second render pass, and the React lint rule rejects it. The reset
@@ -40,6 +52,33 @@ export function AuthProvider({ children }) {
       // can reach, rather than stranding the user on a spinner.
       .catch(() => !cancelled && setConstants(null))
       .finally(() => !cancelled && setConstantsReady(true));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // Re-read on every load rather than trusting what login stored. The token is
+  // minted once and never changes, so a role granted this morning is invisible to
+  // a session that only ever reads its own copy -- and a person who stopped
+  // leading a unit keeps seeing a team that is no longer theirs.
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+    fetchMe()
+      .then((data) => {
+        if (cancelled) return;
+        setUser(data.user);
+        storeSession(token, data.user);
+        setIsSupervisor(Boolean(data.isSupervisor));
+        setLeadsUnits(data.leadsUnits || []);
+      })
+      // A rejected token is already handled: the API layer clears storage and
+      // raises the session-expired event that signs the user out. Anything else
+      // leaves the stored copy in place rather than stranding them on a spinner.
+      .catch(() => {})
+      .finally(() => !cancelled && setSessionReady(true));
 
     return () => {
       cancelled = true;
@@ -63,6 +102,9 @@ export function AuthProvider({ children }) {
     setUser(null);
     setConstants(null);
     setConstantsReady(false);
+    setIsSupervisor(false);
+    setLeadsUnits([]);
+    setSessionReady(false);
   }, []);
 
   // The API layer clears storage when a token is rejected; this is what clears the
@@ -81,6 +123,9 @@ export function AuthProvider({ children }) {
         isAuthenticated: Boolean(token),
         constants,
         constantsReady,
+        isSupervisor,
+        leadsUnits,
+        sessionReady,
         signIn,
         signOut,
       }}

@@ -9,9 +9,12 @@ import { landingPathFor } from "../utils/landing";
 // wait is one request on the first load of a session, and it is the price of not
 // keeping a second copy of that order in the client.
 export default function LandingRedirect() {
-  const { user, constants, constantsReady } = useAuth();
+  const { user, constants, constantsReady, isSupervisor, sessionReady } = useAuth();
 
-  if (!constantsReady) {
+  // Both answers are needed before choosing: the order comes from the server,
+  // and whether this person leads a unit does too. Redirecting on either alone
+  // sends a supervisor to the employee dashboard and then leaves them there.
+  if (!constantsReady || !sessionReady) {
     return (
       <p className="p-10 text-center text-muted" role="status">
         Loading…
@@ -19,5 +22,10 @@ export default function LandingRedirect() {
     );
   }
 
-  return <Navigate to={landingPathFor(user?.roles, constants?.rolePrecedence)} replace />;
+  return (
+    <Navigate
+      to={landingPathFor(user?.roles, constants?.rolePrecedence, isSupervisor)}
+      replace
+    />
+  );
 }
