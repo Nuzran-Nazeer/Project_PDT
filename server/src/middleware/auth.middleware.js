@@ -37,4 +37,27 @@ const authorize =
     next();
   };
 
-module.exports = { protect, authorize };
+// Authorization: allow the person the record is ABOUT, or anyone holding one of the
+// given roles. Must run after protect.
+//
+// This is the first scope check in the codebase, and it is deliberately the narrowest
+// one possible: "your own, and only your own". It compares the id in the URL against
+// the id in the token, so nothing a client sends can widen it.
+//
+// It is NOT the coverage check HR needs. A reader role still reaches everybody here;
+// limiting HR to the units they cover is a separate story and a separate gate.
+const authorizeSelfOr =
+  (param, ...allowedRoles) =>
+  (req, res, next) => {
+    const held = req.user?.roles || [];
+    const isSelf = String(req.params[param]) === String(req.user?.id);
+    if (!isSelf && !held.some((r) => allowedRoles.includes(r))) {
+      throw new AppError("You do not have permission for this action", 403);
+    }
+    // Downstream needs to know WHICH of the two got them in: a reader sees the whole
+    // answer, somebody reading their own record sees only what the story grants them.
+    req.isSelfRead = isSelf && !held.some((r) => allowedRoles.includes(r));
+    next();
+  };
+
+module.exports = { protect, authorize, authorizeSelfOr };

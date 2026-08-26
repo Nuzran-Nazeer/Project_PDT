@@ -1,29 +1,32 @@
 const router = require("express").Router();
 const controller = require("../controllers/supervision.controller");
-const {
-  validateReportingLineQuery,
-} = require("../validators/orgstructure.validator");
-const { protect, authorize } = require("../middleware/auth.middleware");
+const { validateReportingLineQuery } = require("../validators/orgstructure.validator");
+const { protect, authorizeSelfOr } = require("../middleware/auth.middleware");
 
-// The same read grant as /api/unit-leads, and for the same reason stated there: this
-// endpoint IS the reporting line, so anyone holding it can see who supervises whom
-// across the whole company. Widening it is not a small change.
+// Reading somebody ELSE's line is the same grant as /api/unit-leads, and for the same
+// reason stated there: this endpoint IS the reporting line, so anyone holding it can
+// see who supervises whom across the whole company.
 //
-// ⚠️ NOT SPECIFIED: whether an employee may ask who their own supervisor is. No
-// criterion in this story covers it, so the grant is deliberately no wider than the
-// collection it reads. It needs deciding for the employee dashboard, where an
-// employee plainly does need to see their own supervisor's name.
+// Reading YOUR OWN is open to any signed-in employee. That is criterion 6, added after
+// the server half was merged, and it settles what this file previously flagged as
+// unspecified: the rule is "your own, and only your own". The check compares the id in
+// the URL against the id in the token, so it cannot be widened from the client -- and
+// per the client-hides-server-enforces rule it lives HERE, not in the panel that calls it.
 //
-// ⚠️ NO SCOPE CHECK. An HR officer holding this can ask about anyone at Altrium, not
-// only the units they cover. That gate arrives with Limit access to each user's own
-// people; until then every role check in this codebase is a coarse gate.
+// ⚠️ An employee reading their own line does NOT get skipLevel. Criterion 6 grants them
+// their supervisor and nothing further, and the client already chooses not to show it --
+// but a choice made only on the client is not a rule. Stripped in the controller.
+//
+// ⚠️ NO COVERAGE CHECK. An HR officer holding this can still ask about anyone at
+// Altrium, not only the units they cover. That gate arrives with Limit access to each
+// user's own people; the role check remains a coarse one.
 const CAN_READ = ["hr", "head_of_hr", "leadership"];
 
 router
   .route("/:userId")
   .get(
     protect,
-    authorize(...CAN_READ),
+    authorizeSelfOr("userId", ...CAN_READ),
     validateReportingLineQuery,
     controller.getReportingLine,
   );
