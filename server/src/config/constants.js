@@ -165,6 +165,45 @@ const INVITE_CODE_BYTES = 32;
 // NOT specified by the design documents — chosen here, 2026-08-23, and one line to change.
 const INVITE_EXPIRY_DAYS = 7;
 
+
+// ---------------------------------------------------------------------------
+// Appraisal cycle stages
+// ---------------------------------------------------------------------------
+// THE ORDER IS THE RULE. A cycle moves forward one stage at a time and never
+// backwards, so the sequence below is not documentation -- it is what the service
+// checks a requested move against. Spec §2.10, LOCKED.
+const CYCLE_STAGES = [
+  "draft",
+  "open",
+  "collecting",
+  "supervisor_review",
+  "normalising",
+  "published",
+  "closed",
+];
+
+// Cancelled is deliberately NOT in that list. It is not a stage a cycle passes
+// through; it is a branch off the early life of one, and a cancelled cycle goes
+// nowhere afterwards. Keeping it out of the sequence is what stops "advance one
+// stage" ever landing on it by accident.
+const CYCLE_CANCELLED = "cancelled";
+
+const CYCLE_STATUS = [...CYCLE_STAGES, CYCLE_CANCELLED];
+
+// The next stage after each one, or null where there is nowhere to go.
+const NEXT_STAGE = CYCLE_STAGES.reduce((map, stage, i) => {
+  map[stage] = CYCLE_STAGES[i + 1] || null;
+  return map;
+}, {});
+
+// How long after OPENING a cycle may still be cancelled. Spec §2.9, LOCKED.
+//
+// Measured from opening, not from creation: everything in a cycle happens at its end
+// (§2.1), so 30 days is guaranteed to fall before anybody has submitted anything and
+// no work is ever destroyed by a cancellation. That guarantee is the whole reason the
+// figure is what it is, and it only holds if the clock starts when the cycle opens.
+const CYCLE_CANCEL_WINDOW_DAYS = 30;
+
 module.exports = {
   ROLES,
   GRANTABLE_ROLES,
@@ -178,6 +217,11 @@ module.exports = {
   DESIGNATION_NAMES,
   PAR_GROUPS,
   parGroupFor,
+  CYCLE_STAGES,
+  CYCLE_STATUS,
+  CYCLE_CANCELLED,
+  NEXT_STAGE,
+  CYCLE_CANCEL_WINDOW_DAYS,
   EMPLOYEE_ID_PATTERN,
   BCRYPT_COST,
   MIN_PASSWORD_LENGTH,
