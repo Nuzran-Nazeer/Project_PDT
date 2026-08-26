@@ -11,10 +11,12 @@ import { apiFetch, buildQuery } from "./api";
 //
 // `on` is optional and means today.
 
-// ⚠️ TODAY THIS RETURNS 403 TO AN EMPLOYEE ASKING ABOUT THEMSELVES. The endpoint is
-// granted to hr, head_of_hr and leadership only; the criterion that an employee may
-// see their own supervisor was added after the server half merged, and the grant has
-// not been widened yet. That change belongs on the server branch. Known, intended,
-// and the screen below is written against the endpoint as it will be.
+// An employee may ask about THEMSELVES and nobody else; hr, head_of_hr and leadership
+// may ask about anyone. The server decides that by comparing the id in the URL against
+// the id in the token, so it cannot be widened from here.
+//
+// This comment previously warned that an employee got a 403 asking about themselves.
+// That was true when the screen was written and stopped being true when the grant
+// landed on the server branch.
 export const getReportingLine = (userId, on) =>
   apiFetch(`/supervision/${userId}${buildQuery({ on })}`);
