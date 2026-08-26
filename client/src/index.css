@@ -85,6 +85,25 @@
   --color-success: oklch(0.72 0.12 155);
 }
 
+/* Scroll without a visible scrollbar.
+ *
+ * Used on the sidebar only. A panel that scrolls INSIDE a page that also scrolls
+ * puts two bars on screen at once, and the inner one reads as a defect rather than
+ * as a control. The panel still scrolls with a wheel, a trackpad and the keyboard;
+ * only the chrome is gone.
+ *
+ * Deliberately NOT applied to the page itself. Hiding the one scrollbar a reader
+ * actually uses to judge how long a page is would be a real accessibility loss,
+ * which is not the same trade as hiding a duplicate.
+ */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Global base styles.
  *
  * These go inside `@layer base` on purpose. CSS written outside a layer always
