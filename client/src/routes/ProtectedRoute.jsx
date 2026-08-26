@@ -8,7 +8,7 @@ import { useAuth } from "../hooks/useAuth";
 // server — which is why the endpoints behind these screens carry their own token
 // and role checks. Treat this as navigation, not security. (Build rule 1)
 export default function ProtectedRoute({ allow }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isSupervisor, sessionReady } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -18,8 +18,25 @@ export default function ProtectedRoute({ allow }) {
   }
 
   // `allow` is optional: omitted, the route only needs a signed-in user.
-  if (allow && !allow.some((role) => user?.roles?.includes(role))) {
-    return <Navigate to="/" replace />;
+  if (allow) {
+    // Wait for the answer before turning anybody away. `supervisor` is not in the
+    // stored user, so deciding early sends a supervisor back to the landing page
+    // on every refresh of their own screen.
+    if (!sessionReady) {
+      return (
+        <p className="p-10 text-center text-muted" role="status">
+          Loading…
+        </p>
+      );
+    }
+
+    // `supervisor` is derived and is never in `roles`, so it is answered by the
+    // server's reading of who leads a unit today. Every other name is a granted
+    // role and comes off the record.
+    const held = allow.some((role) =>
+      role === "supervisor" ? isSupervisor : user?.roles?.includes(role),
+    );
+    if (!held) return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

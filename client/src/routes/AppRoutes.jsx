@@ -89,8 +89,10 @@ function AppRoutes() {
             <Route path="/organisation/:id" element={<OrgTreePage />} />
           </Route>
 
-          {/* Unreachable until the org structure exists — `supervisor` is derived
-              from unit leadership and is deliberately not in the token. */}
+          {/* `supervisor` is not a granted role and is deliberately not in the
+              token, so this gate is answered by the server's reading of who leads
+              a unit today rather than by the stored user. It was unreachable until
+              the org structure landed. */}
           <Route element={<ProtectedRoute allow={["supervisor"]} />}>
             <Route path="/supervisor" element={<SupervisorDashboard />} />
           </Route>

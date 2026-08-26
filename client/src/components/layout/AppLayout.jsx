@@ -20,7 +20,7 @@ const ROSTER_ROLES = ["hr", "head_of_hr", "leadership"];
 const ORG_ROLES = ["hr", "head_of_hr", "leadership"];
 
 export default function AppLayout() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isSupervisor } = useAuth();
   const canSeeRoster = user?.roles?.some((role) => ROSTER_ROLES.includes(role));
   const canSeeOrg = user?.roles?.some((role) => ORG_ROLES.includes(role));
 
@@ -40,6 +40,22 @@ export default function AppLayout() {
               }
             >
               Employees
+            </NavLink>
+          )}
+
+          {/* Not driven by a role, because there is no supervisor role to hold.
+              It appears the day somebody is appointed to lead a unit and goes the
+              day their term is closed, without anybody editing their account. */}
+          {isSupervisor && (
+            <NavLink
+              to="/supervisor"
+              className={({ isActive }) =>
+                `text-sm font-medium transition-colors hover:text-brand ${
+                  isActive ? "text-brand" : "text-muted"
+                }`
+              }
+            >
+              My team
             </NavLink>
           )}
 
