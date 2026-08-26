@@ -8,6 +8,7 @@ import ActivatePage from "../pages/ActivatePage";
 import StatusPage from "../pages/StatusPage";
 import Dashboard from "../pages/dashboards/Dashboard";
 import PendingTabPage from "../pages/dashboards/PendingTabPage";
+import MyTeamPage from "../pages/dashboards/MyTeamPage";
 import EmployeeListPage from "../pages/employees/EmployeeListPage";
 import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import EmployeeFormPage from "../pages/employees/EmployeeFormPage";
@@ -22,8 +23,8 @@ import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 //
 // THE SIDEBAR TABS ARE GENERATED, not typed out. Each one is a row in
 // utils/dashboardTabs.js, and this file turns every row into a route so the sidebar
-// can never offer a link that goes nowhere. The pages behind them are honest
-// placeholders until their stories land, which is why they all render one component.
+// can never offer a link that goes nowhere. A tab whose story has landed names its
+// page in TAB_PAGES below; every other one falls through to the honest placeholder.
 //
 // The six old per role paths are kept as redirects rather than deleted. They are
 // still what the landing redirect resolves to after signing in, so removing them
@@ -35,13 +36,26 @@ import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // Which roles reach which group's tabs. `null` means any signed in user, which is
 // right for the employee tabs because everybody is an employee.
+// Entries for groups still held out of the registry are harmless: a group with no
+// tabs is never iterated. They stay so a restored group arrives with its gate already
+// written rather than open by omission.
 const GROUP_ACCESS = {
   employee: null,
+  // Not a granted role. It is answered by the server's reading of who leads a unit
+  // today, so somebody who stops leading one loses these tabs without anybody editing
+  // their account.
   supervisor: ["supervisor"],
   hr: ["hr", "head_of_hr"],
   oversight: ["head_of_hr"],
   leadership: ["leadership"],
   admin: ["admin"],
+};
+
+// A tab that has been BUILT names its page here. Everything else falls through to the
+// one honest placeholder, which is why adding a screen is a row in the registry plus a
+// line here, and never a route written by hand.
+const TAB_PAGES = {
+  "my-team": MyTeamPage,
 };
 
 function AppRoutes() {
@@ -73,9 +87,16 @@ function AppRoutes() {
           {/* One route per sidebar tab, generated from the registry. */}
           {Object.entries(TABS_BY_GROUP).map(([group, tabs]) => {
             const allow = GROUP_ACCESS[group];
-            const routes = tabs.map((tab) => (
-              <Route key={tab.id} path={tab.path} element={<PendingTabPage tab={tab} />} />
-            ));
+            const routes = tabs.map((tab) => {
+              const Page = TAB_PAGES[tab.id];
+              return (
+                <Route
+                  key={tab.id}
+                  path={tab.path}
+                  element={Page ? <Page /> : <PendingTabPage tab={tab} />}
+                />
+              );
+            });
 
             return allow ? (
               <Route key={group} element={<ProtectedRoute allow={allow} />}>

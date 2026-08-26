@@ -1,5 +1,6 @@
 import { useAuth } from "../../hooks/useAuth";
 import { useReportingLine } from "../../hooks/useReportingLine";
+import { useTeam } from "../../hooks/useTeam";
 import { sectionGroupsFor } from "../../utils/dashboardSections";
 import { GROUP_OVERVIEW, TABS_BY_GROUP } from "../../utils/dashboardTabs";
 import { formatDate } from "../../utils/dates";
@@ -36,6 +37,8 @@ import MySupervisorPanel from "../../components/org/MySupervisorPanel";
 export default function Dashboard() {
   const { user, isSupervisor, sessionReady } = useAuth();
   const { line, loading: lineLoading, error: lineError } = useReportingLine();
+  // Asks nothing at all for somebody who leads nothing, which is most people.
+  const { team } = useTeam();
 
   // Whether somebody leads a unit is answered by the server, and is false until the
   // answer lands. Drawing first would show one dashboard and then rearrange it under
@@ -54,7 +57,7 @@ export default function Dashboard() {
 
   const tiles = SHOW_PLACEHOLDER_FIGURES
     ? PLACEHOLDER_TILES[primary] || PLACEHOLDER_TILES.employee
-    : realTiles(user, line, lineLoading);
+    : realTiles(user, line, lineLoading, team);
 
   return (
     <>
@@ -114,7 +117,7 @@ export default function Dashboard() {
           >
             <div className="grid gap-3">
               {tabs.map((tab) => (
-                <ActionRow key={tab.id} tab={tab} />
+                <ActionRow key={tab.id} tab={tab} status={rowStatus(tab.id, team)} />
               ))}
             </div>
           </Section>
@@ -134,10 +137,20 @@ export default function Dashboard() {
 // A tile is left out rather than shown empty when its value is missing, so an
 // administrator with no unit and no appraisal group gets fewer tiles rather than a row
 // reading "None".
-function realTiles(user, line, lineLoading) {
+function realTiles(user, line, lineLoading, team) {
   const unit = lineLoading ? "…" : line?.unit?.name;
 
   return [
+    // First for a supervisor, because it is the reason they are looking. Absent for
+    // everybody else rather than shown as nought, which would read as "your team is
+    // empty" instead of "you do not have one".
+    team && {
+      value: String(team.total),
+      label:
+        team.total === 1 ? "Person you supervise" : "People you supervise",
+      icon: "users",
+      tone: "blue",
+    },
     {
       value: unit || "No unit",
       // The two labels say different things, and the second is a real fact about this
@@ -165,6 +178,24 @@ function realTiles(user, line, lineLoading) {
       tone: "amber",
     },
   ].filter(Boolean);
+}
+
+// The one action row that can carry a TRUE figure today. Everything else returns
+// undefined and falls back to whatever the placeholder file says, which is nothing
+// while its flag is off.
+//
+// Undefined rather than an empty array on purpose: an empty array is truthy, and
+// returning one would silently suppress the placeholder for every other row.
+function rowStatus(tabId, team) {
+  if (tabId !== "my-team" || !team) return undefined;
+
+  return [
+    {
+      text: `${team.total} ${team.total === 1 ? "person" : "people"}`,
+      tone: "muted",
+      icon: "users",
+    },
+  ];
 }
 
 function Section({ heading, children }) {

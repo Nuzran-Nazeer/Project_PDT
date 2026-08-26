@@ -13,19 +13,19 @@
 // `title` and `description` are the mockups' own wording, so the running app and the
 // deck in Deliverables/UI-Mockups/ say the same thing.
 //
-// ⚠️ ONLY THE EMPLOYEE GROUP IS HERE. The mockups design 30 screens across six roles,
-// and the supervisor, HR, oversight, leadership and admin groups were written out in
-// full while this machinery was being built. They were taken back out on 2026-08-26:
-// the HR dashboard is story 16 and the supervisor dashboard is story 17, so their tabs
-// are their stories' work, not this one's. The definitions are kept verbatim in
-// `Project PDT/PDT-DASHBOARD-TABS-PENDING.md`, which sits outside the repository, along
-// with the three edits needed to put a group back.
+// ⚠️ ONLY DELIVERED GROUPS ARE HERE. The mockups design 30 screens across six roles.
+// The employee group landed with story 15 and the supervisor group with story 17; the
+// HR, oversight, leadership and admin groups are still held out, because their tabs
+// are their own stories' work. Their definitions are kept verbatim in
+// `Project PDT/PDT-DASHBOARD-TABS-PENDING.md`, which sits outside the repository,
+// along with the three edits needed to put a group back.
 
 // The label above each group in the sidebar. The employee group has two, because the
 // mockups call it MENU when it is all a person has and MY OWN APPRAISAL when it sits
 // underneath a wider role's group.
 export const GROUP_LABELS = {
   employee: { primary: "Menu", secondary: "My own appraisal" },
+  supervisor: { primary: "Supervisor", secondary: "Supervisor" },
 };
 
 // The heading above this group's action rows on the overview, and the page title when
@@ -36,6 +36,12 @@ export const GROUP_OVERVIEW = {
     roleLabel: "Employee",
     primaryHeading: "Actions",
     secondaryHeading: "My own appraisal",
+  },
+  supervisor: {
+    pageTitle: "Supervisor dashboard",
+    roleLabel: "Supervisor",
+    primaryHeading: "Your team",
+    secondaryHeading: "Your team",
   },
 };
 
@@ -101,6 +107,56 @@ export const TABS_BY_GROUP = {
       icon: "book",
       title: "My history",
       description: "Every past cycle, with no time limit",
+      built: false,
+    },
+  ],
+
+  supervisor: [
+    {
+      id: "my-team",
+      path: "/my-team",
+      label: "My team",
+      icon: "users",
+      title: "My team",
+      description: "The people you supervise this cycle",
+      // The only supervisor tab with data behind it. The PEOPLE are real, read from
+      // the unit tree and the dated leadership records; their submissions are not,
+      // because no cycle or review collection exists.
+      built: true,
+    },
+    {
+      id: "reviews-i-owe",
+      path: "/reviews-i-owe",
+      label: "Reviews I owe",
+      icon: "clipboard",
+      title: "Reviews I owe",
+      description: "Write a review once colleague feedback is in",
+      built: false,
+      // Criterion 3. A review is READY when the self-assessment is in and the minimum
+      // colleague responses have arrived, and BLOCKED otherwise, saying which is
+      // missing. Both halves of that test need collections that do not exist.
+    },
+    {
+      id: "colleague-feedback",
+      path: "/colleague-feedback",
+      label: "Colleague feedback",
+      icon: "message",
+      title: "Colleague feedback to read",
+      description: "Released in batches once half have submitted",
+      built: false,
+      // ⚠️ THIS IS THE TRIPWIRE. It is the first screen that would serve a feedback
+      // record, and the shared function that strips reviewer identity does not exist
+      // yet. That function must land BEFORE this tab is built, not after: retrofitting
+      // anonymity means walking back through every working endpoint removing a field,
+      // with no error when one is missed.
+    },
+    {
+      id: "team-plans",
+      path: "/team-plans",
+      label: "Team plans",
+      icon: "trend",
+      title: "Team development plans",
+      description: "Progress on the actions your team agreed",
       built: false,
     },
   ],
