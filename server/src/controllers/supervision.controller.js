@@ -1,6 +1,16 @@
 const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/supervision.service");
 
+// The people this person supervises on a date. Story 17, criterion 1.
+//
+// Nothing is trimmed for a self read, unlike the reporting line. There the employee
+// is granted their supervisor and NOT their skip-level, so the answer has parts they
+// may not have. Here the whole answer is about them: these are their own reports.
+exports.getTeam = asyncHandler(async (req, res) => {
+  const on = req.query.on || new Date();
+  res.json(await service.teamOn(req.params.userId, on));
+});
+
 exports.getReportingLine = asyncHandler(async (req, res) => {
   // No `on` means "as things stand today". The service normalises whatever arrives
   // to UTC midnight, so a bare Date here is the same day HR would have typed.

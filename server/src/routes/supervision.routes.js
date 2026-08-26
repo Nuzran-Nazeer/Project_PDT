@@ -22,6 +22,22 @@ const { protect, authorizeSelfOr } = require("../middleware/auth.middleware");
 // user's own people; the role check remains a coarse one.
 const CAN_READ = ["hr", "head_of_hr", "leadership"];
 
+// Your own team, or anybody's if you hold a reader role. Same grant and the same
+// middleware as the reporting line below, because it is the same fact read from the
+// other end: the people whose supervisor is this person.
+//
+// Declared before /:userId for readability. Express would not confuse the two anyway
+// -- one segment cannot match two -- but a reader scanning this file should meet the
+// more specific route first.
+router
+  .route("/team/:userId")
+  .get(
+    protect,
+    authorizeSelfOr("userId", ...CAN_READ),
+    validateReportingLineQuery,
+    controller.getTeam,
+  );
+
 router
   .route("/:userId")
   .get(

@@ -1,9 +1,10 @@
 const OrgUnit = require("../models/orgunit.model");
 const User = require("../models/user.model");
+const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
-const { toDay } = require("../utils/dateRange");
+const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
-const { leadOn } = require("./unitlead.service");
+const { leadOn, listLeads } = require("./unitlead.service");
 
 // THE reporting line: one place that answers who supervises whom, on any date.
 //
@@ -164,5 +165,132 @@ exports.reportingLineOn = async (userId, date) => {
       supervisor && String(supervisor.unit._id) !== String(ownUnit._id),
     ),
     skipLevel: asLead(skipLevel),
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Walking DOWN the tree
+// ---------------------------------------------------------------------------
+// The mirror of climbToLead, and it has to be, or the system contradicts itself:
+// "who is my supervisor" and "who is on my team" are the same fact read from two
+// ends. If they were computed by two different rules, somebody could be supervised
+// by a person whose team they do not appear on, and nobody would notice until an
+// appraisal went unwritten.
+//
+// From a unit somebody leads, their team is that unit's members PLUS the members of
+// any unit below it that has no lead of its own on the date. The spec is explicit:
+// "a supervisor leaves and is not replaced -- their boss writes that stretch... a
+// vacancy resolves upward on its own." Read from the other end, that means the boss
+// picks up the leaderless unit's people, and the walk keeps going down through a
+// leaderless unit's own children.
+//
+// THE DESCENT STOPS AT A UNIT THAT HAS A LEAD. Those people are that lead's team,
+// not this one's -- climbToLead would have stopped there too.
+//
+// `active` is deliberately NOT filtered. A discontinued unit holds no members, so it
+// contributes nothing today; but for a PAST date it may have held people who needed
+// supervising then, and filtering on a flag that carries no date would silently drop
+// them from a historical answer.
+const unitsSupervisedFrom = async (rootUnitId, day) => {
+  const collected = [];
+  const seen = new Set();
+  const queue = [{ id: rootUnitId, viaVacancy: false }];
+
+  while (queue.length) {
+    const { id, viaVacancy } = queue.shift();
+    const step = String(id);
+
+    // Only reachable if the tree is already looped, which the unit service prevents
+    // on every write. Same guard, same reason, as the climb.
+    if (seen.has(step)) continue;
+    seen.add(step);
+
+    collected.push({ id, viaVacancy });
+
+    const children = await OrgUnit.find({ parentUnitId: id }).select("_id");
+    for (const child of children) {
+      // A child with its own lead belongs to that lead, so the walk stops there.
+      const childLead = await leadOn(child._id, day);
+      if (childLead) continue;
+      queue.push({ id: child._id, viaVacancy: true });
+    }
+  }
+
+  return collected;
+};
+
+// ---------------------------------------------------------------------------
+// The people somebody supervises on a date
+// ---------------------------------------------------------------------------
+// Story 17, criterion 1. It answers the PEOPLE, not their submissions: no cycle,
+// review or feedback collection exists yet, so a submission column has nothing to
+// read. This is the half of that criterion the data can support today.
+//
+// Somebody who leads nothing gets an empty team, which is a real answer rather than
+// an error -- most people lead nothing.
+//
+// ⚠️ NO COVERAGE CHECK, same as the reporting line. A reader role can ask about
+// anybody's team, not only the units they cover. That gate arrives with "Limit access
+// to each user's own people".
+exports.teamOn = async (userId, date) => {
+  const user = await User.findById(userId).select("_id name employeeId");
+  if (!user) throw new AppError("Employee not found", 404);
+
+  const day = toDay(date, "on");
+  const { items: leadRecords } = await listLeads({ userId, on: day });
+
+  // Keyed by unit so two led units sharing a leaderless descendant collect it once.
+  // A unit reached DIRECTLY beats the same unit reached through a vacancy, because
+  // the direct answer is the more specific one and it is what the screen should say.
+  const byUnit = new Map();
+  for (const record of leadRecords) {
+    const rootId = record.unitId?._id || record.unitId;
+    if (!rootId) continue;
+
+    for (const found of await unitsSupervisedFrom(rootId, day)) {
+      const key = String(found.id);
+      if (!byUnit.has(key) || !found.viaVacancy) byUnit.set(key, found);
+    }
+  }
+
+  const unitIds = [...byUnit.values()].map((u) => u.id);
+
+  // One query rather than one per unit. Empty in, nothing out -- an `$in: []` matches
+  // nothing, but skipping the round trip is clearer than relying on that.
+  //
+  // Status is deliberately not filtered. Deactivating somebody CLOSES their
+  // membership, so a leaver drops out of today's answer through the dates rather than
+  // through a flag -- and for a past date they should still appear, because they were
+  // on the team then.
+  const memberships = unitIds.length
+    ? await UnitMembership.find({ unitId: { $in: unitIds }, ...activeOn(day) })
+        .populate("userId", "name employeeId designation")
+        .populate("unitId", "name type")
+    : [];
+
+  const team = memberships
+    // A person who leads the root can also be a member of it, because the
+    // lead-sits-in-the-parent-unit rule exempts the root. Without this they appear on
+    // their own team. The climb guards against the same hole from the other end.
+    .filter((m) => m.userId && String(m.userId._id) !== String(user._id))
+    .map((m) => ({
+      ...asPerson(m.userId),
+      designation: m.userId.designation,
+      unit: asUnit(m.unitId),
+      // True when this person is here because their own unit has no lead. A screen
+      // can then explain why somebody from a unit the supervisor does not lead is on
+      // their list, rather than looking like a bug. The mirror of `resolvedUpward`.
+      viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    supervisor: asPerson(user),
+    on: day.toISOString().slice(0, 10),
+    // The units they actually lead, which is not the same as the units their team
+    // sits in -- the difference is exactly the vacancies.
+    leads: leadRecords.map((record) => asUnit(record.unitId)),
+    team,
+    total: team.length,
   };
 };
