@@ -17,3 +17,9 @@ exports.activate = asyncHandler(async (req, res) => {
   const user = await inviteService.activateAccount(req.body);
   res.json(user);
 });
+
+// The signed-in person, re-read. The client calls this after login and on a refresh,
+// so a role granted or a unit handed over takes effect without signing out.
+exports.me = asyncHandler(async (req, res) => {
+  res.json(await authService.currentSession(req.user.id));
+});
