@@ -7,6 +7,7 @@ const orgUnitRoutes = require("./orgunit.routes");
 const unitMembershipRoutes = require("./unitmembership.routes");
 const unitLeadRoutes = require("./unitlead.routes");
 const supervisionRoutes = require("./supervision.routes");
+const cycleRoutes = require("./cycle.routes");
 
 // Health check: reports live DB connection state (consumed by the frontend).
 router.get("/status", (req, res) => {
@@ -40,5 +41,10 @@ router.use("/unit-leads", unitLeadRoutes);
 // user record -- putting it at /users/:id/supervisor would imply a field that the
 // data model specifically forbids.
 router.use("/supervision", supervisionRoutes);
+
+// The appraisal cycle. Top level rather than under anything else: a cycle covers an
+// appraisal GROUP, which is not a unit and not a person, so it is nobody's
+// sub-resource. Everything in the Reviews & Feedback epic will hang off it.
+router.use("/cycles", cycleRoutes);
 
 module.exports = router;
