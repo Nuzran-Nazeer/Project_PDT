@@ -304,31 +304,18 @@ export const TABS_BY_GROUP = {
       // because no cycle or review collection exists.
       built: true,
     },
+    // "Reviews I owe" and "Colleague feedback" were removed 2026-08-27. Everything a
+    // supervisor does about somebody now hangs off the team member screen.
     {
-      id: "reviews-i-owe",
-      path: "/reviews-i-owe",
-      label: "Reviews I owe",
-      icon: "clipboard",
-      title: "Reviews I owe",
-      description: "Write a review once colleague feedback is in",
-      built: false,
-      // Criterion 3. A review is READY when the self-assessment is in and the minimum
-      // colleague responses have arrived, and BLOCKED otherwise, saying which is
-      // missing. Both halves of that test need collections that do not exist.
-    },
-    {
-      id: "colleague-feedback",
-      path: "/colleague-feedback",
-      label: "Colleague feedback",
+      id: "team-feedback",
+      path: "/team-feedback",
+      label: "Team feedback",
       icon: "message",
-      title: "Colleague feedback to read",
-      description: "Released in batches once half have submitted",
+      title: "Team feedback",
+      description: "What the people you supervise said about you, anonymised",
       built: false,
-      // ⚠️ THIS IS THE TRIPWIRE. It is the first screen that would serve a feedback
-      // record, and the shared function that strips reviewer identity does not exist
-      // yet. That function must land BEFORE this tab is built, not after: retrofitting
-      // anonymity means walking back through every working endpoint removing a field,
-      // with no error when one is missed.
+      // Renamed from "Colleague feedback". Upward feedback, not what a supervisor
+      // reads about their team, which lives on the team member screen.
     },
     {
       id: "team-plans",
