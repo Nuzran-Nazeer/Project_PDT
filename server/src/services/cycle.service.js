@@ -1,7 +1,8 @@
 const Cycle = require("../models/cycle.model");
 const User = require("../models/user.model");
+const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
-const { toDay, assertOrderedRange } = require("../utils/dateRange");
+const { toDay, assertOrderedRange, activeOn } = require("../utils/dateRange");
 const {
   CYCLE_STAGES,
   CYCLE_CANCELLED,
@@ -52,9 +53,61 @@ const assertUserExists = async (userId) => {
 // ---------------------------------------------------------------------------
 
 exports.getCycleById = async (id) => {
-  const cycle = await Cycle.findById(id).populate("openedBy cancelledBy", "name employeeId");
+  const cycle = await Cycle.findById(id).populate(
+    "openedBy cancelledBy",
+    "name employeeId",
+  );
   if (!cycle) throw new AppError("Cycle not found", 404);
   return cycle;
+};
+
+// ---------------------------------------------------------------------------
+// Who a cycle covers
+// ---------------------------------------------------------------------------
+//
+// NOTHING STORES A ROSTER, and nothing should. A cycle covers an appraisal GROUP, and
+// a person's group is derived from their joining date -- so "who is in the April 2026
+// cycle" is a question about the people, answered when it is asked. Copying a list of
+// members onto the cycle would duplicate a fact that is already true on each record,
+// and the two would disagree the first time somebody joins mid-cycle.
+//
+// TWO CONDITIONS, and the second is the one that is easy to miss. A person is covered
+// when their group matches AND they belong to a unit today: someone in no unit has no
+// supervisor, and the design says they are not appraised. The technical admin account
+// is the standing example.
+//
+// Anybody excluded by that second condition is still RETURNED, carrying `appraised:
+// false` and the reason. Dropping them silently would leave HR looking at a count that
+// is short by one with nothing on screen to explain it.
+const coverageFor = async (parGroup, on = new Date()) => {
+  const day = toDay(on, "date");
+
+  const people = await User.find({ parGroup, status: { $ne: "inactive" } })
+    .select("name employeeId designation jobFamily level location status")
+    .sort({ name: 1 })
+    .lean();
+
+  const memberships = await UnitMembership.find({
+    userId: { $in: people.map((p) => p._id) },
+    ...activeOn(day),
+  })
+    .populate("unitId", "name type")
+    .lean();
+
+  const unitFor = new Map(memberships.map((m) => [String(m.userId), m.unitId]));
+
+  return people.map((person) => {
+    const unit = unitFor.get(String(person._id)) || null;
+    return {
+      ...person,
+      unit,
+      appraised: Boolean(unit),
+      // The one reason a person in the right group is still not covered. Written out
+      // rather than left for the screen to infer from a null unit, so the rule lives
+      // in one place instead of being restated in every interface that shows this.
+      notAppraisedBecause: unit ? null : "Belongs to no unit, so has no supervisor",
+    };
+  });
 };
 
 exports.listCycles = async ({ parGroup, year, status } = {}) => {
@@ -67,9 +120,48 @@ exports.listCycles = async ({ parGroup, year, status } = {}) => {
   // for the first cycle the company ever ran.
   const items = await Cycle.find(filter)
     .sort({ year: -1, createdAt: -1 })
-    .populate("openedBy cancelledBy", "name employeeId");
+    .populate("openedBy cancelledBy", "name employeeId")
+    .lean();
 
-  return { items, total: items.length };
+  // The headcount per card. Counted per GROUP rather than per cycle, because that is
+  // what it actually depends on -- two cycles for the same group in different years
+  // ask the same question of the same people, and a per-cycle query would run the
+  // same count five times for a five-card list.
+  //
+  // ⚠️ IT IS TODAY'S COUNT, on every card, including a cycle that closed last year.
+  // Who belonged to that group in March 2025 is answerable -- the membership records
+  // are dated -- but no criterion asks for it, and pretending a historical figure is
+  // being shown would be worse than showing a current one plainly labelled.
+  const groups = [...new Set(items.map((c) => c.parGroup))];
+  const counts = new Map();
+  for (const group of groups) {
+    const covered = await coverageFor(group);
+    counts.set(group, covered.filter((p) => p.appraised).length);
+  }
+
+  return {
+    items: items.map((c) => ({ ...c, peopleCount: counts.get(c.parGroup) ?? 0 })),
+    total: items.length,
+  };
+};
+
+// The people a cycle covers, for the drill-down from its card.
+//
+// ⚠️ IT CARRIES NO REVIEW STATUS, because there are no reviews. Reviews, feedback and
+// self-assessments have no model and no collection yet, so every "where has this person
+// got to" question is unanswerable and the screen says so in those words rather than
+// inventing a state. When those land, the status belongs HERE, next to the person, and
+// the interface should not have to join two calls to show it.
+exports.peopleInCycle = async (id) => {
+  const cycle = await exports.getCycleById(id);
+  const people = await coverageFor(cycle.parGroup);
+
+  return {
+    cycle,
+    items: people,
+    total: people.length,
+    appraised: people.filter((p) => p.appraised).length,
+  };
 };
 
 // Criterion 8. The cycle a group is in right now, or null.
