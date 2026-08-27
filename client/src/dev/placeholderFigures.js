@@ -52,34 +52,37 @@
 // version back for a walkthrough.
 export const SHOW_PLACEHOLDER_FIGURES = false;
 
-// The banner beside the greeting.
+// THE CYCLE BANNER IS GONE FROM THIS FILE, and that is this file's own rule working
+// as intended: a figure comes out the moment the data behind it exists. The cycle
+// collection landed on 2026-08-27, so the banner now reads GET /cycles/current through
+// hooks/useCurrentCycle.js and is real.
 //
-// The PAR group is the ONE real thing in it: it is derived from the signed in person's
-// joining date and is already on their record, so it is passed in rather than invented.
-// Everything else is placeholder.
-export function placeholderCycleFor(parGroup) {
-  const groupName = parGroup ? `${parGroup} group` : "all groups";
-  const year = new Date().getFullYear();
-
-  // Only the employee banner is here. The supervisor, HR, oversight, leadership and
-  // admin versions were written and then held back with their groups; they are in
-  // Project PDT/PDT-DASHBOARD-TABS-PENDING.md.
-  return {
-    title: `PAR ${year} · ${groupName}`,
-    detail: "Collecting. Your self-assessment and your colleague reviews are open.",
-    metricLabel: "Self-assessment",
-    metricValue: "4 of 6",
-    percent: 67,
-  };
-}
+// Its "4 of 6" and its 67% progress bar did NOT come back as real figures, because
+// nothing measures that yet -- there are no self-assessments. A bar is a claim about a
+// proportion completed, so the card shows the cycle's STAGE instead, which is a fact.
 
 // The four tiles under QUICK OVERVIEW, for whichever group is the primary one.
 export const PLACEHOLDER_TILES = {
   employee: [
-    { value: "4 of 6", label: "Competencies you have answered", icon: "clipboard", tone: "violet" },
-    { value: "3 of 8", label: "Colleague reviews you have written", icon: "message", tone: "blue" },
+    {
+      value: "4 of 6",
+      label: "Competencies you have answered",
+      icon: "clipboard",
+      tone: "violet",
+    },
+    {
+      value: "3 of 8",
+      label: "Colleague reviews you have written",
+      icon: "message",
+      tone: "blue",
+    },
     { value: "5", label: "Plan actions in progress", icon: "trend", tone: "amber" },
-    { value: "8 days", label: "Until collecting closes", icon: "calendar", tone: "green" },
+    {
+      value: "8 days",
+      label: "Until collecting closes",
+      icon: "calendar",
+      tone: "green",
+    },
   ],
 };
 
@@ -91,7 +94,9 @@ export const PLACEHOLDER_ROW_STATUS = {
     { text: "8 assigned", tone: "muted", icon: "users" },
     { text: "3 submitted", tone: "good", icon: "check" },
   ],
-  "my-result": [{ text: "PAR 2025 published, not acknowledged", tone: "warn", icon: "file" }],
+  "my-result": [
+    { text: "PAR 2025 published, not acknowledged", tone: "warn", icon: "file" },
+  ],
   "my-development-plan": [
     { text: "5 actions", tone: "muted", icon: "trend" },
     { text: "1 not started", tone: "warn", icon: "clock" },

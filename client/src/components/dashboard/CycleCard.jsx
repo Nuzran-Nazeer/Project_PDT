@@ -1,27 +1,59 @@
 import Icon from "../common/Icon";
-import { SHOW_PLACEHOLDER_FIGURES } from "../../dev/placeholderFigures";
+import { formatDate } from "../../utils/dates";
 
-// The cycle banner beside the greeting: which appraisal cycle is running, where it
-// stands, and what is due.
+// The cycle banner beside the greeting: which appraisal cycle the person's group is
+// in, and where it has got to.
 //
-// ⚠️ ALL OF IT IS INVENTED TODAY. There is no cycle collection on the server, so there
-// is no cycle to read. When the flag in dev/placeholderFigures.js is turned off this
-// card says so in plain words rather than showing a bar at nought percent, because a
-// progress bar at nought is itself a claim: it says the cycle exists and nobody has
-// done anything, which is a different and false statement.
+// IT IS REAL NOW. It reads GET /cycles/current, which takes no arguments and answers
+// from the signed in person's own record. Until 2026-08-27 every word of this card was
+// invented, and it is the first part of the employee dashboard's first criterion to
+// stop being a placeholder.
 //
-// The first thing that makes this real is seeding a cycle and the competency set on
-// the server. That is one seed script, and it turns this card, the self-assessment
-// tab and two of the four tiles into real screens at once.
-export default function CycleCard({ cycle }) {
-  if (!SHOW_PLACEHOLDER_FIGURES || !cycle) {
+// ⚠️ THERE IS NO PROGRESS BAR, AND ITS ABSENCE IS DELIBERATE. The old placeholder drew
+// one, and a bar is a claim: it says a proportion of something has been completed.
+// Nothing measures that yet -- there are no reviews, no feedback and no
+// self-assessments -- so any figure in it would be invented, and a bar sitting at
+// nought would say "the cycle is running and nobody has done anything", which is a
+// different and false statement. The stage name IS the progress: a cycle at
+// "Collecting" tells a reader exactly where it is.
+//
+// NULL IS A REAL ANSWER. For most of the year a group is between cycles, and a draft
+// does not count because it has not opened. Those are different sentences from "no
+// cycle has ever been created", and this card says which.
+
+const STAGE_LABELS = {
+  open: "Open",
+  collecting: "Collecting",
+  supervisor_review: "Supervisor review",
+  normalising: "Normalising",
+  published: "Published",
+};
+
+export default function CycleCard({ cycle, parGroup, loading }) {
+  if (loading) {
     return (
       <div className="rounded-xl border border-dashed border-line p-5">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">
           Appraisal cycle
         </p>
+        <p className="mt-2 text-sm text-muted">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!cycle) {
+    return (
+      <div className="rounded-xl border border-dashed border-line p-5">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Appraisal cycle
+        </p>
+        {/* Two different sentences, because they mean different things to the reader.
+            Somebody with no appraisal group is not waiting for a cycle at all -- they
+            belong to no unit, so nobody supervises them and they are not appraised. */}
         <p className="mt-2 text-sm text-muted">
-          No cycle has been created yet, so there is nothing running to report on.
+          {parGroup
+            ? `The ${parGroup} group has no cycle running at the moment.`
+            : "You are not in an appraisal group, so no cycle applies to you."}
         </p>
       </div>
     );
@@ -35,24 +67,21 @@ export default function CycleCard({ cycle }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-ink">{cycle.title}</p>
-          <p className="truncate text-[13px] text-muted">{cycle.detail}</p>
+          <p className="truncate font-semibold text-ink">
+            {cycle.parGroup} group · {cycle.year}
+          </p>
+          <p className="truncate text-[13px] text-muted">
+            {formatDate(cycle.startDate)} to {formatDate(cycle.endDate)}
+          </p>
         </div>
 
-        <div className="min-w-[180px] flex-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[13px] text-muted">{cycle.metricLabel}</span>
-            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-              {cycle.metricValue}
-            </span>
-          </div>
-
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
-            <div
-              className="h-full rounded-full bg-emerald-500"
-              style={{ width: `${cycle.percent}%` }}
-            />
-          </div>
+        {/* The stage, standing where the progress bar used to. It is the one honest
+            statement of where the cycle has got to. */}
+        <div className="shrink-0">
+          <p className="text-[13px] text-muted">Stage</p>
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+            {STAGE_LABELS[cycle.status] || cycle.status}
+          </p>
         </div>
       </div>
     </div>
