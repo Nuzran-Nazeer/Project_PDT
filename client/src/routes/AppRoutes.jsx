@@ -9,6 +9,14 @@ import StatusPage from "../pages/StatusPage";
 import Dashboard from "../pages/dashboards/Dashboard";
 import PendingTabPage from "../pages/dashboards/PendingTabPage";
 import MyTeamPage from "../pages/dashboards/MyTeamPage";
+import SelfAssessmentShell from "../pages/shells/SelfAssessmentShell";
+import FeedbackOwedShell from "../pages/shells/FeedbackOwedShell";
+import MyResultShell from "../pages/shells/MyResultShell";
+import SelfAssessmentFormShell from "../pages/shells/SelfAssessmentFormShell";
+import PeerReviewFormShell from "../pages/shells/PeerReviewFormShell";
+import TeamMemberShell from "../pages/shells/TeamMemberShell";
+import SupervisorReviewFormShell from "../pages/shells/SupervisorReviewFormShell";
+import NormalisationShell from "../pages/shells/NormalisationShell";
 import EmployeeListPage from "../pages/employees/EmployeeListPage";
 import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import EmployeeFormPage from "../pages/employees/EmployeeFormPage";
@@ -58,6 +66,14 @@ const GROUP_ACCESS = {
 // line here, and never a route written by hand.
 const TAB_PAGES = {
   "my-team": MyTeamPage,
+
+  // The appraisal journey, as shells. Each shows the real shape of its step with no
+  // data behind it, because the collections behind them do not exist yet. They are
+  // named here like any built page: a shell is a page, not a special case, and when
+  // the real form replaces one only this line's target changes.
+  "my-self-assessment": SelfAssessmentShell,
+  "feedback-i-owe": FeedbackOwedShell,
+  "my-result": MyResultShell,
 };
 
 function AppRoutes() {
@@ -136,6 +152,20 @@ function AppRoutes() {
           </Route>
           <Route element={<ProtectedRoute allow={["supervisor"]} />}>
             <Route path="/supervisor" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+
+          {/* The appraisal journey. Drill-downs, not sidebar destinations, so they are
+              written by hand: a registry entry would put each in somebody's sidebar.
+              The team routes read a self-scoped endpoint, so a non-supervisor reaching
+              them by URL finds an empty screen, not somebody else's data. */}
+          <Route path="/my-self-assessment/form" element={<SelfAssessmentFormShell />} />
+          <Route path="/feedback-i-owe/form" element={<PeerReviewFormShell />} />
+          <Route path="/feedback-i-owe/:id" element={<PeerReviewFormShell />} />
+
+          <Route element={<ProtectedRoute allow={["supervisor"]} />}>
+            <Route path="/my-team/:id" element={<TeamMemberShell />} />
+            <Route path="/my-team/:id/review" element={<SupervisorReviewFormShell />} />
+            <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
           </Route>
 
           {/* Reading the roster is wider than changing it, which is what the server

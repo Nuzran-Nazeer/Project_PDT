@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
@@ -9,7 +10,7 @@ import Icon from "../../components/common/Icon";
 // submissions listed by name, and there is no cycle, review or feedback collection
 // for a submission status to come from. So the list is real and the status column
 // says plainly that it does not exist yet, rather than showing every row as "not
-// started" — which would be a claim about their work rather than about the system.
+// started", which would be a claim about their work rather than about the system.
 //
 // NOTHING HERE IS A COUNT OF REVIEWERS. Criterion 2 says peer reviewers appear as a
 // count only, never named and never timed. When that column arrives it is a number
@@ -40,7 +41,10 @@ export default function MyTeamPage() {
       )}
 
       {error ? (
-        <p role="alert" className="rounded-xl border border-line bg-raised p-5 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
+        >
           {error}
         </p>
       ) : loading ? (
@@ -69,6 +73,7 @@ export default function MyTeamPage() {
                 <Th>Designation</Th>
                 <Th>Unit</Th>
                 <Th>This cycle</Th>
+                <Th>Review</Th>
               </tr>
             </thead>
 
@@ -92,6 +97,16 @@ export default function MyTeamPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted">Not built yet</td>
+                  {/* The way in to one person's review. Two flat tabs were removed
+                      for this. */}
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/my-team/${person.id}`}
+                      className="text-sm text-brand transition-colors hover:underline"
+                    >
+                      View
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
