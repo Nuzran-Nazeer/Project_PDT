@@ -9,6 +9,7 @@ const {
   DESIGNATION_NAMES,
   ORG_UNIT_TYPES,
   PAR_GROUPS,
+  competenciesFor,
   EMPLOYEE_ID_PATTERN,
   MIN_PASSWORD_LENGTH,
 } = require("../config/constants");
@@ -64,6 +65,25 @@ exports.getConstants = asyncHandler(async (req, res) => {
     // a drifted one is invisible — the user simply lands somewhere unexpected.
     // Everyone needs it: it is what decides where they land after signing in.
     rolePrecedence: ROLE_PRECEDENCE,
+
+    // The competency set, PRE-COMPOSED per job family: the shared four plus that
+    // family's pair, in the order they are asked.
+    //
+    // COMPOSED HERE RATHER THAN ON THE CLIENT, deliberately. Serving the shared four
+    // and the family pairs separately would mean React joining them itself, which is
+    // the same rule written twice -- and the second copy is the one that drifts when
+    // the order or the split changes.
+    //
+    // EVERY FAMILY GOES TO EVERY SIGNED-IN USER, not just the reader's own. A peer
+    // reviewing somebody in another family needs the REVIEWEE's set, not their own,
+    // and so does a supervisor -- so an endpoint serving only your own would leave
+    // both forms unable to render. There is nothing to protect here: it is the
+    // vocabulary of the appraisal, not anybody's data.
+    //
+    // ⚠️ NOTHING READING THIS MAY ASSUME SIX. Read the array's length; never a literal.
+    competencies: Object.fromEntries(
+      JOB_FAMILIES.map((family) => [family, competenciesFor(family)]),
+    ),
   };
 
   if (managesRecords) {
