@@ -26,6 +26,8 @@
 export const GROUP_LABELS = {
   employee: { primary: "Menu", secondary: "My own appraisal" },
   supervisor: { primary: "Supervisor", secondary: "Supervisor" },
+  hr: { primary: "HR", secondary: "HR" },
+  leadership: { primary: "Leadership", secondary: "Leadership" },
 };
 
 // The heading above this group's action rows on the overview, and the page title when
@@ -43,6 +45,18 @@ export const GROUP_OVERVIEW = {
     primaryHeading: "Your team",
     secondaryHeading: "Your team",
   },
+  hr: {
+    pageTitle: "HR officer dashboard",
+    roleLabel: "HR officer",
+    primaryHeading: "Running the cycle",
+    secondaryHeading: "Running the cycle",
+  },
+  leadership: {
+    pageTitle: "Leadership dashboard",
+    roleLabel: "Leadership",
+    primaryHeading: "Company",
+    secondaryHeading: "Company",
+  },
 };
 
 // The dashboard itself belongs to no group: everybody has exactly one, and it sits at
@@ -56,6 +70,172 @@ export const DASHBOARD_TAB = {
 };
 
 export const TABS_BY_GROUP = {
+  // The HR group, delivered 2026-08-27.
+  //
+  // TWO SUB-SECTIONS, because the mockup splits it that way: `13-hr-dashboard.png`
+  // separates RUNNING THE CYCLE from PEOPLE DATA. A flat list of seven tabs loses
+  // that, and the two halves are genuinely different jobs -- one is this year's
+  // appraisal round, the other is the standing record of who works here.
+  //
+  // ⚠️ `ownRoute: true` means the ROUTER ALREADY HAS A ROUTE for this path and must
+  // not generate a second one. Employee records, Organisation and Cycles were built
+  // by earlier stories and carry finer gates than a group gate can express: reading
+  // the roster is open to Leadership, creating a record is HR only, and a generated
+  // route would sit BEFORE the hand-written one and quietly narrow it. Getting this
+  // wrong locks Leadership out of screens they are supposed to read.
+  // The leadership group, delivered 2026-08-27 ALONGSIDE the HR one, and it had to be.
+  //
+  // Employee records, Organisation and Cycles moved out of the header into the HR
+  // group in the same change. Leadership may READ all three -- their routes say so,
+  // and have since the stories that built them -- so with the header gone and no
+  // group of their own, a Leadership account was left able to reach those screens by
+  // typing the URL and by no other means. That is a navigation regression, not a
+  // permission one, and shipping it would have been worse than the duplicated
+  // navigation it replaced.
+  //
+  // NOTHING HERE WIDENS ACCESS. Every People data row is a screen Leadership could
+  // already open; this draws a link to it. The three Company tabs are the mockups'
+  // own and none has data behind it yet.
+  leadership: [
+    {
+      section: "Company",
+      id: "rating-distribution",
+      path: "/rating-distribution",
+      label: "Rating distribution",
+      icon: "chart",
+      title: "Rating distribution",
+      description: "Company wide spread, with no names behind any figure",
+      built: false,
+    },
+    {
+      section: "Company",
+      id: "plan-progress",
+      path: "/plan-progress",
+      label: "Plan progress",
+      icon: "trend",
+      title: "Plan progress",
+      description: "How development actions are moving across the company",
+      built: false,
+    },
+    {
+      section: "Company",
+      id: "audit-counts",
+      path: "/audit-counts",
+      label: "Audit counts",
+      icon: "key",
+      title: "Audit counts",
+      description: "How often identities were revealed, as counts only",
+      built: false,
+    },
+    {
+      section: "People data",
+      id: "leadership-employees",
+      path: "/employees",
+      label: "Employee records",
+      icon: "users",
+      title: "Employee records",
+      description: "Everyone at Altrium. Leadership reads; HR writes",
+      built: true,
+      ownRoute: true,
+    },
+    {
+      section: "People data",
+      id: "leadership-organisation",
+      path: "/organisation",
+      label: "Organisation",
+      icon: "sitemap",
+      title: "Organisation structure",
+      description: "The unit tree, who belongs to each unit, and who leads it",
+      built: true,
+      ownRoute: true,
+    },
+    {
+      section: "People data",
+      id: "leadership-cycles",
+      path: "/cycles",
+      label: "Cycles",
+      icon: "target",
+      title: "Appraisal cycles",
+      description: "Which cycle each group is in. Only HR can change them",
+      built: true,
+      ownRoute: true,
+    },
+  ],
+  hr: [
+    {
+      section: "Running the cycle",
+      id: "cycles",
+      path: "/cycles",
+      label: "Cycles",
+      icon: "target",
+      title: "Appraisal cycles",
+      description: "Create a cycle, open it, and move it through its stages",
+      built: true,
+      ownRoute: true,
+    },
+    {
+      section: "Running the cycle",
+      id: "cycle-progress",
+      path: "/cycle-progress",
+      label: "Cycle progress",
+      icon: "chart",
+      title: "Cycle progress",
+      description: "Not started, in progress and complete by group and unit",
+      built: false,
+    },
+    {
+      section: "Running the cycle",
+      id: "summaries-to-check",
+      path: "/summaries-to-check",
+      label: "Summaries to check",
+      icon: "check",
+      title: "Summaries to check",
+      description: "Compare each summary against the raw comments before publication",
+      built: false,
+    },
+    {
+      section: "Running the cycle",
+      id: "reviewer-identity",
+      path: "/reviewer-identity",
+      label: "Reviewer identity",
+      icon: "key",
+      title: "Reviewer identity",
+      description: "Reveal who gave a piece of feedback, with a written reason",
+      built: false,
+    },
+    {
+      section: "People data",
+      id: "employee-records",
+      path: "/employees",
+      label: "Employee records",
+      icon: "users",
+      title: "Employee records",
+      description: "Everyone at Altrium, and the record behind each of them",
+      built: true,
+      ownRoute: true,
+    },
+    {
+      section: "People data",
+      id: "organisation",
+      path: "/organisation",
+      label: "Organisation",
+      icon: "sitemap",
+      title: "Organisation structure",
+      description: "The unit tree, who belongs to each unit, and who leads it",
+      built: true,
+      ownRoute: true,
+    },
+    {
+      section: "People data",
+      id: "projects",
+      path: "/projects",
+      label: "Projects",
+      icon: "briefcase",
+      title: "Projects and assignments",
+      description: "Cross unit work, project leads and team leads",
+      built: false,
+    },
+  ],
   employee: [
     {
       id: "my-self-assessment",

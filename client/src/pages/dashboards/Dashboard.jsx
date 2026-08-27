@@ -1,12 +1,12 @@
 import { useAuth } from "../../hooks/useAuth";
 import { useReportingLine } from "../../hooks/useReportingLine";
+import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import { useTeam } from "../../hooks/useTeam";
 import { sectionGroupsFor } from "../../utils/dashboardSections";
 import { GROUP_OVERVIEW, TABS_BY_GROUP } from "../../utils/dashboardTabs";
 import { formatDate } from "../../utils/dates";
 import {
   SHOW_PLACEHOLDER_FIGURES,
-  placeholderCycleFor,
   PLACEHOLDER_TILES,
 } from "../../dev/placeholderFigures";
 import PageHeader from "../../components/layout/PageHeader";
@@ -39,6 +39,10 @@ export default function Dashboard() {
   const { line, loading: lineLoading, error: lineError } = useReportingLine();
   // Asks nothing at all for somebody who leads nothing, which is most people.
   const { team } = useTeam();
+  // Takes no arguments: the appraisal group is read off their own record on the
+  // server. Null is a real answer, not a failure -- for most of the year a group is
+  // between cycles.
+  const { cycle, parGroup: cycleGroup, loading: cycleLoading } = useCurrentCycle();
 
   // Whether somebody leads a unit is answered by the server, and is false until the
   // answer lands. Drawing first would show one dashboard and then rearrange it under
@@ -83,7 +87,11 @@ export default function Dashboard() {
           roleLabel={overview.roleLabel}
           employeeId={user?.employeeId}
         />
-        <CycleCard cycle={placeholderCycleFor(user?.parGroup)} />
+        <CycleCard
+          cycle={cycle}
+          parGroup={cycleGroup || user?.parGroup}
+          loading={cycleLoading}
+        />
       </div>
 
       {tiles.length > 0 && (
@@ -146,8 +154,7 @@ function realTiles(user, line, lineLoading, team) {
     // empty" instead of "you do not have one".
     team && {
       value: String(team.total),
-      label:
-        team.total === 1 ? "Person you supervise" : "People you supervise",
+      label: team.total === 1 ? "Person you supervise" : "People you supervise",
       icon: "users",
       tone: "blue",
     },
