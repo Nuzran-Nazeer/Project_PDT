@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { buildCycleSchema } from "../../schemas/cycleSchema";
 import {
@@ -354,6 +355,21 @@ export default function CyclesPage() {
                   </span>
                 </div>
 
+                {/* Who it covers, and it is a fact about the PEOPLE, not a roster
+                    stored on the cycle: everyone whose appraisal group matches and
+                    who belongs to a unit today, worked out on the server when it is
+                    asked for.
+
+                    ⚠️ TODAY'S count on every card, a closed cycle included. The dated
+                    membership records could answer "who was in this group last March",
+                    and no criterion asks for it -- so the line says "today" rather
+                    than showing a historical figure that quietly is not one. */}
+                <p className="mt-2 text-[13px] text-muted">
+                  {cycle.peopleCount}{" "}
+                  {cycle.peopleCount === 1 ? "person is" : "people are"} in the{" "}
+                  {cycle.parGroup} group today.
+                </p>
+
                 {cycle.openedOn && (
                   <p className="mt-2 text-[13px] text-muted">
                     Opened {formatDate(cycle.openedOn)}
@@ -372,36 +388,47 @@ export default function CyclesPage() {
                   </p>
                 )}
 
-                {canManage && (target || cancellable) && (
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    {target && (
-                      <button
-                        type="button"
-                        disabled={busyId === cycle._id}
-                        onClick={() => move(cycle)}
-                        className={secondaryClass}
-                      >
-                        {cycle.status === "draft"
-                          ? "Open this cycle"
-                          : `Move to ${STAGE_LABELS[target].toLowerCase()}`}
-                      </button>
-                    )}
+                {/* ONE action row, and the first control in it is for everybody who
+                    can open this screen. Viewing who a cycle covers is a read, so
+                    Leadership gets it too -- and a closed or cancelled cycle has no
+                    other control at all, so nesting this row inside `canManage` makes
+                    the whole row vanish and the button with it. */}
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link to={`/cycles/${cycle._id}/people`} className={secondaryClass}>
+                    View the people
+                  </Link>
 
-                    {cancellable && cancelFor !== cycle._id && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCancelFor(cycle._id);
-                          setCancelReason("");
-                          setActionError("");
-                        }}
-                        className={secondaryClass}
-                      >
-                        Cancel this cycle
-                      </button>
-                    )}
-                  </div>
-                )}
+                  {canManage && (
+                    <>
+                      {target && (
+                        <button
+                          type="button"
+                          disabled={busyId === cycle._id}
+                          onClick={() => move(cycle)}
+                          className={secondaryClass}
+                        >
+                          {cycle.status === "draft"
+                            ? "Open this cycle"
+                            : `Move to ${STAGE_LABELS[target].toLowerCase()}`}
+                        </button>
+                      )}
+
+                      {cancellable && cancelFor !== cycle._id && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCancelFor(cycle._id);
+                            setCancelReason("");
+                            setActionError("");
+                          }}
+                          className={secondaryClass}
+                        >
+                          Cancel this cycle
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
 
                 {cancelFor === cycle._id && (
                   <div className="mt-4 rounded-lg border border-line p-4">

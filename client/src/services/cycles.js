@@ -15,6 +15,13 @@ export const listCycles = (params = {}) => {
 
 export const getCycle = (id) => apiFetch(`/cycles/${id}`);
 
+// Who the cycle covers: everyone whose appraisal group matches and who belongs to a
+// unit today. Nothing stores that list -- it is derived on the server from the group
+// on each person's record, so it cannot drift out of date.
+//
+// It carries NO review status, because reviews do not exist yet.
+export const getCyclePeople = (id) => apiFetch(`/cycles/${id}/people`);
+
 // Always created as a draft. Opening it is a separate step, because opening is what
 // starts the 30-day cancellation clock and records who did it.
 export const createCycle = (data) =>

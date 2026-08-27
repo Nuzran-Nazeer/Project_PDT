@@ -14,6 +14,7 @@ import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import EmployeeFormPage from "../pages/employees/EmployeeFormPage";
 import OrgTreePage from "../pages/org/OrgTreePage";
 import CyclesPage from "../pages/cycles/CyclesPage";
+import CyclePeoplePage from "../pages/cycles/CyclePeoplePage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // The single list of URL to page mappings. Add new routes here only.
@@ -162,6 +163,11 @@ function AppRoutes() {
               story 16's, and it moves in with them at the end of the epic. */}
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/cycles" element={<CyclesPage />} />
+            {/* The people one cycle covers. A cycle in the URL, for the same reason a
+                unit is in the URL on the organisation screen: it makes the page
+                linkable, so "look at who is in the April cycle" can be sent to
+                somebody rather than described to them. */}
+            <Route path="/cycles/:id/people" element={<CyclePeoplePage />} />
           </Route>
 
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
