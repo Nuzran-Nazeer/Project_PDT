@@ -13,6 +13,7 @@ import EmployeeListPage from "../pages/employees/EmployeeListPage";
 import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import EmployeeFormPage from "../pages/employees/EmployeeFormPage";
 import OrgTreePage from "../pages/org/OrgTreePage";
+import CyclesPage from "../pages/cycles/CyclesPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // The single list of URL to page mappings. Add new routes here only.
@@ -152,6 +153,17 @@ function AppRoutes() {
               An HR officer is supposed to reach only units they cover, and that check
               does not exist yet: it needs HR coverage, which is assigned later. Every
               gate here is coarse until then. */}
+          {/* Running the appraisal cycle. Same three roles as the roster: HR and the
+              Head of HR create and move a cycle, Leadership reads it. The page itself
+              draws no controls for a reader, and the server refuses them regardless.
+
+              It sits beside Employees and Organisation in the header for now, for the
+              reason those two are there: its home is the sidebar's HR group, which is
+              story 16's, and it moves in with them at the end of the epic. */}
+          <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
+            <Route path="/cycles" element={<CyclesPage />} />
+          </Route>
+
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/organisation" element={<OrgTreePage />} />
             {/* The same screen. A unit in the URL is what makes it linkable and lets

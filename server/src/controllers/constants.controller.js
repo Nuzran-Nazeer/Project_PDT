@@ -8,6 +8,7 @@ const {
   DESIGNATIONS,
   DESIGNATION_NAMES,
   ORG_UNIT_TYPES,
+  PAR_GROUPS,
   EMPLOYEE_ID_PATTERN,
   MIN_PASSWORD_LENGTH,
 } = require("../config/constants");
@@ -72,6 +73,12 @@ exports.getConstants = asyncHandler(async (req, res) => {
       employeeIdPattern: EMPLOYEE_ID_PATTERN.source,
       minPasswordLength: MIN_PASSWORD_LENGTH,
     };
+
+    // The three appraisal groups, for the cycle form. Scoped the same way as the rest
+    // of this block because HR and the Head of HR are exactly who may create a cycle.
+    // Nobody else has a form that needs the list: parGroup is DERIVED from a joining
+    // date on every other screen, never chosen.
+    payload.parGroups = PAR_GROUPS;
   }
 
   if (managesTree) {

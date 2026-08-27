@@ -29,6 +29,10 @@ import Sidebar from "./Sidebar";
 // stopped existing.
 const ROSTER_ROLES = ["hr", "head_of_hr", "leadership"];
 const ORG_ROLES = ["hr", "head_of_hr", "leadership"];
+// Cycles joins the other two in the header rather than opening the sidebar's HR group
+// early. That group's contents belong to story 16, and all three move in together at
+// the end of the epic.
+const CYCLE_ROLES = ["hr", "head_of_hr", "leadership"];
 
 // Matches Tailwind's `md`. The rail and the drawer swap here.
 const WIDE = "(min-width: 768px)";
@@ -68,6 +72,7 @@ export default function AppLayout() {
 
   const canSeeRoster = user?.roles?.some((role) => ROSTER_ROLES.includes(role));
   const canSeeOrg = user?.roles?.some((role) => ORG_ROLES.includes(role));
+  const canSeeCycles = user?.roles?.some((role) => CYCLE_ROLES.includes(role));
 
   function toggleSidebar() {
     if (!isWide) {
@@ -123,6 +128,7 @@ export default function AppLayout() {
           <nav aria-label="Records" className="mx-auto flex items-center gap-5">
             {canSeeRoster && <HeaderLink to="/employees" label="Employees" />}
             {canSeeOrg && <HeaderLink to="/organisation" label="Organisation" />}
+            {canSeeCycles && <HeaderLink to="/cycles" label="Cycles" />}
           </nav>
 
           {/* `min-w-0` is what stops a long name growing this group without limit and
