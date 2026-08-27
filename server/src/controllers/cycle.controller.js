@@ -15,6 +15,15 @@ exports.getCycle = asyncHandler(async (req, res) => {
   res.json(await service.getCycleById(req.params.id));
 });
 
+// Who this cycle covers. Derived on the way out -- see the service.
+//
+// Behind the same reader gate as the rest of the collection, NOT open to everybody the
+// way /current is. /current answers a question about the person asking; this answers a
+// question about everybody else, which is the line the comment below draws.
+exports.getCyclePeople = asyncHandler(async (req, res) => {
+  res.json(await service.peopleInCycle(req.params.id));
+});
+
 // Criterion 8, and the question every dashboard asks on load.
 //
 // IT TAKES NO GROUP. The appraisal group comes off the signed-in person's own record,

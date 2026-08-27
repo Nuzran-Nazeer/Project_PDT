@@ -40,6 +40,17 @@ router
   .route("/:id")
   .get(protect, authorize(...CAN_READ), validateCycleId, controller.getCycle);
 
+// Who the cycle covers. A read, so it takes the reader gate rather than the writer one:
+// Leadership is shown who is being appraised without being able to touch the cycle.
+//
+// ⚠️ The same coarse-gate caveat applies here and bites HARDER than it does above. A
+// cycle is a whole appraisal group, so an HR officer seeing one they do not cover is
+// arguable; a LIST OF PEOPLE is exactly what the scope rule exists to limit. It closes
+// with HR coverage, and this route is one of the first that should be revisited then.
+router
+  .route("/:id/people")
+  .get(protect, authorize(...CAN_READ), validateCycleId, controller.getCyclePeople);
+
 // Moving a cycle on is its own route rather than a field on an update, because it is
 // not an edit: it is a transition with rules, and only one destination is ever legal.
 // A general PATCH would invite a client to set `status` to anything.
