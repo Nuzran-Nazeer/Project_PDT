@@ -89,16 +89,24 @@ function AppRoutes() {
           {/* One route per sidebar tab, generated from the registry. */}
           {Object.entries(TABS_BY_GROUP).map(([group, tabs]) => {
             const allow = GROUP_ACCESS[group];
-            const routes = tabs.map((tab) => {
-              const Page = TAB_PAGES[tab.id];
-              return (
-                <Route
-                  key={tab.id}
-                  path={tab.path}
-                  element={Page ? <Page /> : <PendingTabPage tab={tab} />}
-                />
-              );
-            });
+            // ⚠️ `ownRoute` tabs are SKIPPED here. Employee records, Organisation and
+            // Cycles were routed by earlier stories with finer gates than a group gate
+            // can express -- reading the roster is open to Leadership, creating a
+            // record is HR only. A generated route would sit BEFORE those and quietly
+            // narrow them, locking Leadership out of screens they may read. The
+            // sidebar still links to them; only the routing is left alone.
+            const routes = tabs
+              .filter((tab) => !tab.ownRoute)
+              .map((tab) => {
+                const Page = TAB_PAGES[tab.id];
+                return (
+                  <Route
+                    key={tab.id}
+                    path={tab.path}
+                    element={Page ? <Page /> : <PendingTabPage tab={tab} />}
+                  />
+                );
+              });
 
             return allow ? (
               <Route key={group} element={<ProtectedRoute allow={allow} />}>

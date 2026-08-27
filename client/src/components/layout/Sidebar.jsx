@@ -77,8 +77,26 @@ export default function Sidebar({ groups, collapsed, drawer = false, onNavigate 
             </p>
 
             <ul>
-              {(isFirst ? [DASHBOARD_TAB, ...tabs] : tabs).map((tab) => (
+              {(isFirst ? [DASHBOARD_TAB, ...tabs] : tabs).map((tab, at, all) => (
                 <li key={tab.id}>
+                  {/* A SUB-HEADING, drawn when this tab starts a new section. The HR
+                      group is the first to need one: the mockup splits it into
+                      Running the cycle and People data, which are genuinely different
+                      jobs -- this year's appraisal round, and the standing record of
+                      who works here. Seven tabs in a flat list lose that.
+
+                      Driven off the tab's own `section` rather than a nested
+                      structure, so a group without sections needs no change at all
+                      and the registry stays one flat list per group. */}
+                  {tab.section && tab.section !== all[at - 1]?.section && (
+                    <p
+                      className={`px-4 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-muted/70 ${
+                        narrow ? "sr-only" : ""
+                      }`}
+                    >
+                      {tab.section}
+                    </p>
+                  )}
                   <SidebarLink tab={tab} narrow={narrow} onNavigate={onNavigate} />
                 </li>
               ))}

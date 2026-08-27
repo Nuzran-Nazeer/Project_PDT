@@ -20,13 +20,7 @@
 // not leave the sections in no order at all. The cost is a second copy that could
 // drift; the consequence of drift here is sections in a surprising order, not a user
 // on the wrong screen.
-const SECTION_ORDER = [
-  "oversight",
-  "hr",
-  "leadership",
-  "supervisor",
-  "employee",
-];
+const SECTION_ORDER = ["oversight", "hr", "leadership", "supervisor", "employee"];
 
 // A role can bring more than one section group with it. Head of HR carries the HR
 // sections as well as their own oversight ones, because the design says their
@@ -48,7 +42,10 @@ const GROUPS_BY_ROLE = {
 // a person actually sees.
 //
 // Adding a group here is the last line of its story, not the first.
-const DELIVERED_GROUPS = ["employee", "supervisor"];
+// `hr` added 2026-08-27. It ships the way the employee and supervisor groups did:
+// the tabs with real data behind them are built, the rest say plainly that they are
+// not. Its story keeps the criteria it cannot meet yet.
+const DELIVERED_GROUPS = ["employee", "supervisor", "hr", "leadership"];
 
 export function sectionGroupsFor(roles, isSupervisor = false) {
   const held = Array.isArray(roles) ? roles : [];
