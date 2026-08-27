@@ -6,36 +6,16 @@ import { buildUnitSchema } from "../../schemas/orgUnitSchema";
 import UnitTree from "../../components/org/UnitTree";
 import UnitDetail from "../../components/org/UnitDetail";
 
-// The organisation structure. Head of HR builds it; HR and Leadership read it.
+// The organisation structure. Head of HR builds it; HR and Leadership read it. The
+// tree is a navigation rail, not the content: the selected unit is the page.
 //
-// It lives at /organisation rather than /head-of-hr/organisation for the same reason
-// the roster lives at /employees: three roles reach it, and naming the route after
-// one of them would be wrong the moment the other two arrive.
-//
-// THE TREE IS A NAVIGATION RAIL, not the content. It started as the wide half of the
-// screen and was inverted when the unit's own page arrived: a tree of five short
-// names needs about fifteen characters of width, while its members, its lead and the
-// appointment form need room. The selected unit is now the page and the tree is how
-// you get to it.
-//
-// CREATING AND EDITING HAPPEN HERE, not on separate routes like /employees/new. A
-// unit is three fields against an employee's ten, and the criterion says a unit is
-// created "from this screen" — a whole page for a name, a type and a parent is
-// heavier than the thing deserves, and it would hide the tree at the moment you most
-// need to see it.
-//
-// Styling follows the roster and the record page rather than being invented here:
-// the same header shape, the same `mt-6`/`mt-8` rhythm, the same primary button, the
-// same alert.
+// Creating and editing happen here rather than on separate routes, a unit being three
+// fields, and a separate page would hide the tree when you most need to see it.
 
 const EMPTY = { name: "", type: "", parentUnitId: "" };
 
-// Every unit beneath this one, so the parent picker can leave them out.
-//
-// The server refuses a unit placed inside its own sub-tree, so this is a guide rail
-// rather than the rule — the same choice made for the lead picker, which offers only
-// people eligible to lead rather than letting you pick anyone and be refused.
-// Preventing the mistake reads better than reporting it.
+// Every unit beneath this one, so the parent picker can leave them out. A guide rail,
+// not the rule: the server refuses a unit placed inside its own sub-tree.
 const descendantsOf = (units, rootId) => {
   const found = new Set();
 
@@ -57,8 +37,8 @@ export default function OrgTreePage() {
   const navigate = useNavigate();
   const { user, constants } = useAuth();
   const canManage = user?.roles?.includes("head_of_hr");
-  // Wider than shaping the tree: HR places people and appoints leads, Head of HR
-  // does that as well as changing the structure itself. Same split the server makes.
+  // Wider than shaping the tree: HR places people and appoints leads. Same split the
+  // server makes.
   const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [units, setUnits] = useState([]);
@@ -98,11 +78,11 @@ export default function OrgTreePage() {
   }, []);
 
   // THE SELECTED UNIT LIVES IN THE URL, not in state. A unit is now a page with
-  // members and a lead on it, so it needs to be linkable and to survive a refresh —
+  // members and a lead on it, so it needs to be linkable and to survive a refresh.
   // and the tree stays beside it, which a separate route would have cost.
   const selected = units.find((unit) => String(unit._id) === String(id)) || null;
 
-  // Any change of unit closes whatever the form was doing — including arriving by
+  // Any change of unit closes whatever the form was doing, including arriving by
   // URL or the back button, which a click handler would miss.
   //
   // Derived, not reset in an effect. The mode is already a function of the URL and
@@ -117,7 +97,7 @@ export default function OrgTreePage() {
   const parentOptions = useMemo(() => {
     // A discontinued unit is never offered as a parent. The server refuses it, and
     // putting a live unit inside a closed one would bring the closed one back by the
-    // back door — its sub-tree would be operating again while it is marked shut.
+    // back door: its sub-tree would be operating again while it is marked shut.
     const live = units.filter((unit) => unit.active !== false);
 
     if (mode !== "edit" || !selected) return live;
@@ -205,7 +185,7 @@ export default function OrgTreePage() {
     } catch (err) {
       // The server's own words: a second root, a unit inside itself, a company below
       // the top, a name already used by a sibling. Every one names the rule that
-      // stopped it, and THE TREE IS UNTOUCHED — nothing is applied until the request
+      // stopped it, and THE TREE IS UNTOUCHED: nothing is applied until the request
       // comes back, so a refusal changes nothing on screen.
       setFormError(err.message);
     } finally {
@@ -384,7 +364,7 @@ export default function OrgTreePage() {
                     >
                       <option value="">
                         {mode === "edit" && !selected.parentUnitId
-                          ? "Nothing — this is the top"
+                          ? "Nothing, this is the top"
                           : "Choose…"}
                       </option>
                       {parentOptions.map((unit) => (

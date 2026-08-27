@@ -16,37 +16,16 @@ import StatTile from "../../components/dashboard/StatTile";
 import ActionRow from "../../components/dashboard/ActionRow";
 import MySupervisorPanel from "../../components/org/MySupervisorPanel";
 
-// THE dashboard. There is one, and every signed in person gets the same route.
-//
-// It replaced six separate dashboard pages, one per role. The design rule is locked:
-// one dashboard per person, not one per role, and the mockups draw it as one sidebar
-// with a group per role rather than six screens to switch between.
-//
-// WHICH GROUPS APPEAR IS GATED BY WHICH STORY IS DELIVERED, in dashboardSections.js.
-// Today that is the employee group and nothing else: the HR dashboard is story 16 and
-// the supervisor dashboard is story 17, and neither has been built. The machinery for
-// stacking groups belongs to this story, because one dashboard per person cannot be
-// built without it. Their contents do not.
-//
-// WHAT IS REAL ON THIS SCREEN. With the placeholder flag off, everything here is
-// answered by the database or by the session: the greeting, the job title, the
-// appraisal group, the unit, the supervisor, the job family, the joining date, and
-// every action row as a working link. What is missing is missing on purpose. There is
-// no cycle, feedback or plan collection on the server, so the cycle banner says so and
-// the action rows carry no status.
+// One dashboard for everybody; the sections it carries come from
+// dashboardSections.js.
 export default function Dashboard() {
   const { user, isSupervisor, sessionReady } = useAuth();
   const { line, loading: lineLoading, error: lineError } = useReportingLine();
-  // Asks nothing at all for somebody who leads nothing, which is most people.
   const { team } = useTeam();
-  // Takes no arguments: the appraisal group is read off their own record on the
-  // server. Null is a real answer, not a failure -- for most of the year a group is
-  // between cycles.
   const { cycle, parGroup: cycleGroup, loading: cycleLoading } = useCurrentCycle();
 
-  // Whether somebody leads a unit is answered by the server, and is false until the
-  // answer lands. Drawing first would show one dashboard and then rearrange it under
-  // the reader.
+  // `isSupervisor` is false until the server answers, so drawing early would
+  // rearrange the dashboard under the reader.
   if (!sessionReady) {
     return (
       <p className="p-10 text-center text-muted" role="status">
@@ -67,21 +46,13 @@ export default function Dashboard() {
     <>
       <PageHeader
         title={overview.pageTitle}
-        // Their own record, not a list of their roles. Somebody holding three roles is
-        // still one person with one job title, and naming the roles here would put a
-        // ladder on the screen that this design deliberately does not have.
+        // Not a list of roles: that would put a ladder on screen.
         context={[user?.designation, user?.parGroup && `${user.parGroup} group`]
           .filter(Boolean)
           .join(" · ")}
       />
 
-      {/* Not two equal halves, and the greeting takes the WIDER side. The mockup gives
-          that room to the cycle banner instead, and Nuzran overruled it on 2026-08-26:
-          the greeting is the part of this row that is real. `items-stretch` keeps the
-          two the same height. */}
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
-        {/* The chip is the ROLE, not the job title. The job title is already under the
-            page title, and repeating it wastes the one line the card has. */}
         <IdentityCard
           name={user?.name}
           roleLabel={overview.roleLabel}
@@ -104,10 +75,6 @@ export default function Dashboard() {
         </Section>
       )}
 
-      {/* It appears in none of the mockups, because it arrived from the reporting line
-          story rather than this one. It sits after the figures and before the action
-          lists: high enough to be found, and not displacing the top row the design
-          does specify. */}
       <Section heading="Your reporting line">
         <MySupervisorPanel line={line} loading={lineLoading} error={lineError} />
       </Section>
@@ -135,23 +102,13 @@ export default function Dashboard() {
   );
 }
 
-// The figures the system can actually answer today.
-//
-// NONE OF THEM IS APPRAISAL ACTIVITY, because none exists: no cycle has been created,
-// nobody has written anything, and no plan has been agreed. What does exist is where
-// this person sits in the organisation, which is real to the last field. When the
-// cycle and the reviews land, these are the tiles that give way to them.
-//
-// A tile is left out rather than shown empty when its value is missing, so an
-// administrator with no unit and no appraisal group gets fewer tiles rather than a row
-// reading "None".
+// A tile is left out rather than shown empty, so somebody with no unit gets fewer
+// tiles rather than a row reading "None".
 function realTiles(user, line, lineLoading, team) {
   const unit = lineLoading ? "…" : line?.unit?.name;
 
   return [
-    // First for a supervisor, because it is the reason they are looking. Absent for
-    // everybody else rather than shown as nought, which would read as "your team is
-    // empty" instead of "you do not have one".
+    // Absent rather than nought, which would read as "your team is empty".
     team && {
       value: String(team.total),
       label: team.total === 1 ? "Person you supervise" : "People you supervise",
@@ -160,8 +117,6 @@ function realTiles(user, line, lineLoading, team) {
     },
     {
       value: unit || "No unit",
-      // The two labels say different things, and the second is a real fact about this
-      // person's appraisal rather than a missing value.
       label: unit ? "Your unit" : "You are in no unit, so you are not appraised",
       icon: "sitemap",
       tone: "blue",
@@ -187,12 +142,8 @@ function realTiles(user, line, lineLoading, team) {
   ].filter(Boolean);
 }
 
-// The one action row that can carry a TRUE figure today. Everything else returns
-// undefined and falls back to whatever the placeholder file says, which is nothing
-// while its flag is off.
-//
-// Undefined rather than an empty array on purpose: an empty array is truthy, and
-// returning one would silently suppress the placeholder for every other row.
+// ⚠️ Undefined, never an empty array: an empty array is truthy, so returning one
+// silently suppresses the placeholder for every other row.
 function rowStatus(tabId, team) {
   if (tabId !== "my-team" || !team) return undefined;
 

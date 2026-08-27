@@ -1,68 +1,32 @@
-// Which sections one person's dashboard carries.
-//
-// THE RULE THIS IMPLEMENTS IS LOCKED (spec §3.12b): one dashboard per person, not
-// one per role. Somebody who leads a unit and works in HR gets ONE screen carrying
-// their employee, supervisor and HR sections, rather than three screens they switch
-// between. A role switcher was considered and rejected: most people hold one or two
-// roles, so it is a control that does nothing for the majority.
-//
 // ⚠️ THIS ORDERS NOTHING AND GRANTS NOTHING. It decides which sections appear on a
-// screen. What a person may READ is decided per record by relationship, on the
-// server, and access is explicitly NOT a ladder. Anyone who turns this file into
-// `if (role >= hr)` has built the thing the design spent a layer avoiding.
+// screen. What a person may READ is decided per record on the server, and access is
+// NOT a ladder: `if (role >= hr)` is the thing this design exists to avoid.
 
-// The order sections appear in, widest remit first, so the section closest to why
-// this person signed in is at the top and `employee` is last because everyone has it.
-//
-// It deliberately matches the server's role precedence, the order that decides where
-// a user lands after signing in, but it is NOT read from it. That order arrives with
-// the constants request, which is allowed to fail silently, and a failed request must
-// not leave the sections in no order at all. The cost is a second copy that could
-// drift; the consequence of drift here is sections in a surprising order, not a user
-// on the wrong screen.
+// Deliberately not read from the server's role precedence, which arrives with the
+// constants request and may fail silently, leaving the sections in no order at all.
 const SECTION_ORDER = ["oversight", "hr", "leadership", "supervisor", "employee"];
 
-// A role can bring more than one section group with it. Head of HR carries the HR
-// sections as well as their own oversight ones, because the design says their
-// dashboard shows both, whether or not they also hold the plain `hr` role.
+// Head of HR carries the HR sections too, whether or not they hold the `hr` role.
 const GROUPS_BY_ROLE = {
   head_of_hr: ["oversight", "hr"],
   hr: ["hr"],
   leadership: ["leadership"],
 };
 
-// WHICH GROUPS HAVE A STORY BEHIND THEM. Added 2026-08-26, on Nuzran's point that the
-// HR dashboard is a different story from the employee one and had started appearing
-// without being asked for.
-//
-// The group machinery below is story 15's, because one dashboard per person cannot be
-// built without it. The CONTENTS of each group belong to their own stories: the
-// supervisor group arrived with story 17, the HR dashboard is story 16, and the rest
-// are Sprint 2. So the registry keeps every group and this list decides which of them
-// a person actually sees.
-//
-// Adding a group here is the last line of its story, not the first.
-// `hr` added 2026-08-27. It ships the way the employee and supervisor groups did:
-// the tabs with real data behind them are built, the rest say plainly that they are
-// not. Its story keeps the criteria it cannot meet yet.
+// The registry above holds every group; this decides which are rendered.
 const DELIVERED_GROUPS = ["employee", "supervisor", "hr", "leadership"];
 
 export function sectionGroupsFor(roles, isSupervisor = false) {
   const held = Array.isArray(roles) ? roles : [];
 
-  // Admin NEVER merges with anything. An admin has no unit, no project and no
-  // supervisor, so they are not on the org chart at all and there is nothing to
-  // merge with. This is the one early return in the file and it is deliberate.
+  // An admin has no unit, project or supervisor, so there is nothing to merge with.
   if (held.includes("admin")) {
     return DELIVERED_GROUPS.includes("admin") ? ["admin"] : [];
   }
 
   const groups = new Set(["employee"]);
 
-  // `supervisor` is not a granted role and never appears in `roles`. A person is a
-  // supervisor because they lead a unit today, which only the server can answer, so
-  // it arrives separately. Somebody who stops leading a unit loses this section
-  // without anybody editing their account.
+  // `supervisor` is never in `roles`: it is derived from who leads a unit today.
   if (isSupervisor) groups.add("supervisor");
 
   held.forEach((role) => {

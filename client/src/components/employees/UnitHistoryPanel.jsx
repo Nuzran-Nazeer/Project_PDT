@@ -8,21 +8,8 @@ import { listUnits } from "../../services/orgUnits";
 import { moveSchema } from "../../schemas/orgStructureSchema";
 import { formatDate, toDateInput, todayInput } from "../../utils/dates";
 
-// Where this person sits in the company, and where they sat before.
-//
-// MOVING HAPPENS HERE rather than on the unit's page, and that is a decision, not
-// an accident of where the code fit. Both screens would produce the same two
-// records on the server; the difference is the question being asked. This record
-// answers "this person is moving — where to?", which is the question that actually
-// arises, and it keeps the one-unit-at-a-time rule visible: you can see what they
-// are being moved OUT of.
-//
-// The history is shown in full because the whole reason these records are dated is
-// that the old ones survive. A screen showing only the current unit would make the
-// collection look like a field on the user, which is exactly the mistake the design
-// spent a layer avoiding.
 
-// Local calendar date, not UTC — see the note on todayInput.
+// Local calendar date, not UTC. See the note on todayInput.
 const today = todayInput;
 
 export default function UnitHistoryPanel({ person, canAssign }) {
@@ -40,16 +27,12 @@ export default function UnitHistoryPanel({ person, canAssign }) {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // No setLoading(true) or setError("") in the effect body — a synchronous state
-  // write inside an effect is a second render pass and the lint rule rejects it.
-  // The record page mounts this with a `key` of the person's id, so opening a
-  // different employee gives a fresh component with `loading` already true.
+  // No setLoading(true) in the effect body: the lint rule rejects the second render
+  // pass. Mounted with a `key` of the person's id, so a different employee gives a
+  // fresh component with `loading` already true.
   useEffect(() => {
     let cancelled = false;
 
-    // The unit list is only needed for the picker, but it is fetched with the
-    // history rather than when the form opens: it is four units, and a dropdown
-    // that populates a moment after it appears is worse than one extra request.
     Promise.all([listMemberships({ userId }), listUnits()])
       .then(([history, unitList]) => {
         if (cancelled) return;
@@ -65,15 +48,12 @@ export default function UnitHistoryPanel({ person, canAssign }) {
     };
   }, [userId, reloadKey]);
 
-  // The open record is the current one. There is at most one: the server refuses
-  // any membership that overlaps another, which is what makes "which unit on this
-  // date" have a single answer.
+  // At most one is open: the server refuses any membership overlapping another.
   const current = records.find((record) => !record.to) || null;
   const past = records.filter((record) => record.to);
 
-  // A discontinued unit is not offered, because the server refuses to place anyone
-  // in one. The current unit is left out too — moving someone where they already
-  // are is refused, and offering it invites the mistake.
+  // Discontinued and current units are both left out: the server refuses either, and
+  // offering them invites the mistake.
   const destinations = units.filter(
     (unit) =>
       unit.active !== false && String(unit._id) !== String(current?.unitId?._id || ""),
@@ -81,9 +61,8 @@ export default function UnitHistoryPanel({ person, canAssign }) {
 
   const startMove = () => {
     setMoving(true);
-    // A first placement defaults to the day they joined, a move to today. Both are
-    // only defaults and either can be changed — but a first membership starting the
-    // day HR happens to open the screen would quietly lose the months before it.
+    // A first placement defaults to the joining date, not today, which would quietly
+    // lose the months before it.
     setForm({
       unitId: "",
       from: current ? today() : toDateInput(person.joinedDate) || today(),
@@ -118,9 +97,8 @@ export default function UnitHistoryPanel({ person, canAssign }) {
 
     setSaving(true);
     try {
-      // Two endpoints, one form. A move must close the old record and open the new
-      // one in a single call, or a half-success leaves someone in no unit or in
-      // two; a first placement has nothing to close and uses the plain create.
+      // A move must close and open in ONE call, or a half-success leaves someone in
+      // no unit or in two.
       if (current) {
         await transferMembership(payload);
       } else {
@@ -129,9 +107,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
       setMoving(false);
       setReloadKey((key) => key + 1);
     } catch (err) {
-      // The server's own words: a move dated before the current stint began, a unit
-      // that has been discontinued, a person already in that unit, an overlap with
-      // a stint recorded earlier. Each one names the rule that stopped it.
+      // The server's own words, never reworded.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -176,8 +152,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
               <span className="text-muted"> · since {formatDate(current.from)}</span>
             </p>
           ) : (
-            // A real state, not a gap. Someone in no unit has no supervisor and is
-            // not appraised, which the design allows for on purpose.
+            // A real state, not a gap: someone in no unit is not appraised.
             <p className="mt-3 text-sm text-muted">
               Not in a unit. Nobody supervises this person and they are not appraised
               until they are placed in one.
@@ -284,7 +259,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
                       {record.unitId?.name || "Unknown unit"}
                     </span>
                     <span className="ml-auto text-[13px] text-muted">
-                      {formatDate(record.from)} — {formatDate(record.to)}
+                      {formatDate(record.from)} to {formatDate(record.to)}
                     </span>
                   </li>
                 ))}

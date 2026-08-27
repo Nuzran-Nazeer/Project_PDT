@@ -19,32 +19,23 @@ router.get("/status", (req, res) => {
   });
 });
 
-// Feature routers - add new ones here as the PAR system grows.
 router.use("/users", userRoutes);
 router.use("/auth", authRoutes);
 router.use("/constants", constantsRoutes);
 
-// "org-units" rather than "units": `unit` is only ONE of the three types this
-// collection holds, so /api/units returning companies and sub-units too would read
-// as a bug.
+// "org-units", not "units": `unit` is one of three types this collection holds.
 router.use("/org-units", orgUnitRoutes);
 
-// The dated collections. They sit beside the tree rather than under it because both
-// answer questions about a PERSON as often as about a unit -- "which unit was she in
-// last March" is not naturally a sub-resource of a unit.
+// Beside the tree rather than under it: these answer questions about a PERSON as
+// often as about a unit.
 router.use("/unit-memberships", unitMembershipRoutes);
 router.use("/unit-leads", unitLeadRoutes);
 
-// Derived, not stored. Nothing is written here: this reads the two collections above
-// and answers "who supervises whom on this date". It sits at the top level rather
-// than under /users because the answer is about a RELATIONSHIP, not a property of the
-// user record -- putting it at /users/:id/supervisor would imply a field that the
-// data model specifically forbids.
+// Read-only and derived from the two collections above. Top level, not
+// /users/:id/supervisor, which would imply a field the data model forbids.
 router.use("/supervision", supervisionRoutes);
 
-// The appraisal cycle. Top level rather than under anything else: a cycle covers an
-// appraisal GROUP, which is not a unit and not a person, so it is nobody's
-// sub-resource. Everything in the Reviews & Feedback epic will hang off it.
+// Top level: a cycle covers an appraisal GROUP, so it is nobody's sub-resource.
 router.use("/cycles", cycleRoutes);
 
 module.exports = router;

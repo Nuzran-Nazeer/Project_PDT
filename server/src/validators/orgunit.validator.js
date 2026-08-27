@@ -2,7 +2,7 @@ const AppError = require("../utils/AppError");
 const { ORG_UNIT_TYPES } = require("../config/constants");
 
 // Request-shape validation: fast-fail before touching the service or the database.
-// Tree rules — one root, no unit inside itself — are about the OTHER units in the
+// Tree rules (one root, no unit inside itself) are about the OTHER units in the
 // collection, so they stay in the service layer.
 //
 // The list comes from config/constants.js, never typed here, so the model and the
@@ -11,7 +11,7 @@ const { ORG_UNIT_TYPES } = require("../config/constants");
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 
 // An HTML select with nothing chosen posts "", and a cleared field posts null. Both
-// mean "no parent" — normalise them to null here so the service sees one value and
+// mean "no parent", so they are normalised to null here and the service sees one value and
 // the database is never asked to cast an empty string to an ObjectId.
 const normaliseParent = (req) => {
   const raw = req.body.parentUnitId;

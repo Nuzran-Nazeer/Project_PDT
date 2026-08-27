@@ -21,30 +21,20 @@ function EyeIcon({ open }) {
   );
 }
 
-// The public half of the invite. Reached from the link in the email HR sends, by
-// someone who cannot sign in yet — so this page sits OUTSIDE ProtectedRoute and
-// outside AppLayout, which is the signed-in chrome.
+// Sits OUTSIDE ProtectedRoute and AppLayout: the person opening it cannot sign in yet.
 //
-// It cannot greet them by name, and should not be able to. Nothing is fetched
-// before the code is submitted, because an endpoint that confirmed "this code
-// belongs to Nuzran" would answer the question an attacker is asking.
+// ⚠️ Nothing is fetched before the code is submitted. An endpoint confirming whose
+// account a code opens would answer the question an attacker is asking.
 export default function ActivatePage() {
   const [searchParams] = useSearchParams();
 
-  // The link carries the code. It is 64 hex characters, so nobody is retyping it —
-  // when the link is intact the field is not shown at all. The paste box below is for
-  // the case where a mail client mangled the URL or the person opened the app
-  // directly, which is common enough to be worth handling.
+  // The link carries the code, so the field is hidden when it arrives intact. The
+  // paste box is for a mangled URL, or somebody opening the app directly.
   const rawCodeFromLink = (searchParams.get("code") || "").trim();
 
-  // Checked BEFORE anything is typed. A link that arrives truncated used to look
-  // perfectly fine: you chose a password, submitted, and only then found out. Someone
-  // who does not stop to read the result walks away believing they are set up, and
-  // discovers otherwise days later when they cannot sign in.
-  //
-  // This only catches a mangled code. Whether a well-formed one has EXPIRED or been
-  // replaced by a re-issue is knowable only on the server, and that check does not
-  // exist yet — so a good-looking dead code is still refused at submit, not on load.
+  // Checked BEFORE anything is typed: otherwise a truncated link looks fine until
+  // after the password is submitted. Only catches a MANGLED code; expiry and re-issue
+  // are knowable only on the server, so a dead code is still refused at submit.
   const linkCodeUsable = CODE_SHAPE_EXACT.test(rawCodeFromLink);
   const linkWasMangled = Boolean(rawCodeFromLink) && !linkCodeUsable;
   const codeFromLink = linkCodeUsable ? rawCodeFromLink : "";
@@ -57,8 +47,7 @@ export default function ActivatePage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
   // Set when the server refuses the CODE rather than the password. The form is then
-  // replaced outright: leaving the fields sitting there invites a retry that cannot
-  // possibly work, which is what a used link looked like before.
+  // replaced outright, since a retry cannot possibly work.
   const [linkDead, setLinkDead] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -99,7 +88,7 @@ export default function ActivatePage() {
       });
     } catch (err) {
       // The server's message, shown as-is. It says the same thing for a code that was
-      // never issued, one already used and one that has expired — splitting those
+      // never issued, one already used and one that has expired. Splitting those
       // apart here would leak the difference it hides.
       //
       // THE PAGE CANNOT KNOW A CODE IS SPENT UNTIL IT ASKS, and it must not be able
@@ -108,7 +97,7 @@ export default function ActivatePage() {
       // deny. So the check happens on submit, once, and the answer is final.
       //
       // Matching on the message is the weak part. The clean version is a status of
-      // its own from the server — 410 Gone fits, and says nothing about WHICH of the
+      // its own from the server. 410 Gone fits, and says nothing about WHICH of the
       // three causes it was. That is a server-branch change.
       if (/invite code/i.test(err.message)) setLinkDead(true);
 
@@ -173,7 +162,7 @@ export default function ActivatePage() {
               <div>
                 {linkWasMangled && (
                   <p className="mb-4 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
-                    That link looks incomplete — some email apps cut long links in half.
+                    That link looks incomplete. Some email apps cut long links in half.
                     Paste the whole code from your invite email instead.
                   </p>
                 )}

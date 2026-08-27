@@ -6,7 +6,7 @@ const { MIN_PASSWORD_LENGTH } = require("../config/constants");
 // before anything touches the database.
 //
 // It deliberately does NOT check whether the code looks like a 64-character hex
-// string. A malformed code and an unknown code must fail identically — a shape
+// string. A malformed code and an unknown code must fail identically, because a shape
 // complaint would tell someone probing the endpoint what a real code looks like.
 exports.validateActivate = (req, res, next) => {
   const { code, password } = req.body;

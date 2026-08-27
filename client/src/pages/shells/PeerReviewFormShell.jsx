@@ -10,7 +10,8 @@ import { FormShell, FormSection, FormActions } from "../../components/shells/For
 // ⚠️ Anonymity runs one way. The reviewer sees who they review; the reviewee never
 // learns who reviewed them. The risk is every screen downstream of this one.
 export default function PeerReviewFormShell() {
-  // The reviewee's id, once assignments exist. Nothing reads it yet.
+  // The reviewee's id. Shown back in the notice; nothing else uses it until
+  // assignments exist.
   const { id } = useParams();
 
   return (

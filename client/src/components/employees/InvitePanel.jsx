@@ -52,7 +52,7 @@ export default function InvitePanel({ person, onIssued }) {
 
   // `inviteExpiresAt` comes back on the record; the token itself never does. So HR can
   // see that an invite is outstanding and when it lapses, without the code being
-  // recoverable — which is exactly the split the design asks for.
+  // recoverable, which is exactly the split the design asks for.
   const outstanding =
     person.inviteExpiresAt && new Date(person.inviteExpiresAt) > new Date();
 
@@ -80,7 +80,7 @@ export default function InvitePanel({ person, onIssued }) {
         <>
           <p className="mt-1 text-[13px] text-muted">
             {outstanding
-              ? `A code was issued and works until ${formatDate(person.inviteExpiresAt)}. It cannot be shown again — generating a new one replaces it, and the old code stops working.`
+              ? `A code was issued and works until ${formatDate(person.inviteExpiresAt)}. It cannot be shown again. Generating a new one replaces it, and the old code stops working.`
               : "Creates a one-time code and an email for you to send. The system sends nothing itself."}
           </p>
 
@@ -111,7 +111,7 @@ export default function InvitePanel({ person, onIssued }) {
             className="rounded-lg border border-brand/40 bg-brand/10 px-3 py-2.5 text-[13px] text-ink"
           >
             Copy this before leaving the page. It is stored as a hash, so nothing can show
-            it to you again — if it is lost, generate a new one.
+            it to you again. If it is lost, generate a new one.
           </p>
 
           <div className="mt-4">

@@ -6,19 +6,12 @@ import { discontinueUnit } from "../../services/orgUnits";
 import { appointLeadSchema, discontinueSchema } from "../../schemas/orgStructureSchema";
 import { formatDate, todayInput } from "../../utils/dates";
 
-// One unit: who is in it, who runs it, and the one write that belongs to a unit
-// rather than to a person.
-//
-// MEMBERS ARE READ-ONLY HERE, deliberately. Moving someone happens on their own
-// record, because both screens produce the identical change on the server and the
-// difference is only which question is being answered. An "Add member" button here
-// would read as ADD, which hides the rule that a person holds one membership at a
-// time and walks HR into a refusal they have no way to understand.
-//
-// Appointing a lead is the exception, and a real one: a lead is a property of the
-// unit, not of the person.
+// Members are read-only here: moving someone happens on their own record. An "Add
+// member" button would read as ADD and hide the rule that a person holds one
+// membership at a time. Appointing a lead is the exception, a lead being a property of
+// the unit.
 
-// Local calendar date, not UTC — see the note on todayInput.
+// Local calendar date, not UTC. See the note on todayInput.
 const today = todayInput;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -26,18 +19,15 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const unitId = String(unit._id);
   const parent = units.find((u) => String(u._id) === String(unit.parentUnitId));
   const closed = unit.active === false;
-  // The top of the tree is not closeable — the whole company depends on it, and a
-  // discontinued root would hold the only root slot so no replacement could ever be
-  // created. The server refuses it; this keeps the button from being offered.
+  // The root is not closeable. The server refuses it; this hides the button.
   const isRoot = !unit.parentUnitId;
 
   const [members, setMembers] = useState([]);
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // Bumped after an appointment to re-run the read below. The alternative is
-  // patching the new lead into state by hand, which is a second copy of what the
-  // server just decided.
+  // Bumped after an appointment to re-run the read, rather than patching state by
+  // hand with a second copy of what the server decided.
   const [reloadKey, setReloadKey] = useState(0);
 
   const [appointing, setAppointing] = useState(false);
@@ -54,14 +44,11 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const [closeError, setCloseError] = useState("");
   const [closingSaving, setClosingSaving] = useState(false);
 
-  // Both reads are "as at today", because the criterion asks for a unit's CURRENT
-  // members and CURRENT lead. Browsing a unit as it stood on a past date is
-  // deliberately out of Sprint 1, though the server would answer it: every filter
-  // used here takes an `on` date already.
-  // No setLoading(true) or setError("") in the effect body: a synchronous state
-  // write inside an effect costs a second render pass and the lint rule rejects it.
-  // The page mounts this component with a `key` of the unit id, so switching unit
-  // gives a fresh component with `loading` already true.
+  // Both reads are "as at today". The server would answer a past date, every filter
+  // used here taking an `on` already, but no screen asks for one.
+  // No setLoading(true) in the effect body: the lint rule rejects the second render
+  // pass. Mounted with a `key` of the unit id, so switching unit gives a fresh
+  // component with `loading` already true.
   useEffect(() => {
     let cancelled = false;
 
@@ -186,7 +173,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
       onChanged?.();
     } catch (err) {
       // The server's own words, and these are the ones that matter most in this
-      // story: the unit still has members, and they are NAMED, so HR is told where
+      // the unit still has members, and they are NAMED, so HR is told where
       // to move them rather than being told no.
       setCloseError(err.message);
     } finally {
@@ -209,12 +196,10 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
       </div>
 
       {/* `discontinuedOn` is the LAST DAY the unit operated, not the day the record
-          closed — the server stores what HR typed for exactly this line to read
-          back. Without a date, closing a unit would be the only undated state change
-          in a system where every other fact is a period. */}
+          closed: the server stores what HR typed for exactly this line to read back. */}
       {closed && (
         <p className="mt-2 text-[13px] text-muted">
-          Discontinued — its last day was {formatDate(unit.discontinuedOn)}. It stays in
+          Discontinued. Its last day was {formatDate(unit.discontinuedOn)}. It stays in
           the tree because the appraisal history recorded against it has to stay readable.
         </p>
       )}
@@ -404,9 +389,9 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
             )}
           </section>
 
-          {/* Closing the unit. Head of HR only — an HR officer can move people
-              between units but cannot close one out from under them — and never for
-              the root or for a unit that is already closed. */}
+          {/* Closing the unit. Head of HR only: an HR officer can move people between
+              units but cannot close one out from under them. Never for the root, or
+              for a unit that is already closed. */}
           {canManage && !closed && !isRoot && (
             <section className="mt-8 border-t border-line pt-5">
               {!closing ? (
@@ -429,7 +414,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               ) : (
                 <div>
                   <p className="text-sm text-ink">
-                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted — it
+                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted: it
                     stays in the tree marked closed, and whoever leads it has their term
                     closed on the same date.
                   </p>

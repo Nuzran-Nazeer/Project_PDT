@@ -5,7 +5,7 @@ import ShellNotice from "../../components/shells/ShellNotice";
 import ShellTable from "../../components/shells/ShellTable";
 
 // Colleague feedback owed. Empty because nobody has been assigned to review anybody:
-// choosing reviewers is a later story.
+// nobody has been assigned to review anybody yet.
 export default function FeedbackOwedShell() {
   const { user } = useAuth();
 

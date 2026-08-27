@@ -4,7 +4,7 @@ const orgUnitService = require("../services/orgunit.service");
 // Thin HTTP layer: read the request, call the service, shape the response.
 //
 // Response shape (build decision B3): a single resource comes back plain, a
-// collection comes back as { items, total }. The HTTP status carries the verdict —
+// collection comes back as { items, total }. The HTTP status carries the verdict:
 // the body never says whether the request succeeded.
 
 exports.createUnit = asyncHandler(async (req, res) => {

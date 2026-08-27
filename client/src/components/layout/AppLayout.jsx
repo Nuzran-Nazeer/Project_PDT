@@ -7,37 +7,13 @@ import ThemeToggle from "../common/ThemeToggle";
 import Icon from "../common/Icon";
 import Sidebar from "./Sidebar";
 
-// The frame every signed in screen sits inside: a top bar and the sidebar.
+// The hamburger collapses the rail on a wide window and opens a drawer below `md`.
 //
-// The sidebar replaced a header full of links. Those links were fine while there were
-// three screens and stop working at thirty, which is what the mockups design towards.
-//
-// THE HAMBURGER DOES TWO DIFFERENT THINGS, on purpose. On a wide window it collapses
-// the rail to icons. Below `md` a 240px rail would leave under 100px of content
-// column, so there the same button opens the sidebar as a drawer over the page. Which
-// one is happening is decided here rather than inside the sidebar, because it is a
-// question about the window and not about navigation.
-// THE HEADER CARRIES NO NAVIGATION ANY MORE.
-//
-// Employee records, Organisation and Cycles were centred links here from 2026-08-26,
-// deferred until the sidebar's HR group opened. It opened on 2026-08-27 and they moved
-// into it, under PEOPLE DATA and RUNNING THE CYCLE, which is where the mockups put
-// them. Two navigations for one app was always the temporary state.
-//
-// ⚠️ NOTHING ABOUT ACCESS CHANGED, and it must not. The roles that may reach those
-// three screens are decided by their routes in AppRoutes.jsx, which are untouched --
-// Leadership still reads the roster and the tree by URL. What moved is where the link
-// is drawn. A Leadership account has no sidebar group yet, so it currently has no link
-// to them; that is what opening the leadership group fixes, and it is a story of its
-// own rather than a reason to keep a second navigation bar.
-//
-// The old "My team" header link is gone rather than moved. It pointed at the separate
-// supervisor dashboard, which no longer exists as a screen.
+// ⚠️ Nothing about ACCESS is decided here. Which roles reach a screen is set by its
+// route, so a missing sidebar link never means a screen is protected.
 const WIDE = "(min-width: 768px)";
 
-// Remembered per browser, so somebody who prefers the narrow rail is not fighting it
-// on every page load. Reading storage can throw in a private window, and a thrown
-// preference must not take the whole layout down, so it is guarded.
+// Reading storage throws in a private window, so every access is guarded.
 const COLLAPSE_KEY = "pdt.sidebar.collapsed";
 
 function storedCollapsed() {
@@ -55,15 +31,8 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(storedCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // The drawer is closed from the link that was clicked, not from an effect watching
-  // the URL. A drawer covers the page it just navigated to, so it has to go; doing it
-  // in the click is one render rather than two, and clicking a link is the only way
-  // to navigate out of it.
-
-  // Everybody holds the employee role, so that group can be drawn before the server
-  // answers. Waiting for the whole sidebar would show a 240px empty rail beside a
-  // spinner on every first load, and the supervisor group simply appears when the
-  // answer lands.
+  // Drawn before the server answers, since everybody holds the employee role.
+  // Waiting would show an empty rail beside a spinner on every first load.
   const groups = sessionReady
     ? sectionGroupsFor(user?.roles, isSupervisor)
     : sectionGroupsFor(user?.roles, false);
@@ -117,14 +86,9 @@ export default function AppLayout() {
             </span>
           </NavLink>
 
-          {/* `ml-auto` is what holds this group against the right edge. It used to be
-              pushed there by the centred nav that sat between it and the logo; that nav
-              moved into the sidebar on 2026-08-27 and this group slid back against the
-              logo, because nothing was absorbing the free space any more.
-
-              `min-w-0` stops a long name growing this group without limit and pushing
-              the row past the viewport, which produces a page level horizontal
-              scrollbar rather than a truncated name. */}
+          {/* `ml-auto` holds this group against the right edge, and `min-w-0` stops a
+              long name pushing the row past the viewport, which would give the page a
+              horizontal scrollbar rather than a truncated name. */}
           <div className="ml-auto flex min-w-0 items-center gap-3">
             <ThemeToggle />
 
@@ -155,12 +119,9 @@ export default function AppLayout() {
         </div>
       </header>
 
-      {/* `min-h` is what stops the rail ending halfway down a short page. A flex row
-          is only as tall as its tallest child, so on the employee dashboard the aside
-          stopped where the content did and left bare surface beneath it. */}
+      {/* `min-h` stops the rail ending halfway down a short page: a flex row is only
+          as tall as its tallest child. */}
       <div className="flex min-h-[calc(100svh-4rem)]">
-        {/* The rail. Present only on a wide window; below that the same sidebar is
-            rendered as the drawer further down. */}
         <aside
           className={`hidden shrink-0 border-r border-line bg-raised transition-[width] duration-200 md:block ${
             collapsed ? "w-16" : "w-60"
@@ -169,38 +130,27 @@ export default function AppLayout() {
           <Sidebar groups={groups} collapsed={collapsed} />
         </aside>
 
-        {/* THE PADDING ON THE RIGHT KEEPS THE CONTENT CENTRED IN THE WINDOW, BUT ONLY
-            WHERE THAT IS FREE. Without it the content is centred in whatever is left of
-            the window after the sidebar, so collapsing the rail slides everything
-            sideways and the reader loses their place. Reserving the rail's width on the
-            far side too makes the free space symmetrical, so nothing moves.
+        {/* Right padding mirrors the rail so the free space stays symmetrical and the
+            content does not slide sideways when the rail collapses.
 
-            ⚠️ IT USED TO APPLY AT EVERY WIDTH, AND THAT WAS WRONG. The content is capped
-            at 1180px. With the rail open on a 1536px window the sum was 240 + 1180 + 240
-            = 1660, more than the window, so the content was squeezed to about 1056px and
-            the screen looked narrower with the sidebar open than with it shut -- while
-            plainly having room. Reported 2026-08-27.
-
-            So the balance is applied only above the width where it costs nothing: 1180
-            plus twice the rail. Below that the padding drops and the content takes the
-            space it has. The content still does not move at the widths where it used
-            not to; it simply stops being squeezed at the widths where it was. */}
+            ⚠️ The breakpoints are arithmetic, not taste: content is capped at 1180, so
+            the balance only fits above 1180 + 2 x rail (1660 open, 1308 collapsed).
+            Applying it at every width squeezed the content to ~1056px on a 1536px
+            window, making the screen look narrower with the sidebar open than shut. */}
         <main
           className={`min-w-0 flex-1 transition-[padding] duration-200 ${
             collapsed ? "min-[1308px]:pr-16" : "min-[1660px]:pr-60"
           }`}
         >
-          {/* The mockups are drawn at roughly this column width. Without a cap, an
-              action row on a wide monitor stretches to a metre of empty space with an
-              icon pinned to one end and a chevron to the other. */}
+          {/* Capped: without it an action row on a wide monitor stretches to a metre
+              of empty space with an icon at one end and a chevron at the other. */}
           <div className="mx-auto w-full max-w-[1180px] px-6 py-8 sm:px-10">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* The drawer, below `md` only. Rendered outside the flex row so it overlays the
-          page rather than taking a column out of it. */}
+      {/* Outside the flex row so it overlays the page rather than taking a column. */}
       {!isWide && drawerOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <button

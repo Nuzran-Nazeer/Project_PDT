@@ -1,16 +1,10 @@
 import Icon from "../common/Icon";
 
-// One of the four tiles under QUICK OVERVIEW.
-//
-// A tile does not know whether its value is real. The dashboard decides that: with
-// the placeholder flag off it builds these from the database, and with it on it takes
-// them from dev/placeholderFigures.js instead.
+// A tile does not know whether its value is real. The dashboard decides that.
 //
 // The tones are the only place this codebase uses palette colours rather than the
-// semantic tokens, because four tiles that are all one colour stop being scannable.
-// Each has an explicit dark variant, so neither theme is left to chance.
-// Light stays at 700 rather than 600: a 600 on white is under the contrast a small
-// glyph needs. Dark keeps the 400s.
+// semantic tokens, because four tiles in one colour stop being scannable. Light stays
+// at 700: a 600 on white is under the contrast a small glyph needs.
 const TONES = {
   blue: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   green: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",

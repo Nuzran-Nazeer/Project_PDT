@@ -1,17 +1,8 @@
 import { apiFetch } from "./api";
 
-// The unit tree. Read by HR, Head of HR and Leadership; written only by the Head of
-// HR, which is what the server enforces — the buttons on the page only decide what
-// is worth showing.
-//
-// There is no delete and there never will be: a unit is somebody's appraisal
-// history. Closing one is a separate operation with three checks in front of it,
-// and it arrives with its own story.
-
 // Comes back as { items, total }, like every other collection here (build decision
-// B3). Flat, with each unit's parent on the record — the tree shape is assembled on
-// the client, because a collection is honestly a list and what it looks like is a
-// display decision.
+// B3). Flat, with each unit's parent on the record: the tree shape is assembled on
+// the client.
 export const listUnits = () => apiFetch("/org-units");
 
 export const getUnit = (id) => apiFetch(`/org-units/${id}`);
@@ -22,13 +13,9 @@ export const createUnit = (data) =>
 export const updateUnit = (id, data) =>
   apiFetch(`/org-units/${id}`, { method: "PUT", body: JSON.stringify(data) });
 
-// Closing a unit. `lastDay` is the final day it operated and is REQUIRED — unlike a
-// leaver's last working day it has no default, because a unit closing is a dated
-// event somebody decided on, and stamping today onto it would invent the one fact
-// this story exists to record honestly.
-//
-// There is still no delete. A discontinued unit stays in the tree, marked, and
-// everything recorded about it stays readable.
+// `lastDay` is required and has no default. A unit closing is a dated event somebody
+// decided on, so stamping today onto it would invent the fact. There is no delete: a
+// discontinued unit stays in the tree, marked.
 export const discontinueUnit = (id, lastDay) =>
   apiFetch(`/org-units/${id}/discontinue`, {
     method: "PUT",

@@ -1,17 +1,11 @@
 import * as yup from "yup";
 
-// Built from the server's own lists rather than typed here.
+// Functions taking the payload from GET /api/constants, because the valid values are
+// the server's to decide. Hardcoding them drifts silently: the form offers an option
+// the server rejects with a 400 nobody can explain.
 //
-// Both schemas are FUNCTIONS taking the payload from GET /api/constants, because
-// the valid designations, locations, roles and the employee-ID pattern are the
-// server's to decide. Hardcoding them would drift the first time HR adds a
-// designation, and drift silently: the form would offer an option the server then
-// rejects with a 400 nobody can explain.
-//
-// If the constants request failed, `constants` is null and each list check is
-// skipped. That is deliberate — a form that refuses every value because a side
-// request failed is worse than one that lets the server have the final word, which
-// it has regardless.
+// If that request failed, `constants` is null and each list check is skipped, letting
+// the server have the final word, which it has regardless.
 
 const names = (list) => (list || []).map((entry) => entry.name ?? entry);
 
@@ -23,9 +17,8 @@ const idPattern = (constants) => {
 const optionalIn = (list, message) =>
   yup.string().test("in-list", message, (value) => !value || list.includes(value));
 
-// Fields only settable at creation. `employeeId` and `joinedDate` are immutable on
-// the server: the username is generated from the ID's digits, and the joined date
-// decides the appraisal group, which must never move once set.
+// Settable only at creation: `employeeId` and `joinedDate` are immutable on the
+// server, the joined date deciding the appraisal group.
 export const buildCreateEmployeeSchema = (constants) => {
   const pattern = idPattern(constants);
   const designations = names(constants?.designations);
@@ -52,8 +45,7 @@ export const buildCreateEmployeeSchema = (constants) => {
       .date()
       .typeError("Enter a valid date")
       .required("Joined date is required"),
-    // Blank is allowed: not everyone is on probation, and the field is optional on
-    // the server too. When it is given it cannot precede the joined date.
+    // Optional on the server too. When given it cannot precede the joined date.
     probationEndDate: yup
       .date()
       .nullable()
@@ -69,9 +61,8 @@ export const buildCreateEmployeeSchema = (constants) => {
   });
 };
 
-// Deliberately narrower. The server refuses to change employeeId, username,
-// joinedDate and parGroup, so offering them here would only produce a 400 the user
-// cannot act on.
+// Narrower: the server refuses to change employeeId, username, joinedDate and
+// parGroup, so offering them produces a 400 the user cannot act on.
 export const buildUpdateEmployeeSchema = (constants) => {
   const designations = names(constants?.designations);
   const locations = constants?.locations || [];

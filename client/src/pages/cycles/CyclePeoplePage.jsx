@@ -39,9 +39,8 @@ export default function CyclePeoplePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Same shape as every other detail screen here: a promise chain rather than an async
-  // effect body, and a `cancelled` flag so a slow response cannot write into a screen
-  // the user has already left.
+  // Same shape as every other detail screen: a promise chain rather than an async
+  // effect body, and `cancelled` so a slow response cannot write into a gone screen.
   useEffect(() => {
     let cancelled = false;
 
