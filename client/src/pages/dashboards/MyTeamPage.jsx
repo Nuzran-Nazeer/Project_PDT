@@ -75,7 +75,9 @@ export default function MyTeamPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted">Not built yet</td>
+                  <td className="px-4 py-3 text-muted">
+                    <CycleCell person={person} />
+                  </td>
                   <td className="px-4 py-3">
                     <Link
                       to={`/my-team/${person.id}`}
@@ -93,12 +95,32 @@ export default function MyTeamPage() {
 
       {people.length > 0 && (
         <p className="mt-4 max-w-prose text-[13px] text-muted">
-          The <strong>This cycle</strong> column will show each person&rsquo;s
-          self-assessment and review status. No appraisal cycle exists yet, so there is
-          nothing for it to report.
+          <strong>This cycle</strong> is the appraisal cycle each person&rsquo;s group is
+          in, which is not always yours: the group comes from the month they joined, so
+          one team can span all three. Their own self-assessment and review status join
+          this column once reviews exist.
         </p>
       )}
     </>
+  );
+}
+
+// Three separate answers, and running them together loses the difference: no group at
+// all, a group with no cycle running, and a live cycle.
+function CycleCell({ person }) {
+  if (!person.parGroup) return <span>&mdash;</span>;
+
+  if (!person.cycle) {
+    return <span>None running &middot; {person.parGroup} group</span>;
+  }
+
+  return (
+    <span>
+      {person.cycle.parGroup} {person.cycle.year}
+      <span className="mt-1 block text-[12px]">
+        {person.cycle.status.replace(/_/g, " ")}
+      </span>
+    </span>
   );
 }
 

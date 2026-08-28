@@ -1,6 +1,5 @@
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
-import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 
@@ -13,9 +12,12 @@ import { FormSection } from "../../components/shells/FormShell";
 export default function TeamMemberShell() {
   const { id } = useParams();
   const { team, loading, error } = useTeam();
-  const { cycle } = useCurrentCycle();
 
   const person = (team?.team || []).find((member) => member.id === id);
+  // ⚠️ THEIR cycle, off the team record, never the signed-in supervisor's. The group
+  // comes from each person's joining month, so a team spans groups and a supervisor's
+  // own cycle is frequently not the one this person is being appraised in.
+  const cycle = person?.cycle || null;
 
   if (loading) {
     return (
@@ -43,7 +45,9 @@ export default function TeamMemberShell() {
     <>
       <PageHeader
         title={person.name}
-        context={[person.designation, person.unit?.name].filter(Boolean).join(" · ")}
+        context={[person.designation, person.unit?.name, person.employeeId]
+          .filter(Boolean)
+          .join(" · ")}
       />
 
       <Link
@@ -83,8 +87,8 @@ export default function TeamMemberShell() {
         >
           <p className="max-w-prose text-sm text-muted">
             {cycle
-              ? `The ${cycle.parGroup} ${cycle.year} cycle is at ${cycle.status.replace(/_/g, " ")}.`
-              : "No cycle is running for this group."}{" "}
+              ? `Their ${cycle.parGroup} ${cycle.year} cycle is at ${cycle.status.replace(/_/g, " ")}.`
+              : `No cycle is running for the ${person.parGroup || "their"} group.`}{" "}
             A review unlocks once the self-assessment is in and the minimum colleague
             responses have arrived.
           </p>

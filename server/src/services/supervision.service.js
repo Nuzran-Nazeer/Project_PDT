@@ -5,6 +5,7 @@ const AppError = require("../utils/AppError");
 const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { leadOn, listLeads } = require("./unitlead.service");
+const { currentCycleFor } = require("./cycle.service");
 
 // ⚠️ The ONE place that answers who supervises whom, so the features above cannot
 // drift into four definitions of "supervisor".
@@ -181,18 +182,45 @@ exports.teamOn = async (userId, date) => {
   // for a past date they should still appear.
   const memberships = unitIds.length
     ? await UnitMembership.find({ unitId: { $in: unitIds }, ...activeOn(day) })
-        .populate("userId", "name employeeId designation")
+        .populate("userId", "name employeeId designation parGroup")
         .populate("unitId", "name type")
     : [];
 
-  const team = memberships
+  const members = memberships
     // The root's lead can also be a member of it, and would otherwise appear on their
     // own team.
-    .filter((m) => m.userId && String(m.userId._id) !== String(user._id))
+    .filter((m) => m.userId && String(m.userId._id) !== String(user._id));
+
+  // ⚠️ A supervisor's team spans appraisal groups, because the group comes from each
+  // person's own joining month. The supervisor's own cycle is the wrong answer for
+  // them, so it is looked up per group rather than taken from the signed-in user.
+  //
+  // ⚠️ The LIVE cycle, whatever `day` was asked for: nothing records which cycle was
+  // running on a past date.
+  const cycleByGroup = new Map();
+  for (const group of new Set(members.map((m) => m.userId.parGroup).filter(Boolean))) {
+    const cycle = await currentCycleFor(group);
+    cycleByGroup.set(
+      group,
+      cycle
+        ? {
+            id: cycle._id,
+            parGroup: cycle.parGroup,
+            year: cycle.year,
+            status: cycle.status,
+          }
+        : null,
+    );
+  }
+
+  const team = members
     .map((m) => ({
       ...asPerson(m.userId),
       designation: m.userId.designation,
       unit: asUnit(m.unitId),
+      parGroup: m.userId.parGroup || null,
+      // Null is a real answer: for most of the year a group is between cycles.
+      cycle: cycleByGroup.get(m.userId.parGroup) || null,
       // The mirror of `resolvedUpward`.
       viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
     }))
