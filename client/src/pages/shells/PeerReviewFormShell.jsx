@@ -1,6 +1,4 @@
-import { useParams } from "react-router-dom";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import CompetencyRows from "../../components/shells/CompetencyRows";
 import { FormShell, FormSection, FormActions } from "../../components/shells/FormShell";
 
@@ -10,23 +8,13 @@ import { FormShell, FormSection, FormActions } from "../../components/shells/For
 // ⚠️ Anonymity runs one way. The reviewer sees who they review; the reviewee never
 // learns who reviewed them. The risk is every screen downstream of this one.
 export default function PeerReviewFormShell() {
-  // The reviewee's id. Shown back in the notice; nothing else uses it until
-  // assignments exist.
-  const { id } = useParams();
-
   return (
     <>
       <PageHeader
         title="Colleague feedback"
-        context="The form as it will be, with nothing behind it"
+        context="No colleague assigned"
         backTo="/dashboard"
       />
-
-      <ShellNotice>
-        This is the whole colleague feedback form. It is not attached to anybody: nobody
-        has been assigned to review anybody yet, so there is no colleague to name at the
-        top{id ? ` (asked for "${id}")` : ""}.
-      </ShellNotice>
 
       <FormShell>
         <FormSection

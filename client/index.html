@@ -3,20 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDT — Performance & Development Tracker</title>
+    <title>PDT: Performance & Development Tracker</title>
 
-    <!-- Theme, applied before the first paint.
-         This has to be a plain blocking script in <head>. Anything that runs after
-         React mounts is already too late: the browser paints the default colours
-         first and the page visibly snaps to the other theme a moment later.
-         That flash is what criterion 4 of "Switch between light and dark" rules out.
-
-         Dark is the default. The operating system's setting is deliberately NOT
-         consulted — the app opens dark for everyone until they choose otherwise.
-
-         The storage key and the class name are repeated in
-         src/context/ThemeProvider.jsx. The two MUST agree — if they drift, the page
-         paints one theme and React immediately switches it to the other. -->
+    <!-- Applied before first paint, so it must be a plain blocking script: anything
+         running after React mounts paints the default colours first and visibly snaps.
+         The key and class name are repeated in ThemeProvider.jsx and MUST agree. -->
     <script>
       (function () {
         try {

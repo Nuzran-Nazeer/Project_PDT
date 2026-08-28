@@ -1,7 +1,6 @@
 import { useAuth } from "../../hooks/useAuth";
 import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import ShellTable, { Pill } from "../../components/shells/ShellTable";
 
 // What the employee finally sees.
@@ -23,16 +22,13 @@ export default function MyResultShell() {
     <>
       <PageHeader
         title="My result"
-        context={[user?.designation, user?.name].filter(Boolean).join(" · ")}
+        context={
+          cycle
+            ? `${cycle.parGroup} ${cycle.year} · ${cycle.status.replace(/_/g, " ")}`
+            : [user?.designation, user?.name].filter(Boolean).join(" · ")
+        }
         backTo="/dashboard"
       />
-
-      <ShellNotice>
-        This is the shape of a published result. Nothing has been published:{" "}
-        {cycle
-          ? `the ${cycle.parGroup} ${cycle.year} cycle is still at ${cycle.status.replace(/_/g, " ")}.`
-          : "your group has no cycle running at the moment."}
-      </ShellNotice>
 
       <ShellTable
         heading="My result"
