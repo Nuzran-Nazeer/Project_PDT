@@ -66,7 +66,7 @@ export default function LoginPage() {
       navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (err) {
       // The server's message, shown as-is. It says the same thing for a wrong
-      // password, an account that does not exist and one that is deactivated —
+      // password, an account that does not exist and one that is deactivated.
       // rewording or splitting it here would leak the difference it hides.
       setFormError(err.message);
       setSubmitting(false);
@@ -187,7 +187,7 @@ export default function LoginPage() {
         </form>
 
         {/* No "forgot password" and no "sign up" link, both deliberately.
-            PDT has no self-registration at all — HR creates every record and the
+            PDT has no self-registration at all. HR creates every record and the
             employee activates it with a one-time code, so a sign-up route would
             be a promise the system cannot keep. The reset link arrives with
             "Reset a forgotten password"; until then it would go nowhere. */}

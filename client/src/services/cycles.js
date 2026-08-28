@@ -1,10 +1,7 @@
 import { apiFetch } from "./api";
 
-// The appraisal cycle. HR runs it, Head of HR is the backstop, Leadership reads.
-//
-// There is no delete and there never will be: a published cycle is somebody's
-// appraisal record and the evidence that the process was followed. Cancelling is a
-// status, never a removal (spec §5.4, LOCKED).
+// No delete route: a published cycle is somebody's appraisal record. Cancelling is a
+// status, never a removal (spec §5.4).
 
 export const listCycles = (params = {}) => {
   const query = new URLSearchParams(
@@ -15,36 +12,31 @@ export const listCycles = (params = {}) => {
 
 export const getCycle = (id) => apiFetch(`/cycles/${id}`);
 
-// Who the cycle covers: everyone whose appraisal group matches and who belongs to a
-// unit today. Nothing stores that list -- it is derived on the server from the group
-// on each person's record, so it cannot drift out of date.
-//
-// It carries NO review status, because reviews do not exist yet.
+// Derived on the server from the group on each person's record, never stored, so it
+// cannot drift. Carries no review status, because reviews do not exist yet.
 export const getCyclePeople = (id) => apiFetch(`/cycles/${id}/people`);
 
-// Always created as a draft. Opening it is a separate step, because opening is what
-// starts the 30-day cancellation clock and records who did it.
+// Always created as a draft. Opening it is a separate step, because opening starts
+// the 30-day cancellation clock and records who did it.
 export const createCycle = (data) =>
   apiFetch("/cycles", { method: "POST", body: JSON.stringify(data) });
 
-// The stage is NAMED rather than implied. "Advance" with no target reads fine until
-// somebody double-clicks and skips a stage without noticing; naming the one they
-// expect means a repeated request is refused instead of obeyed.
+// The target stage is named rather than implied, so a double-click is refused rather
+// than obeyed and silently skipping a stage.
 export const advanceCycle = (id, status) =>
   apiFetch(`/cycles/${id}/advance`, {
     method: "PUT",
     body: JSON.stringify({ status }),
   });
 
-// A written reason is required and the server refuses without one. It also refuses
-// after 30 days from opening, and once the cycle has moved past `open`.
+// The server refuses without a reason, after 30 days from opening, and once the cycle
+// has moved past `open`.
 export const cancelCycle = (id, reason) =>
   apiFetch(`/cycles/${id}/cancel`, {
     method: "PUT",
     body: JSON.stringify({ reason }),
   });
 
-// The cycle the SIGNED-IN person's own group is in, or null. Takes no arguments on
-// purpose: the group comes off their own record on the server, so there is no version
-// of this that asks about anybody else's.
+// Takes no arguments: the group comes off the signed-in person's own record on the
+// server. Returns null when their group is in no cycle.
 export const getMyCurrentCycle = () => apiFetch("/cycles/current");

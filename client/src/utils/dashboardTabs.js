@@ -1,28 +1,15 @@
-// Every tab in the sidebar, grouped the way the mockups group them.
+// ONE REGISTRY, read by three things: the sidebar, the dashboard's action rows, and
+// the router. Adding a screen is a row here, not an edit to three files.
 //
-// ONE REGISTRY, READ BY THREE THINGS: the sidebar draws its groups and links from it,
-// the dashboard overview draws its action rows from it, and the router builds a route
-// per tab from it. Adding a screen means adding a row here, not editing three files
-// and forgetting the third.
+// `built: false` means the tab exists, is reachable, and its page says plainly that it
+// has not been built.
 //
-// `built: false` means the tab exists, is reachable, and its page says plainly that
-// it has not been built. That is deliberate. A skeleton that runs end to end can be
-// demonstrated from week two; four finished features and no flow cannot, which is the
-// choice the spec made for Sprint 1 and the reason these are here rather than absent.
-//
-// `title` and `description` are the mockups' own wording, so the running app and the
-// deck in Deliverables/UI-Mockups/ say the same thing.
-//
-// ⚠️ ONLY DELIVERED GROUPS ARE HERE. The mockups design 30 screens across six roles.
-// The employee group landed with story 15 and the supervisor group with story 17; the
-// HR, oversight, leadership and admin groups are still held out, because their tabs
-// are their own stories' work. Their definitions are kept verbatim in
-// `Project PDT/PDT-DASHBOARD-TABS-PENDING.md`, which sits outside the repository,
-// along with the three edits needed to put a group back.
+// ⚠️ Oversight and admin are deliberately absent. Their definitions, and the three
+// edits needed to add a group, are in PDT-DASHBOARD-TABS-PENDING.md, outside the
+// repository.
 
-// The label above each group in the sidebar. The employee group has two, because the
-// mockups call it MENU when it is all a person has and MY OWN APPRAISAL when it sits
-// underneath a wider role's group.
+// The employee group has two labels: one when it is all a person has, another when it
+// sits underneath a wider role's group.
 export const GROUP_LABELS = {
   employee: { primary: "Menu", secondary: "My own appraisal" },
   supervisor: { primary: "Supervisor", secondary: "Supervisor" },
@@ -30,8 +17,8 @@ export const GROUP_LABELS = {
   leadership: { primary: "Leadership", secondary: "Leadership" },
 };
 
-// The heading above this group's action rows on the overview, and the page title when
-// this is the person's widest group. Both come from the mockups.
+// The heading above this group's action rows, and the page title when it is the
+// person's widest group.
 export const GROUP_OVERVIEW = {
   employee: {
     pageTitle: "Employee dashboard",
@@ -59,8 +46,7 @@ export const GROUP_OVERVIEW = {
   },
 };
 
-// The dashboard itself belongs to no group: everybody has exactly one, and it sits at
-// the top of the first group in the sidebar.
+// Belongs to no group: it sits at the top of the first group in the sidebar.
 export const DASHBOARD_TAB = {
   id: "dashboard",
   path: "/dashboard",
@@ -70,32 +56,15 @@ export const DASHBOARD_TAB = {
 };
 
 export const TABS_BY_GROUP = {
-  // The HR group, delivered 2026-08-27.
-  //
-  // TWO SUB-SECTIONS, because the mockup splits it that way: `13-hr-dashboard.png`
-  // separates RUNNING THE CYCLE from PEOPLE DATA. A flat list of seven tabs loses
-  // that, and the two halves are genuinely different jobs -- one is this year's
-  // appraisal round, the other is the standing record of who works here.
+  // Two sub-sections, because running this year's cycle and maintaining the standing
+  // record of who works here are different jobs.
   //
   // ⚠️ `ownRoute: true` means the ROUTER ALREADY HAS A ROUTE for this path and must
-  // not generate a second one. Employee records, Organisation and Cycles were built
-  // by earlier stories and carry finer gates than a group gate can express: reading
-  // the roster is open to Leadership, creating a record is HR only, and a generated
-  // route would sit BEFORE the hand-written one and quietly narrow it. Getting this
-  // wrong locks Leadership out of screens they are supposed to read.
-  // The leadership group, delivered 2026-08-27 ALONGSIDE the HR one, and it had to be.
-  //
-  // Employee records, Organisation and Cycles moved out of the header into the HR
-  // group in the same change. Leadership may READ all three -- their routes say so,
-  // and have since the stories that built them -- so with the header gone and no
-  // group of their own, a Leadership account was left able to reach those screens by
-  // typing the URL and by no other means. That is a navigation regression, not a
-  // permission one, and shipping it would have been worse than the duplicated
-  // navigation it replaced.
-  //
-  // NOTHING HERE WIDENS ACCESS. Every People data row is a screen Leadership could
-  // already open; this draws a link to it. The three Company tabs are the mockups'
-  // own and none has data behind it yet.
+  // not generate a second one. Those paths carry finer gates than a group gate can
+  // express, and a generated route would sit BEFORE the hand-written one and quietly
+  // narrow it, locking readers out of screens they may open.
+  // ⚠️ Nothing here widens access. Every People data row is a screen Leadership can
+  // already open; this only draws a link to it.
   leadership: [
     {
       section: "Company",
@@ -245,9 +214,6 @@ export const TABS_BY_GROUP = {
       title: "My self-assessment",
       description: "Complete or review your own assessment",
       built: false,
-      // Six competencies: four shared and two from the job family, worded for the
-      // self viewpoint, each one scorable or markable as not observed. Nothing in the
-      // code hardcodes that set, so seeding it is server work and comes first.
     },
     {
       id: "feedback-i-owe",
@@ -266,10 +232,9 @@ export const TABS_BY_GROUP = {
       title: "My result",
       description: "View and acknowledge a published result",
       built: false,
-      // The one screen where the confidentiality rule is load bearing. It shows a
-      // summary and nothing else: no individual comment, no rating, and no count of
-      // how many people responded. A count alone identifies a reviewer in a small
-      // team, which is why it is excluded rather than merely hidden.
+      // ⚠️ Summary only: no individual comment, no rating, and no count of how many
+      // people responded. A count alone identifies a reviewer in a small team, so it
+      // is excluded rather than merely hidden.
     },
     {
       id: "my-development-plan",
@@ -304,8 +269,6 @@ export const TABS_BY_GROUP = {
       // because no cycle or review collection exists.
       built: true,
     },
-    // "Reviews I owe" and "Colleague feedback" were removed 2026-08-27. Everything a
-    // supervisor does about somebody now hangs off the team member screen.
     {
       id: "team-feedback",
       path: "/team-feedback",

@@ -17,9 +17,7 @@ const {
 
 const userSchema = new mongoose.Schema(
   {
-    // -----------------------------------------------------------------------
     // Identity
-    // -----------------------------------------------------------------------
     employeeId: {
       type: String,
       required: [true, "Employee ID is required"],
@@ -49,12 +47,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // -----------------------------------------------------------------------
     // Credentials
-    // -----------------------------------------------------------------------
     // NAMED FOR WHAT IS ASSIGNED, NOT WHAT IS STORED. Every write site assigns
     // PLAINTEXT and the pre('save') hook below hashes it. Do not hash before
-    // assigning — the hook would hash it a second time and the account would be
+    // assigning. The hook would hash it a second time and the account would be
     // permanently unopenable, with no error raised anywhere.  (Build decision B1)
     //
     // `select: false` keeps it out of every query result. Login is the only place
@@ -79,17 +75,15 @@ const userSchema = new mongoose.Schema(
 
     // Set when HR generates an invite, cleared the moment it is redeemed.
     //
-    // This holds a SHA-256 HASH of the code, never the code itself — the raw code
+    // This holds a SHA-256 HASH of the code, never the code itself. The raw code
     // exists once, in the response HR reads, and is never stored. `select: false`
     // keeps the hash out of query results; `index: true` is for the redemption
     // lookup, which finds the account BY this field. See utils/inviteCode.js.
     inviteToken: { type: String, select: false, index: true },
     inviteExpiresAt: { type: Date },
 
-    // -----------------------------------------------------------------------
     // Roles
-    // -----------------------------------------------------------------------
-    // GRANTED roles only. `supervisor` is never stored — it is derived from who
+    // GRANTED roles only. `supervisor` is never stored: it is derived from who
     // leads which unit on a given date. See config/constants.js.
     roles: {
       type: [
@@ -104,9 +98,7 @@ const userSchema = new mongoose.Schema(
       default: ["employee"],
     },
 
-    // -----------------------------------------------------------------------
     // Job
-    // -----------------------------------------------------------------------
     designation: {
       type: String,
       enum: {
@@ -132,11 +124,9 @@ const userSchema = new mongoose.Schema(
       },
     },
 
-    // -----------------------------------------------------------------------
     // Dates
-    // -----------------------------------------------------------------------
     // Immutable because it decides parGroup, and an appraisal group must never move
-    // once set — moving it changes which cycle a person's history belongs to.
+    // once set, because moving it changes which cycle a person's history belongs to.
     joinedDate: {
       type: Date,
       required: [true, "Joined date is required"],
@@ -155,26 +145,22 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// ---------------------------------------------------------------------------
-// Derivations — run before validation so the derived values are validated too
-// ---------------------------------------------------------------------------
-// NOTE: Mongoose 9 middleware does NOT receive a `next` callback — it is
-// promise-based. Almost every tutorial online still writes `function (next)` and
-// calls `next()`; on this version that throws "next is not a function".
+// Runs before validation so the derived values are validated too.
+//
+// ⚠️ Mongoose 9 hooks are promise-based and receive NO `next` callback. Tutorials
+// writing `function (next)` throw "next is not a function".
 userSchema.pre("validate", function () {
   if (this.designation) {
     this.jobFamily = DESIGNATIONS[this.designation];
   }
 
-  // Set once, on creation only. `immutable: true` blocks later changes anyway;
-  // this guard makes the intent explicit.
+  // `immutable: true` blocks later changes anyway; this makes the intent explicit.
   if (this.isNew && this.joinedDate && !this.parGroup) {
     this.parGroup = parGroupFor(this.joinedDate);
   }
 
-  // Username: last word of the name + the employee ID's digits.
-  //   "Nuzran Nazeer" + ALT-0241  ->  nazeer0241
-  // Collision-free because the employee ID is unique by definition.
+  // Last word of the name plus the employee ID's digits, so "Nuzran Nazeer" with
+  // ALT-0241 becomes nazeer0241. Collision-free because the ID is unique.
   if (this.isNew && !this.username && this.name && this.employeeId) {
     const words = this.name.trim().split(/\s+/);
     const lastName = words[words.length - 1].toLowerCase().replace(/[^a-z]/g, "");
@@ -183,14 +169,9 @@ userSchema.pre("validate", function () {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Password hashing — the ONE path a password takes into the database
-// ---------------------------------------------------------------------------
-// Hashing here rather than in a service means no future write site can forget:
-// a seed script, an HR reset and the invite-completion route all pass through it.
-//
-// The isModified guard is not optional. Without it, any unrelated save — changing
-// a designation, say — re-hashes the existing hash and locks the user out forever.
+// ⚠️ The ONE path a password takes into the database, so no write site can forget.
+// The isModified guard is not optional: without it any unrelated save re-hashes the
+// existing hash and locks the user out.
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   if (!this.password) return;
@@ -203,8 +184,8 @@ userSchema.methods.comparePassword = function (plainText) {
   return bcrypt.compare(plainText, this.password);
 };
 
-// Belt and braces alongside `select: false`: even if a query explicitly re-selects
-// the password, it never survives being turned into JSON for a response.
+// Belt and braces alongside `select: false`: a query that re-selects the password
+// still cannot leak it through a response.
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
     delete ret.password;

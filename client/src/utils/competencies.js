@@ -1,4 +1,4 @@
-// Readers over the competency set. Kept out of the component file because exporting a
+// Kept out of the component file because exporting a
 // component and a helper together breaks fast refresh.
 
 export function competenciesFor(constants, jobFamily) {

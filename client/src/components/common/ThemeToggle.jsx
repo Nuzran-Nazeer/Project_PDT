@@ -1,6 +1,6 @@
 import { useTheme } from "../../hooks/useTheme";
 
-// Sun and moon drawn inline rather than pulled from an icon package — two icons
+// Sun and moon drawn inline rather than pulled from an icon package: two icons
 // do not justify a dependency, and `currentColor` means they follow the theme
 // without being told about it.
 function SunIcon() {

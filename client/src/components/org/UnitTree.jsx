@@ -1,24 +1,12 @@
 import { useMemo } from "react";
 
-// The tree, drawn from the flat list the server sends.
-//
-// The server returns units flat, each carrying its parent, and says so on purpose:
-// a collection is honestly a list, and a nested response has to decide what to do
-// with an orphan. Assembling the shape here keeps that decision on the screen that
-// draws it.
-//
-// No expand and collapse: Altrium's tree is a handful of units and hiding four of
-// them behind a chevron would be machinery in place of information. It can be added
-// when a tree is big enough to need it.
+// The tree, assembled here from the flat list the server sends. No expand and
+// collapse: Altrium's tree is a handful of units, and hiding four of them behind a
+// chevron would be machinery in place of information.
 
-// Depth is carried by nesting rather than by a stored level, so nothing has to be
-// kept in sync when a unit moves.
-//
-// Three things say how deep a unit sits, because indentation alone is a weak signal
-// and this data proves it — "Backend" exists under two different parents, and with
-// only an offset to go on you have to measure the left edge by eye to tell them
-// apart. So each level also gets a GUIDE LINE down its left side, and the name steps
-// down in size and weight.
+// Depth is carried by nesting rather than a stored level, so nothing needs keeping in
+// sync when a unit moves. Indentation alone is a weak signal ("Backend" exists under
+// two different parents), so each level also gets a guide line and a size step.
 const LEVEL = ["text-[15px] font-semibold", "text-sm font-medium", "text-sm font-normal"];
 
 const levelClass = (depth) => LEVEL[Math.min(depth, LEVEL.length - 1)];
@@ -36,12 +24,12 @@ export default function UnitTree({ units, selectedId, onSelect }) {
     return map;
   }, [units]);
 
-  // Recursion, not a flattened depth-first list: the nesting is what makes a screen
-  // reader announce the tree as a tree.
+  // Recursion rather than a flattened list: the nesting is what makes a screen reader
+  // announce the tree as a tree.
   const branch = (parentKey, depth) => {
     const children = childrenOf.get(parentKey) || [];
     // A leaf renders no list at all. An empty one would still draw its guide line,
-    // leaving a stub hanging under every unit that has no children.
+    // leaving a stub under every unit with no children.
     if (children.length === 0) return null;
 
     return (
@@ -59,11 +47,8 @@ export default function UnitTree({ units, selectedId, onSelect }) {
               <button
                 type="button"
                 onClick={() => onSelect(unit)}
-                // Name left, type hard right. The type used to start wherever the
-                // name happened to end, which scattered COMPANY / UNIT / SUB-UNIT
-                // across the card instead of lining them up; flush right makes it a
-                // column, and puts content at both edges of a row that was mostly
-                // empty in the middle.
+                // Name left, type flush right, so the types line up as a column
+                // instead of starting wherever each name happened to end.
                 className={`flex w-full items-baseline justify-between gap-4 rounded-md px-2.5 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${levelClass(
                   depth,
                 )} ${
@@ -72,10 +57,6 @@ export default function UnitTree({ units, selectedId, onSelect }) {
                     : "text-ink hover:bg-surface hover:text-brand"
                 }`}
               >
-                {/* A discontinued unit stays in the tree and stays readable — it is
-                    part of somebody's appraisal history. Struck through and faded
-                    rather than hidden, so the shape of the company as it was is
-                    still visible. */}
                 <span
                   className={`truncate ${unit.active === false ? "text-muted line-through decoration-1" : ""}`}
                 >

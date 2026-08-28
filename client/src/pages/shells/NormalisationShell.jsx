@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import { FormSection } from "../../components/shells/FormShell";
 
 // Normalisation: the supervisor starts it, the system runs it, the supervisor checks it.
@@ -30,20 +29,13 @@ export default function NormalisationShell() {
         ← Back to {person ? person.name : "my team"}
       </Link>
 
-      <ShellNotice>
-        Designed, and deliberately not built. Formal calibration is worth its cost above
-        roughly a hundred employees and Altrium has forty-five, so the recorded decision
-        is to design it properly and decline to build it at this scale. This screen shows
-        where it would sit.
-      </ShellNotice>
-
       <div className="grid gap-5">
         <FormSection
           letter="A"
           title="What the system would compare"
           note="Ratings across teams, so that a lenient supervisor's 4 and a strict one's 4 mean the same thing."
         >
-          <Empty>Nothing to compare. No reviews have been submitted, by anybody.</Empty>
+          <Empty>Nothing to compare. No reviews have been submitted.</Empty>
         </FormSection>
 
         <FormSection

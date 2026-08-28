@@ -7,19 +7,15 @@ exports.login = asyncHandler(async (req, res) => {
   res.json({ token, user });
 });
 
-// PUBLIC. The new joiner has no account to sign in with, so the invite code is their
-// credential for this one request.
-//
-// It returns the user and NO TOKEN, on purpose: `login` stays the single place in the
-// system where a session is minted, which keeps one door to audit rather than two.
-// The client sends them to the sign-in screen with the password they just chose.
+// PUBLIC: the invite code is the credential for this one request. Returns NO TOKEN on
+// purpose, so `login` stays the single place a session is minted.
 exports.activate = asyncHandler(async (req, res) => {
   const user = await inviteService.activateAccount(req.body);
   res.json(user);
 });
 
-// The signed-in person, re-read. The client calls this after login and on a refresh,
-// so a role granted or a unit handed over takes effect without signing out.
+// Re-read rather than taken from the token, so a role granted today takes effect
+// without signing out.
 exports.me = asyncHandler(async (req, res) => {
   res.json(await authService.currentSession(req.user.id));
 });

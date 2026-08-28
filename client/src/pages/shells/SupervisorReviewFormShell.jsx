@@ -3,7 +3,6 @@ import { useTeam } from "../../hooks/useTeam";
 import { useAuth } from "../../hooks/useAuth";
 import { jobFamilyFor } from "../../utils/competencies";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import CompetencyRows from "../../components/shells/CompetencyRows";
 import { FormShell, FormSection, FormActions } from "../../components/shells/FormShell";
 
@@ -40,12 +39,6 @@ export default function SupervisorReviewFormShell() {
       >
         ← Back to {person ? person.name : "my team"}
       </Link>
-
-      <ShellNotice>
-        This is the whole supervisor review form. The person is real; nothing else is.
-        There is no self-assessment to compare against and no colleague feedback to
-        summarise, so both of those columns are empty rather than filled with examples.
-      </ShellNotice>
 
       <FormShell>
         <FormSection

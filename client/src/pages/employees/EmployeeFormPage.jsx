@@ -8,40 +8,23 @@ import {
 } from "../../schemas/employeeSchema";
 import { addMonths, toDateInput } from "../../utils/dates";
 
-// Creating and editing an employee record, in one page because the two forms are
-// the same form minus four fields.
+// One page for creating and editing, the two being the same form minus four fields.
 //
-// EDITING OFFERS LESS THAN CREATING, on purpose. The server refuses to change the
-// employee ID, the username, the joined date and the appraisal group: the username
-// is generated from the ID's digits, and the joined date decides the appraisal
-// group, which must never move once set. Showing those fields greyed out would beg
-// the question; showing them as text on the record page answers it.
+// ⚠️ Editing offers less on purpose: the server refuses to change the employee ID,
+// username, joined date and appraisal group.
 //
-// There is NO PASSWORD FIELD. HR creates the record, the record lands as `invited`,
-// and the person sets their own password from the invite link. HR never knows it,
-// which is the point of the whole flow.
+// ⚠️ There is NO PASSWORD FIELD, deliberately. The person sets their own from the
+// invite link, so HR never knows it.
 
-// Every ID in the system looks like ALT-0241, so HR types the number and the client
-// assembles the rest. The prefix is hardcoded here, but the ASSEMBLED value is still
-// checked against the pattern the server sends, so if the two ever disagree the form
-// says so before the request goes anywhere.
-//
-// Sequential numbering is what a real system would do, and is not done here: it needs
-// a counter on the server and a rule for collisions, and HR still has to type real IDs
-// when loading people who already work here.
+// HR types the number and the client assembles the rest. The prefix is hardcoded, but
+// the assembled value is still checked against the pattern the server sends.
 const EMPLOYEE_ID_PREFIX = "ALT-";
 const EMPLOYEE_ID_DIGITS = 4;
 
-// Probation runs 6 to 9 months, PER PERSON, which is the system spec's own wording. So
-// this is a shortcut rather than a derived value: deriving one number would contradict
-// the range, and probation genuinely gets extended for individuals.
+// Probation runs 6 to 9 months PER PERSON, so this is a shortcut rather than a derived
+// value: one number would contradict the range. The date field stays editable.
 //
-// The date field below stays editable. Choosing an option fills it in, a case that fits
-// neither is still typeable, and None covers everyone who joined before the company
-// started tracking it.
-//
-// This range belongs in the server constants file with the other controlled lists, and
-// is the one client-side copy of a company rule. Moving it is a server-branch change.
+// ⚠️ The one client-side copy of a company rule. It belongs in the server constants.
 const PROBATION_OPTIONS = [
   { value: "", label: "None" },
   { value: "6", label: "6 months" },

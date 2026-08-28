@@ -4,21 +4,8 @@ import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
-// The people a supervisor supervises. Story 17, criterion 1.
-//
-// THE PEOPLE ARE REAL; THEIR SUBMISSIONS ARE NOT. The criterion asks for the team's
-// submissions listed by name, and there is no cycle, review or feedback collection
-// for a submission status to come from. So the list is real and the status column
-// says plainly that it does not exist yet, rather than showing every row as "not
-// started", which would be a claim about their work rather than about the system.
-//
-// NOTHING HERE IS A COUNT OF REVIEWERS. Criterion 2 says peer reviewers appear as a
-// count only, never named and never timed. When that column arrives it is a number
-// and nothing else: in a team of eight, a name and a timestamp together identify who
-// wrote what, which is the whole thing this system exists to prevent.
-//
-// The team comes from a hook that takes no id, so this screen cannot ask about
-// anybody else's team even by accident.
+// ⚠️ If a reviewer column is ever added here it is a COUNT, never a name and never a
+// timestamp. In a team of eight the two together identify who wrote what.
 export default function MyTeamPage() {
   const { user, isSupervisor } = useAuth();
   const { team, loading, error } = useTeam();
@@ -52,10 +39,6 @@ export default function MyTeamPage() {
           Loading…
         </p>
       ) : people.length === 0 ? (
-        // Three different empty answers, and they mean different things. Somebody who
-        // leads nothing is not a supervisor at all; somebody who leads an empty unit
-        // is. Collapsing them into one sentence would tell one of the two something
-        // false about their own position.
         <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
           {!isSupervisor
             ? "You do not lead a unit, so nobody reports to you."
@@ -86,19 +69,15 @@ export default function MyTeamPage() {
                   <td className="px-4 py-3 text-muted">
                     {person.unit?.name || "—"}
                     {person.viaVacancy && (
-                      // Without this, somebody from a unit the supervisor does not
-                      // lead appears on their list with no explanation and reads as a
-                      // bug. It is the mirror of the note an employee sees when their
-                      // own supervisor was resolved upward.
                       <span className="mt-1 flex items-center gap-1.5 text-[12px] text-amber-700 dark:text-amber-400">
                         <Icon name="flag" className="h-3.5 w-3.5" />
                         No lead of their own, so they report to you
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted">Not built yet</td>
-                  {/* The way in to one person's review. Two flat tabs were removed
-                      for this. */}
+                  <td className="px-4 py-3 text-muted">
+                    <CycleCell person={person} />
+                  </td>
                   <td className="px-4 py-3">
                     <Link
                       to={`/my-team/${person.id}`}
@@ -116,12 +95,32 @@ export default function MyTeamPage() {
 
       {people.length > 0 && (
         <p className="mt-4 max-w-prose text-[13px] text-muted">
-          The <strong>This cycle</strong> column will show each person&rsquo;s
-          self-assessment and review status. No appraisal cycle exists yet, so there is
-          nothing for it to report.
+          <strong>This cycle</strong> is the appraisal cycle each person&rsquo;s group is
+          in, which is not always yours: the group comes from the month they joined, so
+          one team can span all three. Their own self-assessment and review status join
+          this column once reviews exist.
         </p>
       )}
     </>
+  );
+}
+
+// Three separate answers, and running them together loses the difference: no group at
+// all, a group with no cycle running, and a live cycle.
+function CycleCell({ person }) {
+  if (!person.parGroup) return <span>&mdash;</span>;
+
+  if (!person.cycle) {
+    return <span>None running &middot; {person.parGroup} group</span>;
+  }
+
+  return (
+    <span>
+      {person.cycle.parGroup} {person.cycle.year}
+      <span className="mt-1 block text-[12px]">
+        {person.cycle.status.replace(/_/g, " ")}
+      </span>
+    </span>
   );
 }
 

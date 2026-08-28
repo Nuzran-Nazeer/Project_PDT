@@ -5,7 +5,7 @@ import { listUsers } from "../../services/users";
 import StatusBadge from "../../components/employees/StatusBadge";
 
 // The roster. Read by HR, Head of HR and Leadership; written only by HR, which is
-// what the server enforces — the buttons below only decide what is worth showing.
+// what the server enforces. The buttons below only decide what is worth showing.
 //
 // It lives at /employees rather than /hr/employees because three roles reach it and
 // naming the route after one of them would be wrong the moment the other two arrive.
@@ -30,10 +30,9 @@ export default function EmployeeListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // The spinner is turned on by whatever CAUSED the reload — the first render, or
-  // the status handler below — never inside the effect. Setting state synchronously
-  // in an effect body triggers a second render pass, which the React lint rule
-  // rejects; AuthProvider works around the same rule the same way.
+  // The spinner is turned on by whatever CAUSED the reload (the first render, or the
+  // status handler below), never inside the effect: a synchronous state write in an
+  // effect body costs a second render pass and the lint rule rejects it.
   useEffect(() => {
     let cancelled = false;
 

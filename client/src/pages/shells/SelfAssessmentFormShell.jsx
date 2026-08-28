@@ -3,7 +3,6 @@ import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import { useReportingLine } from "../../hooks/useReportingLine";
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import CompetencyRows from "../../components/shells/CompetencyRows";
 import { FormShell, FormSection, FormActions } from "../../components/shells/FormShell";
 
@@ -27,11 +26,6 @@ export default function SelfAssessmentFormShell() {
         }
         backTo="/dashboard"
       />
-
-      <ShellNotice>
-        This is the whole form, with nothing behind it. Every question it will ask is
-        here; none of the fields accept input and neither control at the bottom works.
-      </ShellNotice>
 
       <FormShell>
         <FormSection

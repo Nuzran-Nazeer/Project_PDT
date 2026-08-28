@@ -10,46 +10,37 @@ import {
 } from "../services/token";
 
 export function AuthProvider({ children }) {
-  // Seeded from storage so a refresh does not drop the session. `getToken` is
-  // passed as the initialiser rather than called — React would otherwise read
-  // storage on every single render.
+  // `getToken` is passed as the initialiser rather than called: React would otherwise
+  // read storage on every render.
   const [token, setToken] = useState(getToken);
   const [user, setUser] = useState(getStoredUser);
 
-  // The controlled lists, including the role order that decides where a
-  // multi-role user lands. Fetched once per session because the endpoint needs a
-  // token, so it cannot be loaded before signing in.
-  //
-  // It lives here for now because the landing redirect is its only consumer.
-  // When the employee-record forms need the designation list too, this is worth
-  // splitting into its own provider rather than growing this one.
+  // Fetched once per session because the endpoint needs a token, so it cannot be
+  // loaded before signing in.
   const [constants, setConstants] = useState(null);
   const [constantsReady, setConstantsReady] = useState(false);
 
-  // What the stored user cannot tell us. `supervisor` is not a role anybody is
-  // granted -- a person is one because they lead a unit today -- so it can only
-  // come from the server. Working it out here would be a screen deciding what
-  // somebody is, which is the pattern build rule 1 exists to stop.
+  // `supervisor` is not a role anybody is granted: a person is one because they lead a
+  // unit today, so only the server can answer it. Working it out here would be a
+  // screen deciding what somebody is, which build rule 1 exists to stop.
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [leadsUnits, setLeadsUnits] = useState([]);
 
-  // Guards must not decide before the answer arrives, or a supervisor refreshing
-  // on their own screen is bounced off it a moment before the app learns they
-  // belong there.
+  // Guards must not decide before the answer arrives, or a supervisor refreshing on
+  // their own screen is bounced off it.
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // No reset branch here: clearing state synchronously inside an effect body
-    // causes a second render pass, and the React lint rule rejects it. The reset
-    // belongs in signOut, which is the only thing that removes a token anyway.
+    // No reset branch: clearing state synchronously inside an effect body causes a
+    // second render pass and the React lint rule rejects it. The reset belongs in
+    // signOut, the only thing that removes a token anyway.
     if (!token) return;
 
     let cancelled = false;
     fetchConstants()
       .then((data) => !cancelled && setConstants(data))
-      // Deliberately swallowed. A failure here must not block signing in — the
-      // landing redirect falls back to the employee dashboard, which everyone
-      // can reach, rather than stranding the user on a spinner.
+      // Deliberately swallowed: a failure here must not block signing in. The landing
+      // redirect falls back to the employee dashboard, which everyone can reach.
       .catch(() => !cancelled && setConstants(null))
       .finally(() => !cancelled && setConstantsReady(true));
 
@@ -58,10 +49,10 @@ export function AuthProvider({ children }) {
     };
   }, [token]);
 
-  // Re-read on every load rather than trusting what login stored. The token is
-  // minted once and never changes, so a role granted this morning is invisible to
-  // a session that only ever reads its own copy -- and a person who stopped
-  // leading a unit keeps seeing a team that is no longer theirs.
+  // Re-read on every load rather than trusting what login stored. The token is minted
+  // once and never changes, so a role granted this morning is invisible to a session
+  // reading only its own copy, and someone who stopped leading a unit keeps seeing a
+  // team that is no longer theirs.
   useEffect(() => {
     if (!token) return;
 
@@ -74,9 +65,8 @@ export function AuthProvider({ children }) {
         setIsSupervisor(Boolean(data.isSupervisor));
         setLeadsUnits(data.leadsUnits || []);
       })
-      // A rejected token is already handled: the API layer clears storage and
-      // raises the session-expired event that signs the user out. Anything else
-      // leaves the stored copy in place rather than stranding them on a spinner.
+      // A rejected token is already handled: the API layer clears storage and raises
+      // the session-expired event. Anything else leaves the stored copy in place.
       .catch(() => {})
       .finally(() => !cancelled && setSessionReady(true));
 
@@ -93,9 +83,8 @@ export function AuthProvider({ children }) {
     return result.user;
   }, []);
 
-  // Signing out is a client-side discard: the token is thrown away and the
-  // server is not told, because it keeps no session to end (build decision B6).
-  // The token itself stays technically valid until it expires.
+  // A client-side discard: the server is not told, because it keeps no session to end
+  // (build decision B6). The token stays technically valid until it expires.
   const signOut = useCallback(() => {
     clearSession();
     setToken(null);
@@ -107,9 +96,8 @@ export function AuthProvider({ children }) {
     setSessionReady(false);
   }, []);
 
-  // The API layer clears storage when a token is rejected; this is what clears the
-  // React state to match, so the route guard notices and sends the user to login.
-  // Without it the two disagree until something forces a reload.
+  // The API layer clears storage when a token is rejected; this clears the React state
+  // to match, so the route guard notices. Without it the two disagree until a reload.
   useEffect(() => {
     window.addEventListener(SESSION_EXPIRED, signOut);
     return () => window.removeEventListener(SESSION_EXPIRED, signOut);

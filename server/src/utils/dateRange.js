@@ -1,38 +1,16 @@
 const AppError = require("./AppError");
 
-// Every relationship that changes over time is stored here as a PERIOD, and every
-// rule in this system asks the same question of it: "was this true on date D?".
-// Both halves of that answer live in this one file, so the four dated collections
-// cannot drift into three different interpretations of the same dates.
+// ⚠️ THE CONVENTION IS [from, to). `from` is the first day covered, `to` the first day
+// NOT covered, `to: null` still open. Someone moving on 1 April gets `to: 2026-04-01`
+// on the old record and `from: 2026-04-01` on the new one: the same date twice, so
+// there is no gap and no day on which both are true. An inclusive `to` would force
+// every close to compute "the day before", wrong at every month end and leap year.
 //
-// ---------------------------------------------------------------------------
-// THE CONVENTION: [from, to)
-// ---------------------------------------------------------------------------
-// `from` is the first day the record covers.
-// `to`   is the first day it does NOT cover.
-// `to: null` means the record is still open.
+// Not specified by the design documents; confined to this file so it is one change if
+// overruled. HR sees a last day, which is `to` minus one.
 //
-// So someone who moves unit on 1 April gets `to: 2026-04-01` on the old record and
-// `from: 2026-04-01` on the new one. THE SAME DATE, written twice — which is the
-// point: there is no day-before arithmetic to get wrong, no gap between the two
-// records, and no day on which both are true.
-//
-// The alternative, an inclusive `to` of 31 March, forces every close to compute
-// "the day before" — and that computation is wrong at every month end, every leap
-// year, and every daylight-saving boundary.
-//
-// ⚠️ NOT SPECIFIED BY THE DESIGN DOCUMENTS. The system spec says only that `to` is
-// null for the current record; it never says which side of the boundary `to` sits
-// on. Chosen here on 2026-08-25, flagged to Nuzran, and confined to this file so it
-// is one change if overruled. HR never sees it: a screen showing a last day shows
-// `to` minus one day.
-//
-// ---------------------------------------------------------------------------
-// Dates are normalised to UTC midnight
-// ---------------------------------------------------------------------------
-// HR enters days, not moments. Left unnormalised, a membership saved at 10:32 would
-// not be found by a query asking about that same day at 00:00, and the failure would
-// look like missing data rather than a time-of-day bug.
+// ⚠️ Dates are normalised to UTC midnight. Unnormalised, a membership saved at 10:32
+// is not found by a query asking about that day, and it looks like missing data.
 const toDay = (value, fieldName) => {
   if (value === undefined || value === null || value === "") {
     throw new AppError(`${fieldName} is required`, 400);
@@ -46,34 +24,23 @@ const toDay = (value, fieldName) => {
   );
 };
 
-// The day after. Lives here because it is the OTHER half of the [from, to)
-// convention, and the one place it is genuinely needed.
-//
-// Most dates in this system arrive as "effective from": a transfer's date is the
-// first day in the new unit, so the old record's `to` is that same date and no
-// arithmetic happens anywhere. Closing things is the exception -- HR supplies a LAST
-// day ("her last working day was the 25th"), and a last day has to become the first
-// uncovered day before it can be stored.
-//
-// Date.UTC normalises out of range values, so the 31st becomes the 1st of the next
-// month and 31 December becomes 1 January without a special case. This is the only
-// day-arithmetic in the codebase; keeping it here is what stops it being reinvented,
-// slightly wrong, in three services.
+// Closing is the one case needing arithmetic: HR supplies a LAST day, which becomes
+// the first uncovered day. Date.UTC normalises out-of-range values, so the 31st
+// becomes the 1st of the next month with no special case. The only day-arithmetic in
+// the codebase, kept here so it is not reinvented slightly wrong elsewhere.
 const dayAfter = (day) =>
   new Date(
     Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1),
   );
 
-// A period must cover at least one day. `to` equal to `from` covers none, which is a
-// record that is true on no date at all -- always a mistake, never a useful history.
+// `to` equal to `from` covers no days, so the record is true on no date.
 const assertOrderedRange = (from, to) => {
   if (to && to.getTime() <= from.getTime()) {
     throw new AppError("The end date must be after the start date", 400);
   }
 };
 
-// Records true on the given day. This is the ONLY way to ask "as at" -- criterion 2
-// of the dated-history story, and the foundation the reporting line is built on.
+// The only way to ask "as at".
 const activeOn = (day) => ({
   from: { $lte: day },
   $or: [{ to: null }, { to: { $gt: day } }],

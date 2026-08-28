@@ -32,7 +32,7 @@ export default function EmployeeDetailPage() {
   const canManage = user?.roles?.includes("hr");
   // Placing and moving people is HR and Head of HR, matching the server. Written
   // out rather than reusing `canManage` above, which is about editing the record
-  // itself — the two happen to overlap today and are not the same permission.
+  // itself: the two happen to overlap today and are not the same permission.
   const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [person, setPerson] = useState(null);
@@ -46,10 +46,8 @@ export default function EmployeeDetailPage() {
   const [lastWorkingDay, setLastWorkingDay] = useState(todayInput);
   const [warnings, setWarnings] = useState([]);
 
-  // No setLoading(true) here: the initial state is already `true`, and this screen
-  // is only ever reached by mounting it fresh. Setting it inside the effect body
-  // would be a synchronous state write in an effect, which the React lint rule
-  // rejects for causing a second render pass.
+  // No setLoading(true) in the effect body: the lint rule rejects the second render
+  // pass, and the initial state is already `true`.
   useEffect(() => {
     getUser(id)
       .then(setPerson)
@@ -139,9 +137,9 @@ export default function EmployeeDetailPage() {
         </p>
       )}
 
-      {/* Not an error — the deactivation succeeded. Styled with the neutral tokens
-          rather than the danger ones for that reason: there is no warning colour in
-          the palette, and borrowing `danger` would read as "this failed". */}
+      {/* Not an error: the deactivation succeeded. Neutral tokens rather than danger
+          ones, because there is no warning colour and `danger` reads as "this
+          failed". */}
       {warnings.length > 0 && (
         <div className="mt-6 rounded-xl border border-line bg-raised px-4 py-3">
           <p className="text-[13px] font-semibold text-ink">
@@ -227,7 +225,7 @@ export default function EmployeeDetailPage() {
                 Deactivate <strong>{person.name}</strong>? They will not be able to sign
                 in, and their unit membership and any unit they lead are closed on the
                 date below. The record is kept, because it is part of their appraisal
-                history, and HR can set the account back to active later — though that
+                history, and HR can set the account back to active later, though that
                 returns them with no unit rather than reopening the old membership.
               </p>
 

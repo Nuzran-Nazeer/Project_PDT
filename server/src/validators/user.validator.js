@@ -14,7 +14,7 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 // Request-shape validation: fast-fail before touching the service or the database.
 // Business rules (duplicate email, immutable fields) stay in the service layer.
 //
-// The lists come from config/constants.js, never from the model — so the model and
+// The lists come from config/constants.js, never from the model, so the model and
 // the validator cannot drift apart, and neither can be renamed without the other.
 
 const checkRoles = (roles, errors) => {

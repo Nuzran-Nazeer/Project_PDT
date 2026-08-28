@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import { competencyCount } from "../../utils/competencies";
 
 // The way in to the self-assessment: which cycle, and one action to open the form.
@@ -20,11 +19,6 @@ export default function SelfAssessmentShell() {
         context={[user?.designation, user?.name].filter(Boolean).join(" · ")}
         backTo="/dashboard"
       />
-
-      <ShellNotice>
-        The cycle below is real. The form behind it is a shell: you can see its shape and
-        every question it asks, and nothing you type is stored.
-      </ShellNotice>
 
       {loading ? (
         <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">

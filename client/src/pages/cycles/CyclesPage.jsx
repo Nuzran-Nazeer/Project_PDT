@@ -11,24 +11,13 @@ import {
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 
-// Running the appraisal cycle: create one, open it, move it on, cancel it.
+// ⚠️ EVERY RULE HERE IS THE SERVER'S. The one-per-group check, the stage order, the
+// 30-day window and the written reason all live in the service; the buttons below only
+// hide what would be refused. A rule enforced by a hidden button is not enforced.
 //
-// THE MOCKUPS DO NOT DRAW THIS SCREEN. All thirty cover the six dashboards and their
-// tabs, and none shows HR creating a cycle — so this follows the house style of the
-// organisation tree rather than a design, and stays plain on purpose.
-//
-// EVERY RULE HERE IS THE SERVER'S. This page shows what is worth offering; it decides
-// nothing. The one-per-group check, the stage order, the 30-day window and the written
-// reason all live in the service, and the buttons below only hide what would be
-// refused. A rule enforced by a hidden button is not enforced at all.
-//
-// The refusals are shown in the server's own words, never reworded. "This one is
-// collecting" and "opened 40 days ago" name the rule that stopped you, which a generic
-// "could not cancel" would throw away.
+// Refusals are shown in the server's own words, which name the rule that stopped you.
 
-// The stages, in order, so the page can say what the next move is called. It is the
-// same list the server holds; here it is only ever used for LABELS, never to decide
-// whether a move is allowed.
+// ⚠️ Used for LABELS only, never to decide whether a move is allowed.
 const STAGE_LABELS = {
   draft: "Draft",
   open: "Open",
@@ -71,8 +60,8 @@ const blankForm = () => ({
 export default function CyclesPage() {
   const { user, constants } = useAuth();
 
-  // HR and the Head of HR run the cycle; Leadership reads it. The server enforces
-  // exactly this, which is why the page can simply not draw the controls.
+  // The server enforces exactly this, which is why the page can simply not draw the
+  // controls.
   const canManage = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [cycles, setCycles] = useState([]);
@@ -91,8 +80,7 @@ export default function CyclesPage() {
   const [cancelFor, setCancelFor] = useState("");
   const [cancelReason, setCancelReason] = useState("");
 
-  // Reloading after a change. Called from a click, never from an effect body, which
-  // is why it can be a plain async function.
+  // Called from a click, never an effect body, so it can be a plain async function.
   const load = async () => {
     try {
       const data = await listCycles();
@@ -105,10 +93,8 @@ export default function CyclesPage() {
     }
   };
 
-  // The first load is written as a promise chain rather than calling `load()`, because
-  // setting state synchronously inside an effect body causes a second render pass on
-  // every mount. `cancelled` stops a slow response writing into a screen that has
-  // already gone. Same shape as every other list page here.
+  // A promise chain rather than `load()`: the lint rule rejects the second render
+  // pass. `cancelled` stops a slow response writing into a screen that has gone.
   useEffect(() => {
     let cancelled = false;
 
@@ -147,7 +133,7 @@ export default function CyclesPage() {
     } catch (err) {
       // The server's own words: a second live cycle for the same group and year names
       // the one that already exists and what stage it is at. Nothing on screen changes
-      // — the cycle was never created, so there is nothing to undo.
+      // The cycle was never created, so there is nothing to undo.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -324,8 +310,8 @@ export default function CyclesPage() {
           <p className="text-sm text-muted">Loading…</p>
         ) : cycles.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
-            No cycle has been created yet. Nothing above a cycle can exist until one does
-            — no review, no feedback, no development plan.
+            No cycle has been created yet. Nothing above a cycle can exist until one
+            does: no review, no feedback, no development plan.
           </p>
         ) : (
           cycles.map((cycle) => {
@@ -377,9 +363,8 @@ export default function CyclesPage() {
                   </p>
                 )}
 
-                {/* Shown, not hidden. A cancelled cycle stays in the list with the
-                    reason it was cancelled, because that is the record of a decision
-                    somebody made — and nothing here is ever deleted. */}
+                {/* Shown, not hidden. A cancelled cycle stays in the list with its
+                    reason, because that is the record of a decision somebody made. */}
                 {cycle.status === "cancelled" && (
                   <p className="mt-2 text-[13px] text-muted">
                     Cancelled {formatDate(cycle.cancelledOn)}

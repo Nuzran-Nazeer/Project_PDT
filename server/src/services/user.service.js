@@ -53,9 +53,8 @@ exports.createUser = async (data) => {
   });
   if (existing) throw new AppError("Email or employee ID already in use", 409);
 
-  // HR creates the record; the employee sets their own password through an invite.
-  // Until that story is built, HR may pass an initial password — if they do, the
-  // account is usable straight away.
+  // HR creates the record; the employee sets their own password through an invite. An
+  // initial password from HR still works, and makes the account usable at once.
   if (!fields.password) fields.status = "invited";
   else fields.status = "active";
 
@@ -82,7 +81,7 @@ exports.getUserById = async (id) => {
   return user;
 };
 
-// Load, assign, save — NEVER findByIdAndUpdate.
+// Load, assign, save. NEVER findByIdAndUpdate.
 //
 // findByIdAndUpdate does not fire `save` hooks, so a password passed through it
 // would be written to the database as plaintext, silently and with no error.
@@ -108,27 +107,18 @@ exports.updateUser = async (id, data) => {
   return user;
 };
 
-// Soft delete: the record stays, the account stops working.
-// The record is someone's appraisal history — it is never removed.
-// ---------------------------------------------------------------------------
-// Deactivating someone, and closing what depends on them
-// ---------------------------------------------------------------------------
-// Setting `status: inactive` used to be the whole of this function, and it left a
-// departed employee sitting in their unit and, if they led one, STILL LEADING IT. An
-// open dated record means "this is still true today", so leaving them open made the
-// system assert something false -- and once the reporting line started reading those
-// records, that became a wrong answer on a screen rather than untidy data.
+// Soft delete: the record stays because it is someone's appraisal history, and the
+// account stops working. It also CLOSES the dated records that depend on the person,
+// because an open dated record means "this is still true today", and leaving a leaver
+// open makes the reporting line assert something false on a screen.
 //
-// Note this CASCADES where discontinuing a unit REFUSES, and the difference is not an
-// inconsistency. Closing a unit is a decision, and a decision can be made to happen
-// in the right order. A person leaving is a fact that already happened, and HR cannot
-// be blocked from recording it because of paperwork.
+// This cascades where discontinuing a unit REFUSES, which is not an inconsistency:
+// closing a unit is a decision that can be made to happen in the right order, while a
+// person leaving is a fact that already happened.
 //
-// `lastWorkingDay` is the final day they worked, and defaults to today. It is
-// editable because HR processes leavers AFTER they have gone: every rule in this
-// system is about a period, and peer eligibility is four continuous months with two
-// inside the cycle, so a fortnight of phantom service can flip whether someone was
-// eligible to review a colleague.
+// `lastWorkingDay` defaults to today but is editable, because HR processes leavers
+// after they have gone: peer eligibility is four continuous months, so a fortnight of
+// phantom service can flip whether someone was eligible to review a colleague.
 exports.deactivateUser = async (id, lastWorkingDay) => {
   const user = await User.findById(id);
   if (!user) throw new AppError("User not found", 404);
@@ -144,9 +134,8 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
     await membership.save();
   }
 
-  // A person can lead more than one unit at a time -- that is ordinary in a company
-  // this size and the lead service allows it on purpose -- so this is a loop, not a
-  // findOne.
+  // A loop, not a findOne: one person leading several units at once is ordinary in a
+  // company this size.
   const terms = await UnitLead.find({ userId: user._id, to: null }).populate(
     "unitId",
     "name",
@@ -157,12 +146,9 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
     term.to = closesOn;
     await term.save();
 
-    // Criterion 7. A unit holds at most one lead at a time, so closing a term always
-    // leaves the unit vacant -- there is no "unless somebody else leads it" case.
-    //
-    // This WARNS rather than refusing, and it is safe to proceed because the
-    // reporting line resolves upward to the parent's lead when a unit has none. The
-    // unit degrades to reporting one level higher; nobody is left unsupervised.
+    // A unit holds at most one lead, so closing a term always leaves it vacant. This
+    // WARNS rather than refusing, which is safe because the reporting line resolves
+    // upward: the unit degrades to reporting one level higher.
     warnings.push(
       `${(term.unitId && term.unitId.name) || "A unit"} now has no lead. Its people report to the unit above until someone is appointed.`,
     );
@@ -171,11 +157,9 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
   user.status = "inactive";
   await user.save();
 
-  // Criterion 8 is satisfied by doing NOTHING here. Reactivating is an ordinary
-  // status edit through updateUser, and it does not reopen the membership closed
-  // above -- so someone who comes back returns with no unit and HR assigns them
-  // afresh. Reopening would claim continuous membership across a gap that really
-  // happened, and would guess at a unit that may have been reorganised or
-  // discontinued while they were away.
+  // Reactivating is an ordinary status edit through updateUser and deliberately does
+  // NOT reopen the membership closed above: someone who comes back returns with no
+  // unit. Reopening would claim continuous membership across a gap that really
+  // happened, and guess at a unit that may since have been reorganised.
   return { user, warnings };
 };

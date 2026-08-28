@@ -1,8 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
-import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import PageHeader from "../../components/layout/PageHeader";
-import ShellNotice from "../../components/shells/ShellNotice";
 import { FormSection } from "../../components/shells/FormShell";
 
 // One team member: their self-assessment, their feedback, and the way in to the review.
@@ -14,9 +12,12 @@ import { FormSection } from "../../components/shells/FormShell";
 export default function TeamMemberShell() {
   const { id } = useParams();
   const { team, loading, error } = useTeam();
-  const { cycle } = useCurrentCycle();
 
   const person = (team?.team || []).find((member) => member.id === id);
+  // ⚠️ THEIR cycle, off the team record, never the signed-in supervisor's. The group
+  // comes from each person's joining month, so a team spans groups and a supervisor's
+  // own cycle is frequently not the one this person is being appraised in.
+  const cycle = person?.cycle || null;
 
   if (loading) {
     return (
@@ -44,7 +45,9 @@ export default function TeamMemberShell() {
     <>
       <PageHeader
         title={person.name}
-        context={[person.designation, person.unit?.name].filter(Boolean).join(" · ")}
+        context={[person.designation, person.unit?.name, person.employeeId]
+          .filter(Boolean)
+          .join(" · ")}
       />
 
       <Link
@@ -54,22 +57,13 @@ export default function TeamMemberShell() {
         ← Back to my team
       </Link>
 
-      <ShellNotice>
-        The person is real. Everything below is the shape of what this screen will carry:
-        their self-assessment, the colleague feedback about them, and the way through to
-        writing your review. None of those collections exists yet.
-      </ShellNotice>
-
       <div className="grid gap-5">
         <FormSection
           letter="A"
           title="Their self-assessment"
           note="You cannot start your review until this is submitted, so this section is also the gate."
         >
-          <Empty>
-            Not submitted. Self-assessments are not built yet, so there is nothing to
-            read.
-          </Empty>
+          <Empty>Not submitted.</Empty>
         </FormSection>
 
         <FormSection
@@ -77,9 +71,7 @@ export default function TeamMemberShell() {
           title="Colleague feedback"
           note="Consolidated, and never attributed. You see what was said, not who said it."
         >
-          <Empty>
-            No colleague feedback. Nobody has been assigned to review anybody yet.
-          </Empty>
+          <Empty>No colleague feedback.</Empty>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
             When this fills in, it will never name a reviewer or say how many responded,
@@ -95,8 +87,8 @@ export default function TeamMemberShell() {
         >
           <p className="max-w-prose text-sm text-muted">
             {cycle
-              ? `The ${cycle.parGroup} ${cycle.year} cycle is at ${cycle.status.replace(/_/g, " ")}.`
-              : "No cycle is running for this group."}{" "}
+              ? `Their ${cycle.parGroup} ${cycle.year} cycle is at ${cycle.status.replace(/_/g, " ")}.`
+              : `No cycle is running for the ${person.parGroup || "their"} group.`}{" "}
             A review unlocks once the self-assessment is in and the minimum colleague
             responses have arrived.
           </p>
