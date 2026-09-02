@@ -164,6 +164,29 @@ const REVIEWER_TYPES = [
 // attribute is feedback they cannot follow up. Wrong in either direction is a bug.
 const CONFIDENTIAL_REVIEWER_TYPES = ["peer", "upward"];
 
+const REVIEW_STATUS = [
+  "pending",
+  "in_progress",
+  "awaiting_supervisor",
+  "normalising",
+  "published",
+  "acknowledged",
+  "withdrawn",
+  "under_appeal",
+];
+
+// How many colleagues are asked to review one person. The floor of 5, the small-pool
+// figure of 3 and the per-reviewer load caps are a separate rule and are NOT here yet.
+const PEER_REVIEWS_TARGET = 8;
+
+// ⚠️ FOUR CONTINUOUS months, not four months added up across two separate stints. Two
+// short spells either side of a transfer are not the same evidence as one long one.
+const PEER_ELIGIBILITY_MONTHS = 4;
+
+// At least this much of that stretch must fall INSIDE the cycle, so a pool cannot be
+// filled entirely by people who stopped working with the reviewee before it opened.
+const PEER_ELIGIBILITY_MONTHS_IN_CYCLE = 2;
+
 const FEEDBACK_STATUS = ["assigned", "draft", "submitted", "locked"];
 
 // The author may still edit for this long after submitting. `locksAt` is `submittedAt`
@@ -372,6 +395,10 @@ module.exports = {
   REVIEWER_TYPES,
   CONFIDENTIAL_REVIEWER_TYPES,
   FEEDBACK_STATUS,
+  REVIEW_STATUS,
+  PEER_REVIEWS_TARGET,
+  PEER_ELIGIBILITY_MONTHS,
+  PEER_ELIGIBILITY_MONTHS_IN_CYCLE,
   FEEDBACK_EDIT_WINDOW_HOURS,
   IDENTIFYING_FIELDS,
   NEVER_SERVED_FIELDS,
