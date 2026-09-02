@@ -148,6 +148,46 @@ const NEXT_STAGE = CYCLE_STAGES.reduce((map, stage, i) => {
 // guarantee is why the figure is what it is, and it holds only from opening.
 const CYCLE_CANCEL_WINDOW_DAYS = 30;
 
+// Feedback
+
+const REVIEWER_TYPES = [
+  "self",
+  "peer",
+  "supervisor",
+  "project_lead",
+  "team_lead",
+  "upward",
+];
+
+// ⚠️ THE TWO TYPES THAT MUST NEVER REACH A REVIEWEE OR THEIR SUPERVISOR WITH A NAME
+// ON THEM. The other four are ATTRIBUTED on purpose: feedback an employee cannot
+// attribute is feedback they cannot follow up. Wrong in either direction is a bug.
+const CONFIDENTIAL_REVIEWER_TYPES = ["peer", "upward"];
+
+const FEEDBACK_STATUS = ["assigned", "draft", "submitted", "locked"];
+
+// The author may still edit for this long after submitting. `locksAt` is `submittedAt`
+// plus this window, and the next stage stays gated until it passes so nobody reviews a
+// document that is still changing.
+const FEEDBACK_EDIT_WINDOW_HOURS = 5;
+
+// ⚠️ Stripped from a FEEDBACK record served to a reviewee or their supervisor. The
+// timestamps are here because a submission time is an identity: it correlates against
+// who was on leave, or who mentioned they had a review to write.
+const IDENTIFYING_FIELDS = [
+  "reviewerId",
+  "reviewerName",
+  "submittedAt",
+  "createdAt",
+  "updatedAt",
+];
+
+// ⚠️ The subset no response may EVER carry without an authorised identity read. Kept
+// apart from the list above because `createdAt` is ordinary on a user or a unit and
+// only becomes identifying on feedback, so guarding it globally would refuse every
+// endpoint in the system.
+const NEVER_SERVED_FIELDS = ["reviewerId", "reviewerName"];
+
 // Competencies
 //
 // SIX PER REVIEW: four shared by everyone, plus two for the reviewee's job family.
@@ -329,6 +369,12 @@ module.exports = {
   CYCLE_CANCELLED,
   NEXT_STAGE,
   CYCLE_CANCEL_WINDOW_DAYS,
+  REVIEWER_TYPES,
+  CONFIDENTIAL_REVIEWER_TYPES,
+  FEEDBACK_STATUS,
+  FEEDBACK_EDIT_WINDOW_HOURS,
+  IDENTIFYING_FIELDS,
+  NEVER_SERVED_FIELDS,
   EMPLOYEE_ID_PATTERN,
   BCRYPT_COST,
   MIN_PASSWORD_LENGTH,
