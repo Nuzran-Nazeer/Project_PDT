@@ -36,7 +36,11 @@ module.exports = (req, res, next) => {
 
   res.json = (body) => {
     if (!res.locals.identityRevealed) {
-      const leak = findForbidden(body);
+      // ⚠️ Scan what will actually be SENT, not the object handed in. A Mongoose
+      // document carries the schema's path names as keys in its own bookkeeping, so
+      // walking the live object finds "reviewerId" on a document that never loaded it.
+      // Serialising first also runs every toJSON transform, so this sees the bytes.
+      const leak = findForbidden(JSON.parse(JSON.stringify(body ?? null)));
       if (leak) {
         // A 500 is the correct outcome. A refused response is recoverable; a reviewer
         // named to their reviewee is not.
