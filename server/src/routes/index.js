@@ -8,6 +8,7 @@ const unitMembershipRoutes = require("./unitmembership.routes");
 const unitLeadRoutes = require("./unitlead.routes");
 const supervisionRoutes = require("./supervision.routes");
 const cycleRoutes = require("./cycle.routes");
+const feedbackRoutes = require("./feedback.routes");
 
 // Health check: reports live DB connection state (consumed by the frontend).
 router.get("/status", (req, res) => {
@@ -37,5 +38,9 @@ router.use("/supervision", supervisionRoutes);
 
 // Top level: a cycle covers an appraisal GROUP, so it is nobody's sub-resource.
 router.use("/cycles", cycleRoutes);
+
+// Top level, and not under /reviews: the half a reviewer uses is addressed by THEIR
+// assignment, not by the review it belongs to.
+router.use("/feedback", feedbackRoutes);
 
 module.exports = router;

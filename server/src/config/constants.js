@@ -148,6 +148,69 @@ const NEXT_STAGE = CYCLE_STAGES.reduce((map, stage, i) => {
 // guarantee is why the figure is what it is, and it holds only from opening.
 const CYCLE_CANCEL_WINDOW_DAYS = 30;
 
+// Feedback
+
+const REVIEWER_TYPES = [
+  "self",
+  "peer",
+  "supervisor",
+  "project_lead",
+  "team_lead",
+  "upward",
+];
+
+// ⚠️ THE TWO TYPES THAT MUST NEVER REACH A REVIEWEE OR THEIR SUPERVISOR WITH A NAME
+// ON THEM. The other four are ATTRIBUTED on purpose: feedback an employee cannot
+// attribute is feedback they cannot follow up. Wrong in either direction is a bug.
+const CONFIDENTIAL_REVIEWER_TYPES = ["peer", "upward"];
+
+const REVIEW_STATUS = [
+  "pending",
+  "in_progress",
+  "awaiting_supervisor",
+  "normalising",
+  "published",
+  "acknowledged",
+  "withdrawn",
+  "under_appeal",
+];
+
+// How many colleagues are asked to review one person. The floor of 5, the small-pool
+// figure of 3 and the per-reviewer load caps are a separate rule and are NOT here yet.
+const PEER_REVIEWS_TARGET = 8;
+
+// ⚠️ FOUR CONTINUOUS months, not four months added up across two separate stints. Two
+// short spells either side of a transfer are not the same evidence as one long one.
+const PEER_ELIGIBILITY_MONTHS = 4;
+
+// At least this much of that stretch must fall INSIDE the cycle, so a pool cannot be
+// filled entirely by people who stopped working with the reviewee before it opened.
+const PEER_ELIGIBILITY_MONTHS_IN_CYCLE = 2;
+
+const FEEDBACK_STATUS = ["assigned", "draft", "submitted", "locked"];
+
+// The author may still edit for this long after submitting. `locksAt` is `submittedAt`
+// plus this window, and the next stage stays gated until it passes so nobody reviews a
+// document that is still changing.
+const FEEDBACK_EDIT_WINDOW_HOURS = 5;
+
+// ⚠️ Stripped from a FEEDBACK record served to a reviewee or their supervisor. The
+// timestamps are here because a submission time is an identity: it correlates against
+// who was on leave, or who mentioned they had a review to write.
+const IDENTIFYING_FIELDS = [
+  "reviewerId",
+  "reviewerName",
+  "submittedAt",
+  "createdAt",
+  "updatedAt",
+];
+
+// ⚠️ The subset no response may EVER carry without an authorised identity read. Kept
+// apart from the list above because `createdAt` is ordinary on a user or a unit and
+// only becomes identifying on feedback, so guarding it globally would refuse every
+// endpoint in the system.
+const NEVER_SERVED_FIELDS = ["reviewerId", "reviewerName"];
+
 // Competencies
 //
 // SIX PER REVIEW: four shared by everyone, plus two for the reviewee's job family.
@@ -329,6 +392,16 @@ module.exports = {
   CYCLE_CANCELLED,
   NEXT_STAGE,
   CYCLE_CANCEL_WINDOW_DAYS,
+  REVIEWER_TYPES,
+  CONFIDENTIAL_REVIEWER_TYPES,
+  FEEDBACK_STATUS,
+  REVIEW_STATUS,
+  PEER_REVIEWS_TARGET,
+  PEER_ELIGIBILITY_MONTHS,
+  PEER_ELIGIBILITY_MONTHS_IN_CYCLE,
+  FEEDBACK_EDIT_WINDOW_HOURS,
+  IDENTIFYING_FIELDS,
+  NEVER_SERVED_FIELDS,
   EMPLOYEE_ID_PATTERN,
   BCRYPT_COST,
   MIN_PASSWORD_LENGTH,
