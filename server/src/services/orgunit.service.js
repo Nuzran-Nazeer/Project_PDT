@@ -1,6 +1,7 @@
 const OrgUnit = require("../models/orgunit.model");
 const UnitMembership = require("../models/unitmembership.model");
 const UnitLead = require("../models/unitlead.model");
+const HrCoverage = require("../models/hrcoverage.model");
 const AppError = require("../utils/AppError");
 const { toDay, dayAfter, overlapping } = require("../utils/dateRange");
 
@@ -115,7 +116,6 @@ const assertNameFreeAmongSiblings = async (name, parentUnitId, excludeId) => {
   }
 };
 
-
 exports.createUnit = async (data) => {
   const fields = pick(data, CREATABLE_FIELDS);
   if (!fields.parentUnitId) fields.parentUnitId = null;
@@ -191,8 +191,10 @@ exports.updateUnit = async (id, data) => {
 //
 // ⚠️ THIS REFUSES RATHER THAN CASCADING. Quietly closing the memberships would drop
 // everyone out of the appraisal cycle with no error and nothing visible on any screen,
-// because a person with no unit is not appraised. The leadership record IS closed
-// automatically, which is safe because a lead belongs to the unit above.
+// because a person with no unit is not appraised. The leadership record and any open
+// HR coverage ARE closed automatically, which is safe in both cases because the thing
+// each one resolves to (the reporting line, HR coverage) climbs to the unit above on
+// its own.
 exports.discontinueUnit = async (id, lastDay) => {
   const unit = await OrgUnit.findById(id);
   if (!unit) throw new AppError("Unit not found", 404);
@@ -235,9 +237,7 @@ exports.discontinueUnit = async (id, lastDay) => {
   }).populate("userId", "name");
 
   if (members.length) {
-    const names = members
-      .map((m) => (m.userId && m.userId.name) || "someone")
-      .join(", ");
+    const names = members.map((m) => (m.userId && m.userId.name) || "someone").join(", ");
     throw new AppError(
       `${unit.name} still has ${members.length === 1 ? "a member" : "members"}: ${names}. Move ${members.length === 1 ? "them" : "them all"} to another unit first, or they will be left with no supervisor and no appraisal.`,
       409,
@@ -257,6 +257,30 @@ exports.discontinueUnit = async (id, lastDay) => {
     }
     term.to = closesOn;
     await term.save();
+  }
+
+  // Same closing, for HR coverage. Up to two records here, one per role, unlike the
+  // lead above: a discontinued unit cannot go on being someone's direct coverage
+  // either.
+  const coverageRecords = await HrCoverage.find({ unitId: unit._id, to: null });
+
+  // ⚠️ EVERY date is checked before the first save. Validating inside the writing loop
+  // would close the primary and then throw on the backup, leaving the unit half
+  // covered by a record nobody asked to keep open.
+  for (const record of coverageRecords) {
+    if (closesOn.getTime() <= record.from.getTime()) {
+      throw new AppError(
+        `This unit's ${record.role} only started covering it on ${record.from
+          .toISOString()
+          .slice(0, 10)}, so it cannot have closed before then`,
+        400,
+      );
+    }
+  }
+
+  for (const record of coverageRecords) {
+    record.to = closesOn;
+    await record.save();
   }
 
   // ⚠️ The LAST day it operated, not `closesOn`, which is the storage form. This field

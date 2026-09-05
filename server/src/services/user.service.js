@@ -1,6 +1,7 @@
 const User = require("../models/user.model");
 const UnitMembership = require("../models/unitmembership.model");
 const UnitLead = require("../models/unitlead.model");
+const HrCoverage = require("../models/hrcoverage.model");
 const AppError = require("../utils/AppError");
 const { toDay, dayAfter, assertOrderedRange } = require("../utils/dateRange");
 
@@ -151,6 +152,44 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
     // upward: the unit degrades to reporting one level higher.
     warnings.push(
       `${(term.unitId && term.unitId.name) || "A unit"} now has no lead. Its people report to the unit above until someone is appointed.`,
+    );
+  }
+
+  // Same closing, for any HR coverage this person holds. A loop for the same reason:
+  // one person can cover several units, and a unit can have both a primary and a
+  // backup, so a leaving HR officer can hold more than one open record.
+  const coverageRecords = await HrCoverage.find({ userId: user._id, to: null }).populate(
+    "unitId",
+    "name",
+  );
+
+  // ⚠️ EVERY date is checked before the first save, so a leaver covering four units
+  // cannot end up with two closed and two still open because the third date was bad.
+  for (const record of coverageRecords) {
+    assertOrderedRange(record.from, closesOn);
+  }
+
+  for (const record of coverageRecords) {
+    record.to = closesOn;
+    await record.save();
+
+    // ⚠️ What the unit falls back to depends on what is LEFT. Any direct record still
+    // open on it blocks inheritance, so a unit keeping its backup is not "covered from
+    // the unit above" -- saying so would describe the opposite of what coverageOn()
+    // does. Records belonging to this leaver are excluded: the ones not yet closed in
+    // this same loop are on their way out too, and are nobody's remaining cover.
+    const remaining = await HrCoverage.findOne({
+      unitId: record.unitId?._id || record.unitId,
+      userId: { $ne: user._id },
+      to: null,
+    });
+
+    const unitName = (record.unitId && record.unitId.name) || "A unit";
+
+    warnings.push(
+      remaining
+        ? `${unitName} now has no ${record.role} HR officer. Its ${remaining.role} still covers it directly.`
+        : `${unitName} now has no ${record.role} HR officer. It falls back to coverage from the unit above until someone is appointed.`,
     );
   }
 

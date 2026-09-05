@@ -6,6 +6,7 @@ const constantsRoutes = require("./constants.routes");
 const orgUnitRoutes = require("./orgunit.routes");
 const unitMembershipRoutes = require("./unitmembership.routes");
 const unitLeadRoutes = require("./unitlead.routes");
+const hrCoverageRoutes = require("./hrcoverage.routes");
 const supervisionRoutes = require("./supervision.routes");
 const cycleRoutes = require("./cycle.routes");
 const feedbackRoutes = require("./feedback.routes");
@@ -31,6 +32,7 @@ router.use("/org-units", orgUnitRoutes);
 // often as about a unit.
 router.use("/unit-memberships", unitMembershipRoutes);
 router.use("/unit-leads", unitLeadRoutes);
+router.use("/hr-coverage", hrCoverageRoutes);
 
 // Read-only and derived from the two collections above. Top level, not
 // /users/:id/supervisor, which would imply a field the data model forbids.
