@@ -21,6 +21,8 @@ import EmployeeListPage from "../pages/employees/EmployeeListPage";
 import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import EmployeeFormPage from "../pages/employees/EmployeeFormPage";
 import OrgTreePage from "../pages/org/OrgTreePage";
+import ProjectsPage from "../pages/projects/ProjectsPage";
+import ProjectDetailPage from "../pages/projects/ProjectDetailPage";
 import CyclesPage from "../pages/cycles/CyclesPage";
 import CyclePeoplePage from "../pages/cycles/CyclePeoplePage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
@@ -160,6 +162,20 @@ function AppRoutes() {
             {/* Same screen: the unit in the URL makes it linkable and survives a
                 refresh, with the tree still beside it. */}
             <Route path="/organisation/:id" element={<OrgTreePage />} />
+          </Route>
+
+          {/* Same three roles as the tree, and the same split inside: Leadership reads
+              the team, HR and the Head of HR record it. Written by hand rather than
+              generated, which is why the tab carries `ownRoute`.
+
+              ⚠️ The project screens are the one place where a coarse gate is NOT the
+              whole story. An HR officer reaches every project here, but the server
+              refuses a write about somebody they do not cover, so the refusal arrives
+              in the response rather than as a missing button. */}
+          <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
+            <Route path="/projects" element={<ProjectsPage />} />
+            {/* The project is in the URL so the team can be linked to. */}
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
           </Route>
         </Route>
       </Route>

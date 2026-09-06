@@ -129,6 +129,17 @@ export const TABS_BY_GROUP = {
       built: true,
       ownRoute: true,
     },
+    {
+      section: "People data",
+      id: "leadership-projects",
+      path: "/projects",
+      label: "Projects",
+      icon: "briefcase",
+      title: "Projects and assignments",
+      description: "Cross unit work, project leads and team leads",
+      built: true,
+      ownRoute: true,
+    },
   ],
   hr: [
     {
@@ -202,7 +213,8 @@ export const TABS_BY_GROUP = {
       icon: "briefcase",
       title: "Projects and assignments",
       description: "Cross unit work, project leads and team leads",
-      built: false,
+      built: true,
+      ownRoute: true,
     },
   ],
   employee: [
