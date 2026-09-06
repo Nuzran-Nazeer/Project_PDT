@@ -1,4 +1,5 @@
 const AppError = require("../utils/AppError");
+const { HR_COVERAGE_ROLES } = require("../config/constants");
 
 // Request-shape checks for the dated collections: are the references shaped like
 // references, and is a date present where one is required.
@@ -32,6 +33,16 @@ const checkDate = (value, field, errors, { required = true } = {}) => {
   }
   if (Number.isNaN(new Date(value).getTime())) {
     errors.push(`${field} is not a valid date`);
+  }
+};
+
+const checkEnum = (value, field, allowed, errors, { required = true } = {}) => {
+  if (value === undefined || value === null || value === "") {
+    if (required) errors.push(`${field} is required`);
+    return;
+  }
+  if (!allowed.includes(value)) {
+    errors.push(`${field} must be one of: ${allowed.join(", ")}`);
   }
 };
 
@@ -88,6 +99,35 @@ exports.validateHistoryQuery = (req, res, next) => {
 exports.validateReportingLineQuery = (req, res, next) => {
   const errors = [];
   checkId(req.params.userId, "userId", errors);
+  checkDate(req.query.on, "on", errors, { required: false });
+  finish(errors, next);
+};
+
+exports.validateAssignCoverage = (req, res, next) => {
+  const errors = [];
+  checkId(req.body.unitId, "unitId", errors);
+  checkId(req.body.userId, "userId", errors);
+  checkEnum(req.body.role, "role", HR_COVERAGE_ROLES, errors);
+  checkDate(req.body.from, "from", errors);
+  finish(errors, next);
+};
+
+// Same split as validateHistoryQuery, with `role` added: still shape only, so an
+// unrecognised role reaches the service, which reads as "no record has this role" and
+// returns an empty list rather than a 400 for what may just be a typo worth seeing.
+exports.validateCoverageHistoryQuery = (req, res, next) => {
+  const errors = [];
+  checkId(req.query.userId, "userId", errors, { required: false });
+  checkId(req.query.unitId, "unitId", errors, { required: false });
+  checkDate(req.query.on, "on", errors, { required: false });
+  finish(errors, next);
+};
+
+// The unit is in the path, `on` is optional in the query and means today when left
+// off, same convention as validateReportingLineQuery.
+exports.validateEffectiveCoverageQuery = (req, res, next) => {
+  const errors = [];
+  checkId(req.params.unitId, "unitId", errors);
   checkDate(req.query.on, "on", errors, { required: false });
   finish(errors, next);
 };

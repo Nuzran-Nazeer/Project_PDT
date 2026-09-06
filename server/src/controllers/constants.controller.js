@@ -8,6 +8,8 @@ const {
   DESIGNATIONS,
   DESIGNATION_NAMES,
   ORG_UNIT_TYPES,
+  HR_COVERAGE_ROLES,
+  HR_OFFICER_ROLES,
   PAR_GROUPS,
   competenciesFor,
   EMPLOYEE_ID_PATTERN,
@@ -21,6 +23,10 @@ const RECORD_MANAGING_ROLES = ["hr", "head_of_hr"];
 // Only the Head of HR builds the tree, so only they need a type dropdown.
 const TREE_MANAGING_ROLES = ["head_of_hr"];
 
+// Same roles as TREE_MANAGING_ROLES today, kept as its own name because the two are
+// separate decisions that only happen to agree right now.
+const COVERAGE_MANAGING_ROLES = ["head_of_hr"];
+
 // Serves the controlled lists so a dropdown and a Yup schema come from the SAME source
 // the model validates against. A copy in client code drifts silently: the form offers
 // an option the server then rejects with a 400 nobody can explain.
@@ -31,6 +37,7 @@ exports.getConstants = asyncHandler(async (req, res) => {
   const held = req.user?.roles || [];
   const managesRecords = held.some((role) => RECORD_MANAGING_ROLES.includes(role));
   const managesTree = held.some((role) => TREE_MANAGING_ROLES.includes(role));
+  const managesCoverage = held.some((role) => COVERAGE_MANAGING_ROLES.includes(role));
 
   const payload = {
     designations: DESIGNATION_NAMES.map((name) => ({
@@ -67,6 +74,14 @@ exports.getConstants = asyncHandler(async (req, res) => {
 
   if (managesTree) {
     payload.orgUnitTypes = ORG_UNIT_TYPES;
+  }
+
+  if (managesCoverage) {
+    payload.hrCoverageRoles = HR_COVERAGE_ROLES;
+    // Who the candidate picker offers when assigning coverage -- the same vocabulary
+    // the server enforces in hrcoverage.service.js, so the picker cannot offer someone
+    // the server would then refuse.
+    payload.hrOfficerRoles = HR_OFFICER_ROLES;
   }
 
   res.json(payload);

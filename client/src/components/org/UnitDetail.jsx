@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { listMemberships } from "../../services/memberships";
 import { appointLead, listLeads } from "../../services/unitLeads";
+import { assignCoverage, getEffectiveCoverage } from "../../services/hrCoverage";
 import { listUsers } from "../../services/users";
 import { discontinueUnit } from "../../services/orgUnits";
-import { appointLeadSchema, discontinueSchema } from "../../schemas/orgStructureSchema";
+import { useAuth } from "../../hooks/useAuth";
+import {
+  appointLeadSchema,
+  assignCoverageSchema,
+  discontinueSchema,
+} from "../../schemas/orgStructureSchema";
 import { formatDate, todayInput } from "../../utils/dates";
 
 // Members are read-only here: moving someone happens on their own record. An "Add
@@ -16,6 +22,7 @@ const today = todayInput;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function UnitDetail({ unit, units, canAssign, canManage, onChanged }) {
+  const { constants } = useAuth();
   const unitId = String(unit._id);
   const parent = units.find((u) => String(u._id) === String(unit.parentUnitId));
   const closed = unit.active === false;
@@ -24,6 +31,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
   const [members, setMembers] = useState([]);
   const [lead, setLead] = useState(null);
+  const [coverage, setCoverage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   // Bumped after an appointment to re-run the read, rather than patching state by
@@ -37,6 +45,16 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Which HR coverage role a form is open for, or null. Only one role's form is open
+  // at a time, the same way appointing a lead is one form, not two.
+  const [assigningRole, setAssigningRole] = useState(null);
+  const [coverageForm, setCoverageForm] = useState({ userId: "", from: today() });
+  const [coverageCandidates, setCoverageCandidates] = useState([]);
+  const [coverageCandidateError, setCoverageCandidateError] = useState("");
+  const [coverageFieldErrors, setCoverageFieldErrors] = useState({});
+  const [coverageFormError, setCoverageFormError] = useState("");
+  const [coverageSaving, setCoverageSaving] = useState(false);
 
   const [closing, setClosing] = useState(false);
   const [lastDay, setLastDay] = useState("");
@@ -55,12 +73,14 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
     Promise.all([
       listMemberships({ unitId, on: today() }),
       listLeads({ unitId, on: today() }),
+      getEffectiveCoverage(unitId, today()),
     ])
-      .then(([memberList, leadList]) => {
+      .then(([memberList, leadList, coverageData]) => {
         if (cancelled) return;
         setError("");
         setMembers(memberList.items || []);
         setLead((leadList.items || [])[0] || null);
+        setCoverage(coverageData);
       })
       .catch((err) => !cancelled && setError(err.message))
       .finally(() => !cancelled && setLoading(false));
@@ -108,6 +128,44 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
     };
   }, [appointing, unit.parentUnitId, form.from]);
 
+  // Who may be offered as an HR officer: anyone ACTIVE who holds one of the roles the
+  // server itself enforces (`constants.hrOfficerRoles`), so this list can never offer
+  // someone the server would then refuse. Not scoped to this unit or its parent --
+  // unlike a lead, an HR officer does not have to belong to the unit they cover.
+  //
+  // ⚠️ `status: "active"` is explicit rather than left to the default: the roster's
+  // default hides only LEAVERS, so an invited joiner who has never opened their account
+  // would otherwise be offered, and the server refuses exactly those.
+  useEffect(() => {
+    if (!assigningRole) return undefined;
+
+    let cancelled = false;
+    const roles = constants?.hrOfficerRoles || [];
+
+    Promise.all(roles.map((role) => listUsers({ role, status: "active" })))
+      .then((results) => {
+        if (cancelled) return;
+        const byId = new Map();
+        results.forEach((data) => {
+          (data.items || []).forEach((person) => byId.set(String(person._id), person));
+        });
+        const people = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+        setCoverageCandidateError("");
+        setCoverageCandidates(people);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCoverageCandidates([]);
+        setCoverageCandidateError(
+          "The people who may cover this unit could not be loaded.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assigningRole, constants]);
+
   const startAppoint = () => {
     setAppointing(true);
     setForm({ userId: "", from: today() });
@@ -149,6 +207,55 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
       setFormError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const startAssignCoverage = (role) => {
+    setAssigningRole(role);
+    setCoverageForm({ userId: "", from: today() });
+    setCoverageFieldErrors({});
+    setCoverageFormError("");
+  };
+
+  const handleCoverageChange = (e) => {
+    const { name, value } = e.target;
+    setCoverageForm((f) => ({ ...f, [name]: value }));
+    setCoverageFormError("");
+  };
+
+  const handleCoverageSubmit = async (e) => {
+    e.preventDefault();
+    setCoverageFormError("");
+    setCoverageFieldErrors({});
+
+    try {
+      await assignCoverageSchema.validate(coverageForm, { abortEarly: false });
+    } catch (validationError) {
+      const errors = {};
+      validationError.inner.forEach((err) => {
+        if (!errors[err.path]) errors[err.path] = err.message;
+      });
+      setCoverageFieldErrors(errors);
+      return;
+    }
+
+    setCoverageSaving(true);
+    try {
+      await assignCoverage({
+        unitId,
+        role: assigningRole,
+        userId: coverageForm.userId,
+        from: coverageForm.from,
+      });
+      setAssigningRole(null);
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      // The server's own words: someone not on the hr/head_of_hr roster, a handover
+      // dated before the current holder's term began, the same person already
+      // covering this unit as the other role, a discontinued unit.
+      setCoverageFormError(err.message);
+    } finally {
+      setCoverageSaving(false);
     }
   };
 
@@ -357,6 +464,165 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
           <section className="mt-8">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              HR coverage
+            </h3>
+
+            {/* Covers this unit and, unless overridden below, everything under it.
+                Once a unit has ANY direct coverage of its own, that stops the walk
+                entirely: a direct primary with no direct backup shows the backup as
+                vacant here, not inherited from further up. */}
+            <p className="mt-2 text-[13px] text-muted">
+              {coverage?.resolvedUpward
+                ? `No HR officer is assigned directly to ${unit.name}, so it is covered from ${coverage.resolvedUnit?.name || "the unit above"}.`
+                : "Covers this unit and, unless a sub-unit has its own HR officer, everything beneath it too."}
+            </p>
+
+            {["primary", "backup"].map((role) => {
+              const holder = coverage?.[role] || null;
+              const label = role === "primary" ? "Primary" : "Backup";
+
+              return (
+                <div key={role} className="mt-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-ink">{label}</span>
+                    {canManage && assigningRole !== role && !closed && (
+                      <button
+                        type="button"
+                        onClick={() => startAssignCoverage(role)}
+                        className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                      >
+                        {holder && !coverage?.resolvedUpward
+                          ? `Change ${label.toLowerCase()}`
+                          : `Assign ${label.toLowerCase()}`}
+                      </button>
+                    )}
+                  </div>
+
+                  {holder ? (
+                    <p className="mt-1.5 text-sm text-ink">
+                      {holder.name}
+                      <span className="text-muted">
+                        {" · since "}
+                        {formatDate(holder.from)}
+                        {holder.employeeId ? ` · ${holder.employeeId}` : ""}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-sm text-muted">
+                      {coverage?.resolvedUpward
+                        ? `No ${label.toLowerCase()} either, even from ${coverage.resolvedUnit?.name || "the unit above"}.`
+                        : `Nobody covers this unit as ${label.toLowerCase()}.`}
+                    </p>
+                  )}
+
+                  {assigningRole === role && (
+                    <form
+                      onSubmit={handleCoverageSubmit}
+                      className="mt-3 rounded-xl border border-line bg-surface p-4"
+                    >
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label htmlFor="coverageUserId" className={labelClass}>
+                            Who covers it
+                          </label>
+                          <select
+                            id="coverageUserId"
+                            name="userId"
+                            value={coverageForm.userId}
+                            onChange={handleCoverageChange}
+                            aria-invalid={Boolean(coverageFieldErrors.userId)}
+                            className={inputClass}
+                          >
+                            <option value="">Choose…</option>
+                            {coverageCandidates.map((person) => (
+                              <option key={person._id} value={person._id}>
+                                {person.name}
+                              </option>
+                            ))}
+                          </select>
+                          {coverageFieldErrors.userId && (
+                            <p className="mt-1.5 text-[13px] text-danger">
+                              {coverageFieldErrors.userId}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="coverageFrom" className={labelClass}>
+                            From
+                          </label>
+                          <input
+                            id="coverageFrom"
+                            name="from"
+                            type="date"
+                            value={coverageForm.from}
+                            onChange={handleCoverageChange}
+                            aria-invalid={Boolean(coverageFieldErrors.from)}
+                            className={inputClass}
+                          />
+                          {coverageFieldErrors.from && (
+                            <p className="mt-1.5 text-[13px] text-danger">
+                              {coverageFieldErrors.from}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-[13px] text-muted">
+                        Only people holding the HR officer or Head of HR role can be
+                        offered here.
+                        {holder &&
+                          !coverage?.resolvedUpward &&
+                          ` Assigning someone new ends the current ${label.toLowerCase()}'s term on the same date.`}
+                      </p>
+
+                      {coverageCandidateError && (
+                        <p role="alert" className="mt-3 text-[13px] text-danger">
+                          {coverageCandidateError}
+                        </p>
+                      )}
+
+                      {!coverageCandidateError && coverageCandidates.length === 0 && (
+                        <p className="mt-3 text-[13px] text-muted">
+                          Nobody holds the HR officer or Head of HR role yet, so there is
+                          nobody who can cover this unit.
+                        </p>
+                      )}
+
+                      {coverageFormError && (
+                        <p
+                          role="alert"
+                          className="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
+                        >
+                          {coverageFormError}
+                        </p>
+                      )}
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={coverageSaving}
+                          className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {coverageSaving ? "Saving…" : "Assign"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAssigningRole(null)}
+                          className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="mt-8">
+            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
               Members
             </h3>
 
@@ -414,9 +680,9 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               ) : (
                 <div>
                   <p className="text-sm text-ink">
-                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted: it
-                    stays in the tree marked closed, and whoever leads it has their term
-                    closed on the same date.
+                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted: it stays
+                    in the tree marked closed, and whoever leads it has their term closed
+                    on the same date.
                   </p>
 
                   <div className="mt-4 max-w-xs">

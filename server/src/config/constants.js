@@ -33,6 +33,16 @@ const LOCATIONS = ["Colombo"];
 // tree is recursive and three names cannot describe five levels.
 const ORG_UNIT_TYPES = ["company", "unit", "sub-unit"];
 
+// HR coverage: which HR officer is responsible for a unit (and, unless overridden,
+// its sub-units). A unit may hold one open PRIMARY and one open BACKUP at once — see
+// models/hrcoverage.model.js.
+const HR_COVERAGE_ROLES = ["primary", "backup"];
+
+// ⚠️ Who may be named as an HR officer. Enforced in hrcoverage.service.js, not only in
+// the client's candidate picker: a request built by hand must be refused the same way
+// a form ever could be.
+const HR_OFFICER_ROLES = ["hr", "head_of_hr"];
+
 // The review form is chosen by JOB FAMILY, not designation, so HR can add a
 // designation without anyone building a form.
 const JOB_FAMILIES = [
@@ -378,6 +388,8 @@ module.exports = {
   USER_STATUS,
   LOCATIONS,
   ORG_UNIT_TYPES,
+  HR_COVERAGE_ROLES,
+  HR_OFFICER_ROLES,
   JOB_FAMILIES,
   DESIGNATIONS,
   DESIGNATION_NAMES,
