@@ -100,7 +100,7 @@ export default function TeamMemberPage() {
           ) : !collected ? (
             <Empty>Loading…</Empty>
           ) : (
-            <CollectedFeedback collected={collected} />
+            <CollectedFeedback collected={collected} personId={person.id} />
           )}
         </FormSection>
 

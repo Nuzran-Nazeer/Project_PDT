@@ -1,81 +1,56 @@
-// What colleagues wrote about one person, for the supervisor writing from it.
-//
-// ⚠️ NOT RELEASED IS NOT THE SAME AS NOTHING WRITTEN, and the two are drawn differently
-// on purpose. "Nothing has arrived" told where "nothing is released yet" is true is a
-// false statement about somebody's own appraisal, and it invites a supervisor to write
-// their review as though the colleague view were empty.
-//
-// ⚠️ Nothing here shows a name, a time or an order that means anything. The server sends
-// a random label as the only handle and sorts by it, so position carries no information;
-// rendering an index, a date or "first response" would put back what the server removed.
+import { Link } from "react-router-dom";
 
-export default function CollectedFeedback({ collected }) {
-  // ⚠️ Off the response, never worked out here. A rating is stored under a stable key
-  // and the wording it stands for is the REVIEWEE's job family, which is not always the
-  // supervisor's own.
-  const nameFor = (key) =>
-    (collected.competencies || []).find((c) => c.key === key)?.name || key;
+// ⚠️ Not released is not the same as nothing written: "nothing has arrived" told where
+// responses are merely held back invites a review written as though none exist.
+//
+// ⚠️ No name, no time, no order that means anything, and outstanding responses are a
+// COUNT — a label seen waiting and later seen arriving is a submission time. (B17)
 
+export default function CollectedFeedback({ collected, personId }) {
   if (!collected.released) {
     return (
       <div className="rounded-lg border border-dashed border-line p-6 text-center">
         <p className="text-sm text-ink">Not released yet</p>
         <p className="mx-auto mt-2 max-w-prose text-[13px] text-muted">
           {collected.assignedCount === 0
-            ? "No colleagues have been asked to review this person yet."
-            : `${collected.submittedCount} of ${collected.assignedCount} have submitted. ${collected.needed} more before anything is shown.`}
-        </p>
-        <p className="mx-auto mt-2 max-w-prose text-[13px] text-muted">
-          Responses are held back and released together. One arriving on its own could be
-          matched to whoever was known to be writing it.
+            ? "No colleagues have been asked yet."
+            : `${collected.submittedCount} of ${collected.assignedCount} submitted. ${collected.needed} more before anything is shown.`}
         </p>
       </div>
     );
   }
 
-  return (
-    <div className="grid gap-4">
-      {collected.items.map((item) => (
-        <article key={item.id} className="rounded-lg border border-line p-4">
-          {item.ratings.map((rating) => (
-            <div key={rating.competencyKey} className="mb-3 last:mb-0">
-              <p className="text-[13px] font-medium text-ink">
-                {nameFor(rating.competencyKey)}
-                {rating.notObserved ? " · not observed" : ` · ${rating.score}`}
-              </p>
-              {rating.evidence && (
-                <p className="mt-1 max-w-prose whitespace-pre-wrap text-[13px] text-muted">
-                  {rating.evidence}
-                </p>
-              )}
-            </div>
-          ))}
+  const outstanding = collected.assignedCount - collected.submittedCount;
 
-          <FreeText label="Strength worth keeping" value={item.freeText?.strengths} />
-          <FreeText label="What would help them grow" value={item.freeText?.development} />
-        </article>
+  return (
+    <div className="grid gap-3">
+      {collected.items.map((item) => (
+        <Link
+          key={item.id}
+          to={`/my-team/${personId}/feedback/${item.id}`}
+          className="rounded-lg border border-line p-4 transition-colors hover:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        >
+          <p className="text-sm font-medium text-ink">{item.id}&rsquo;s feedback</p>
+          <p className="mt-1 text-[13px] text-muted">{summarise(item)}</p>
+        </Link>
       ))}
 
-      <p className="max-w-prose text-[13px] text-muted">
+      <p className="text-[13px] text-muted">
         {collected.complete
-          ? `All ${collected.assignedCount} responses are in.`
-          : `${collected.total} of ${collected.assignedCount} shown. The rest are released once everyone has submitted.`}{" "}
-        No response here is attributed, and the order they appear in is not the order they
-        arrived.
+          ? `All ${collected.assignedCount} in.`
+          : `${collected.submittedCount} of ${collected.assignedCount} in, ${outstanding} to come.`}
       </p>
     </div>
   );
 }
 
-function FreeText({ label, value }) {
-  if (!value) return null;
+// Counts only. A snippet of the evidence here is the same text in two places, and the
+// shorter copy is the one somebody quotes back at the person who wrote it.
+function summarise(item) {
+  const ratings = item.ratings || [];
+  const declined = ratings.filter((rating) => rating.notObserved).length;
 
-  return (
-    <div className="mt-3 border-t border-line pt-3">
-      <p className="text-[13px] font-medium text-ink">{label}</p>
-      <p className="mt-1 max-w-prose whitespace-pre-wrap text-[13px] text-muted">
-        {value}
-      </p>
-    </div>
-  );
+  return [`${ratings.length - declined} rated`, declined && `${declined} not observed`]
+    .filter(Boolean)
+    .join(" · ");
 }

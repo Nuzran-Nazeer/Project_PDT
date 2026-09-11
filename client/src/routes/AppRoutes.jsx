@@ -15,6 +15,7 @@ import MyResultShell from "../pages/shells/MyResultShell";
 import SelfAssessmentFormShell from "../pages/shells/SelfAssessmentFormShell";
 import PeerReviewFormPage from "../pages/appraisal/PeerReviewFormPage";
 import TeamMemberPage from "../pages/appraisal/TeamMemberPage";
+import CollectedResponsePage from "../pages/appraisal/CollectedResponsePage";
 import SupervisorReviewFormShell from "../pages/shells/SupervisorReviewFormShell";
 import NormalisationShell from "../pages/shells/NormalisationShell";
 import EmployeeListPage from "../pages/employees/EmployeeListPage";
@@ -132,6 +133,12 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute allow={["supervisor"]} />}>
             <Route path="/my-team/:id" element={<TeamMemberPage />} />
+            {/* The label is the only handle a consumer gets, so it is what addresses
+                the record here: the real id never leaves the server. */}
+            <Route
+              path="/my-team/:id/feedback/:label"
+              element={<CollectedResponsePage />}
+            />
             <Route path="/my-team/:id/review" element={<SupervisorReviewFormShell />} />
             <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
           </Route>
