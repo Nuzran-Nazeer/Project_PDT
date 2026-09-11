@@ -1,15 +1,14 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
+import { getCollected } from "../../services/feedback";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
+import CollectedFeedback from "../../components/forms/CollectedFeedback";
 
 // One team member: their self-assessment, their feedback, and the way in to the review.
 // Replaced two flat tabs so the supervisor writes once with everything in front of them.
-//
-// ⚠️ First screen that would serve a feedback record. The shared function stripping
-// reviewer identity must land before section B is filled in, plus the three-submission
-// threshold, because one comment alone is traceable.
-export default function TeamMemberShell() {
+export default function TeamMemberPage() {
   const { id } = useParams();
   const { team, loading, error } = useTeam();
 
@@ -18,6 +17,24 @@ export default function TeamMemberShell() {
   // comes from each person's joining month, so a team spans groups and a supervisor's
   // own cycle is frequently not the one this person is being appraised in.
   const cycle = person?.cycle || null;
+  const reviewId = person?.reviewId || null;
+
+  const [collected, setCollected] = useState(null);
+  const [collectedError, setCollectedError] = useState("");
+
+  useEffect(() => {
+    if (!reviewId) return undefined;
+
+    let cancelled = false;
+
+    getCollected(reviewId)
+      .then((data) => !cancelled && setCollected(data))
+      .catch((err) => !cancelled && setCollectedError(err.message));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reviewId]);
 
   if (loading) {
     return (
@@ -71,13 +88,20 @@ export default function TeamMemberShell() {
           title="Colleague feedback"
           note="Consolidated, and never attributed. You see what was said, not who said it."
         >
-          <Empty>No colleague feedback.</Empty>
-
-          <p className="mt-3 max-w-prose text-[13px] text-muted">
-            When this fills in, it will never name a reviewer or say how many responded,
-            and nothing appears here at all until at least three colleagues have
-            submitted.
-          </p>
+          {collectedError ? (
+            <p role="alert" className="text-[13px] text-danger">
+              {collectedError}
+            </p>
+          ) : !reviewId ? (
+            <Empty>
+              No review exists for this person yet, so no colleague feedback has been
+              collected.
+            </Empty>
+          ) : !collected ? (
+            <Empty>Loading…</Empty>
+          ) : (
+            <CollectedFeedback collected={collected} />
+          )}
         </FormSection>
 
         <FormSection

@@ -1,4 +1,5 @@
 const OrgUnit = require("../models/orgunit.model");
+const Review = require("../models/review.model");
 const User = require("../models/user.model");
 const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
@@ -213,17 +214,41 @@ exports.teamOn = async (userId, date) => {
     );
   }
 
+  // The review is the container every piece of feedback hangs off, and it is keyed on
+  // the cycle plus the person. Without its id here a supervisor's screen has no way to
+  // ask what came in for somebody it is already showing.
+  const liveCycleIds = [...cycleByGroup.values()].filter(Boolean).map((c) => c.id);
+  const reviews = liveCycleIds.length
+    ? await Review.find({
+        cycleId: { $in: liveCycleIds },
+        userId: { $in: members.map((m) => m.userId._id) },
+      }).select("_id cycleId userId")
+    : [];
+
+  const reviewIdByPerson = new Map(
+    reviews.map((r) => [`${r.cycleId}:${r.userId}`, String(r._id)]),
+  );
+
   const team = members
-    .map((m) => ({
-      ...asPerson(m.userId),
-      designation: m.userId.designation,
-      unit: asUnit(m.unitId),
-      parGroup: m.userId.parGroup || null,
+    .map((m) => {
       // Null is a real answer: for most of the year a group is between cycles.
-      cycle: cycleByGroup.get(m.userId.parGroup) || null,
-      // The mirror of `resolvedUpward`.
-      viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
-    }))
+      const cycle = cycleByGroup.get(m.userId.parGroup) || null;
+
+      return {
+        ...asPerson(m.userId),
+        designation: m.userId.designation,
+        unit: asUnit(m.unitId),
+        parGroup: m.userId.parGroup || null,
+        cycle,
+        // Null until the cycle opens and reviews are created, which is why the screen
+        // must handle its absence rather than assume one exists.
+        reviewId: cycle
+          ? reviewIdByPerson.get(`${cycle.id}:${m.userId._id}`) || null
+          : null,
+        // The mirror of `resolvedUpward`.
+        viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return {
