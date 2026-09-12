@@ -26,6 +26,15 @@ router
   .route("/owed/:id/submit")
   .put(protect, validateFeedbackId, validateAnswers, controller.submit);
 
+// Your own assessment. No id in the path, deliberately: the record is reached through
+// the token alone, which is narrower than any check on an id could be.
+router
+  .route("/self")
+  .get(protect, controller.getSelfAssessment)
+  .put(protect, validateAnswers, controller.saveSelfDraft);
+
+router.route("/self/submit").put(protect, validateAnswers, controller.submitSelf);
+
 // The supervisor's read. Gated on actually supervising the person, in the service,
 // because the role alone does not say whose feedback this is.
 router
