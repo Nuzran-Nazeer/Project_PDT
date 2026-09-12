@@ -10,11 +10,12 @@ import Dashboard from "../pages/dashboards/Dashboard";
 import PendingTabPage from "../pages/dashboards/PendingTabPage";
 import MyTeamPage from "../pages/dashboards/MyTeamPage";
 import SelfAssessmentShell from "../pages/shells/SelfAssessmentShell";
-import FeedbackOwedShell from "../pages/shells/FeedbackOwedShell";
+import FeedbackOwedPage from "../pages/appraisal/FeedbackOwedPage";
 import MyResultShell from "../pages/shells/MyResultShell";
 import SelfAssessmentFormShell from "../pages/shells/SelfAssessmentFormShell";
-import PeerReviewFormShell from "../pages/shells/PeerReviewFormShell";
-import TeamMemberShell from "../pages/shells/TeamMemberShell";
+import PeerReviewFormPage from "../pages/appraisal/PeerReviewFormPage";
+import TeamMemberPage from "../pages/appraisal/TeamMemberPage";
+import CollectedResponsePage from "../pages/appraisal/CollectedResponsePage";
 import SupervisorReviewFormShell from "../pages/shells/SupervisorReviewFormShell";
 import NormalisationShell from "../pages/shells/NormalisationShell";
 import EmployeeListPage from "../pages/employees/EmployeeListPage";
@@ -47,7 +48,7 @@ const TAB_PAGES = {
   "my-team": MyTeamPage,
 
   "my-self-assessment": SelfAssessmentShell,
-  "feedback-i-owe": FeedbackOwedShell,
+  "feedback-i-owe": FeedbackOwedPage,
   "my-result": MyResultShell,
 };
 
@@ -122,11 +123,22 @@ function AppRoutes() {
               team routes read a self-scoped endpoint, so a non-supervisor reaching one
               by URL finds an empty screen, not somebody else's data. */}
           <Route path="/my-self-assessment/form" element={<SelfAssessmentFormShell />} />
-          <Route path="/feedback-i-owe/form" element={<PeerReviewFormShell />} />
-          <Route path="/feedback-i-owe/:id" element={<PeerReviewFormShell />} />
+          {/* A colleague review always belongs to an assignment, so an id-less form
+              has no record it could ever save to. */}
+          <Route
+            path="/feedback-i-owe/form"
+            element={<Navigate to="/feedback-i-owe" replace />}
+          />
+          <Route path="/feedback-i-owe/:id" element={<PeerReviewFormPage />} />
 
           <Route element={<ProtectedRoute allow={["supervisor"]} />}>
-            <Route path="/my-team/:id" element={<TeamMemberShell />} />
+            <Route path="/my-team/:id" element={<TeamMemberPage />} />
+            {/* The label is the only handle a consumer gets, so it is what addresses
+                the record here: the real id never leaves the server. */}
+            <Route
+              path="/my-team/:id/feedback/:label"
+              element={<CollectedResponsePage />}
+            />
             <Route path="/my-team/:id/review" element={<SupervisorReviewFormShell />} />
             <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
           </Route>

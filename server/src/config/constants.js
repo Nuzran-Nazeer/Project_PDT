@@ -213,6 +213,11 @@ const IDENTIFYING_FIELDS = [
   "submittedAt",
   "createdAt",
   "updatedAt",
+
+  // ⚠️ `locksAt` is `submittedAt` plus a fixed window, so serving it hands back the
+  // submission time with one subtraction. The author still sees their own, which is
+  // built by hand rather than serialised.
+  "locksAt",
 ];
 
 // ⚠️ The subset no response may EVER carry without an authorised identity read. Kept

@@ -222,7 +222,7 @@ export const TABS_BY_GROUP = {
       icon: "message",
       title: "Feedback I owe",
       description: "Colleague reviews assigned to you",
-      built: false,
+      built: true,
     },
     {
       id: "my-result",

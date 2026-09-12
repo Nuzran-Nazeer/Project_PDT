@@ -1,5 +1,6 @@
 const Feedback = require("../models/feedback.model");
 const Review = require("../models/review.model");
+const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { forConsumerList } = require("./feedback.privacy");
 const { teamOn } = require("./supervision.service");
@@ -226,6 +227,12 @@ const collectedFor = async (reviewId, viewer) => {
 
   await assertMayRead(review, viewer);
 
+  // Resolved here, never by the reader: a rating is stored under a stable key and the
+  // wording that key stands for belongs to the reviewee's job family, not the
+  // supervisor's. A client working it out is a second copy of that rule.
+  const reviewee = await User.findById(review.userId).select("jobFamily");
+  const competencies = competenciesFor(reviewee?.jobFamily);
+
   const assigned = await Feedback.find({ reviewId, reviewerType: "peer" }).sort({
     submittedAt: 1,
   });
@@ -241,6 +248,7 @@ const collectedFor = async (reviewId, viewer) => {
       assignedCount: assigned.length,
       submittedCount: submitted.length,
       needed: Math.max(threshold - submitted.length, 0),
+      competencies,
       items: [],
       total: 0,
     };
@@ -255,6 +263,7 @@ const collectedFor = async (reviewId, viewer) => {
     submittedCount: submitted.length,
     needed: 0,
     complete,
+    competencies,
     items: forConsumerList(batch).sort((a, b) =>
       String(a.id).localeCompare(String(b.id)),
     ),
