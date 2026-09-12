@@ -213,7 +213,7 @@ export const TABS_BY_GROUP = {
       icon: "clipboard",
       title: "My self-assessment",
       description: "Complete or review your own assessment",
-      built: false,
+      built: true,
     },
     {
       id: "feedback-i-owe",

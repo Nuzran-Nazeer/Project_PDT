@@ -9,10 +9,10 @@ import StatusPage from "../pages/StatusPage";
 import Dashboard from "../pages/dashboards/Dashboard";
 import PendingTabPage from "../pages/dashboards/PendingTabPage";
 import MyTeamPage from "../pages/dashboards/MyTeamPage";
-import SelfAssessmentShell from "../pages/shells/SelfAssessmentShell";
+import SelfAssessmentPage from "../pages/appraisal/SelfAssessmentPage";
 import FeedbackOwedPage from "../pages/appraisal/FeedbackOwedPage";
 import MyResultShell from "../pages/shells/MyResultShell";
-import SelfAssessmentFormShell from "../pages/shells/SelfAssessmentFormShell";
+import SelfAssessmentFormPage from "../pages/appraisal/SelfAssessmentFormPage";
 import PeerReviewFormPage from "../pages/appraisal/PeerReviewFormPage";
 import TeamMemberPage from "../pages/appraisal/TeamMemberPage";
 import CollectedResponsePage from "../pages/appraisal/CollectedResponsePage";
@@ -47,7 +47,7 @@ const GROUP_ACCESS = {
 const TAB_PAGES = {
   "my-team": MyTeamPage,
 
-  "my-self-assessment": SelfAssessmentShell,
+  "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
   "my-result": MyResultShell,
 };
@@ -122,7 +122,7 @@ function AppRoutes() {
           {/* Drill-downs, not sidebar destinations, so they are written by hand. The
               team routes read a self-scoped endpoint, so a non-supervisor reaching one
               by URL finds an empty screen, not somebody else's data. */}
-          <Route path="/my-self-assessment/form" element={<SelfAssessmentFormShell />} />
+          <Route path="/my-self-assessment/form" element={<SelfAssessmentFormPage />} />
           {/* A colleague review always belongs to an assignment, so an id-less form
               has no record it could ever save to. */}
           <Route
