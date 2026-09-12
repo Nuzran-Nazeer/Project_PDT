@@ -4,6 +4,7 @@ const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { forConsumerList } = require("./feedback.privacy");
 const { teamOn } = require("./supervision.service");
+const { currentCycleFor } = require("./cycle.service");
 const { competenciesFor, FEEDBACK_EDIT_WINDOW_HOURS } = require("../config/constants");
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -55,7 +56,10 @@ const competenciesForRecord = (doc) =>
  * the token, so there is no request shape that returns somebody else's.
  */
 const owedBy = async (userId) => {
-  const items = await Feedback.find({ reviewerId: userId })
+  // ⚠️ The self-assessment lives in this collection with the author as its own
+  // reviewer, so without this exclusion a person's own form appears in the list of
+  // colleagues they have been asked to review.
+  const items = await Feedback.find({ reviewerId: userId, reviewerType: { $ne: "self" } })
     .populate("revieweeId", "name employeeId designation jobFamily")
     .sort({ status: 1, createdAt: 1 });
 
@@ -164,10 +168,10 @@ const saveDraft = async (id, userId, payload) => {
   return asOwnRecord(doc, competenciesForRecord(doc));
 };
 
-const submit = async (id, userId, payload) => {
-  const doc = await ownedBy(id, userId);
+// Everything a submission does once the record has been found. The colleague form and
+// the self-assessment differ in how they find it and in nothing after that.
+const applyAndSubmit = (doc, payload) => {
   assertOpen(doc);
-
   applyAnswers(doc, payload);
 
   // Every competency has to be answered one way or the other before it counts as
@@ -188,6 +192,11 @@ const submit = async (id, userId, payload) => {
     );
     doc.status = "submitted";
   }
+};
+
+const submit = async (id, userId, payload) => {
+  const doc = await ownedBy(id, userId);
+  applyAndSubmit(doc, payload);
 
   await doc.save();
   return asOwnRecord(doc, competenciesForRecord(doc));
@@ -271,6 +280,126 @@ const collectedFor = async (reviewId, viewer) => {
   };
 };
 
+// The self-assessment. Same collection, same answer rules and the same five-hour
+// window; the author is also the subject, and it is attributed rather than
+// confidential, so nothing here strips anything.
+
+// ⚠️ NO ID IN ANY OF THESE. The cycle comes from the signed-in person's own appraisal
+// group and the review from their own id, so there is no request shape that reaches
+// somebody else's self-assessment, and none can be added by taking a parameter.
+const liveReviewFor = async (userId) => {
+  const user = await User.findById(userId).select(
+    "name employeeId designation jobFamily parGroup",
+  );
+  if (!user) throw new AppError("Employee not found", 404);
+
+  const cycle = await currentCycleFor(user.parGroup);
+  const review = cycle
+    ? await Review.findOne({ cycleId: cycle._id, userId: user._id })
+    : null;
+
+  return { user, cycle, review };
+};
+
+const asCycle = (cycle) =>
+  cycle
+    ? {
+        id: String(cycle._id),
+        parGroup: cycle.parGroup,
+        year: cycle.year,
+        status: cycle.status,
+      }
+    : null;
+
+// ⚠️ `not_started` is NOT a stored status. The record is created by the first save, so
+// until then there is nothing to report one from. Creating it on sight would put an
+// empty document into the cycle for everybody who never opened the form.
+const asSelfRecord = ({ user, cycle, review, doc }) => ({
+  cycle: asCycle(cycle),
+  reviewId: review ? String(review._id) : null,
+  status: doc ? doc.status : "not_started",
+  ratings: doc ? doc.ratings : [],
+  freeText: doc ? doc.freeText : { strengths: null, development: null },
+  submittedAt: doc ? doc.submittedAt : null,
+  locksAt: doc ? doc.locksAt : null,
+  editable: Boolean(review) && (!doc || isEditable(doc)),
+  competencies: competenciesFor(user.jobFamily),
+});
+
+const selfAssessmentFor = async (userId) => {
+  const { user, cycle, review } = await liveReviewFor(userId);
+
+  // Null is a real answer twice over: for most of the year a group is between cycles,
+  // and somebody in no unit has no review to attach one to.
+  const doc = review
+    ? await Feedback.findOne({
+        reviewId: review._id,
+        reviewerId: user._id,
+        reviewerType: "self",
+      })
+    : null;
+
+  return asSelfRecord({ user, cycle, review, doc });
+};
+
+// Created by the first write rather than when the cycle opens. A second one is
+// impossible regardless: the unique index on review + reviewee + reviewer refuses it.
+const openSelfRecord = async (userId) => {
+  const { user, cycle, review } = await liveReviewFor(userId);
+
+  if (!cycle) {
+    throw new AppError("No appraisal cycle is running for your group", 409);
+  }
+  if (!review) {
+    throw new AppError(
+      "You have no review in this cycle, so there is no self-assessment to write",
+      409,
+    );
+  }
+
+  const existing = await Feedback.findOne({
+    reviewId: review._id,
+    reviewerId: user._id,
+    reviewerType: "self",
+  });
+  if (existing) return { user, cycle, review, doc: existing };
+
+  const doc = await Feedback.create({
+    reviewId: review._id,
+    reviewerId: user._id,
+    revieweeId: user._id,
+    reviewerType: "self",
+    // The subject's job family decides the questions, and here that is the author.
+    formTemplateKey: user.jobFamily,
+    formTemplateVersion: 1,
+    status: "assigned",
+  });
+
+  return { user, cycle, review, doc };
+};
+
+const saveSelfDraft = async (userId, payload) => {
+  const found = await openSelfRecord(userId);
+  assertOpen(found.doc);
+
+  applyAnswers(found.doc, payload);
+
+  // Submitting is a one-way door here too: an already-submitted assessment stays
+  // submitted inside its window rather than dropping back to a draft.
+  if (!found.doc.submittedAt) found.doc.status = "draft";
+
+  await found.doc.save();
+  return asSelfRecord(found);
+};
+
+const submitSelf = async (userId, payload) => {
+  const found = await openSelfRecord(userId);
+  applyAndSubmit(found.doc, payload);
+
+  await found.doc.save();
+  return asSelfRecord(found);
+};
+
 module.exports = {
   owedBy,
   getForReviewer,
@@ -278,4 +407,7 @@ module.exports = {
   submit,
   collectedFor,
   isEditable,
+  selfAssessmentFor,
+  saveSelfDraft,
+  submitSelf,
 };
