@@ -59,6 +59,15 @@ exports.validateAnswers = (req, res, next) => {
     }
   }
 
+  const { colleagueSummary } = req.body || {};
+  if (
+    colleagueSummary !== undefined &&
+    colleagueSummary !== null &&
+    typeof colleagueSummary !== "string"
+  ) {
+    errors.push("colleagueSummary must be text");
+  }
+
   if (freeText !== undefined) {
     if (typeof freeText !== "object" || freeText === null) {
       errors.push("freeText must be an object");

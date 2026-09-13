@@ -41,6 +41,24 @@ router
   .route("/collected/:reviewId")
   .get(protect, validateReviewId, controller.getCollected);
 
+// Somebody else's own assessment. A separate path from `/self` above rather than an id added
+// to it: that route takes no id at all, and keeping it that way is what guarantees there is no
+// request shape reaching another person's record through it.
+router
+  .route("/self-assessment/:reviewId")
+  .get(protect, validateReviewId, controller.getAssessment);
+
+// The supervisor's own review, keyed by the REVIEW rather than by a record id: until the
+// first save there is no record to name, and the person it is about is not the caller.
+router
+  .route("/supervisor/:reviewId")
+  .get(protect, validateReviewId, controller.getSupervisorReview)
+  .put(protect, validateReviewId, validateAnswers, controller.saveSupervisorDraft);
+
+router
+  .route("/supervisor/:reviewId/submit")
+  .put(protect, validateReviewId, validateAnswers, controller.submitSupervisorReview);
+
 // NO DELETE. A submitted piece of feedback is part of somebody's appraisal record.
 
 module.exports = router;

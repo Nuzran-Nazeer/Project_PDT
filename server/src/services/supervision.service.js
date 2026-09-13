@@ -1,8 +1,11 @@
+const Feedback = require("../models/feedback.model");
 const OrgUnit = require("../models/orgunit.model");
 const Review = require("../models/review.model");
 const User = require("../models/user.model");
 const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
+const { hasSettled } = require("./feedback.window");
+const { PEER_DISPLAY_THRESHOLD } = require("../config/constants");
 const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { leadOn, listLeads } = require("./unitlead.service");
@@ -153,6 +156,47 @@ const unitsSupervisedFrom = async (rootUnitId, day) => {
   return collected;
 };
 
+/**
+ * Whether the supervisor may start writing, and what is holding it up if not.
+ *
+ * ⚠️ EVERY assigned colleague has to be in, not the minimum. The supervisor's job at
+ * this stage is to summarise what arrived, and a summary written from six of eight
+ * cannot have the other two folded in afterwards without rewriting it. The minimum is
+ * the failsafe for the deadline path, which does not exist yet.
+ *
+ * ⚠️ SETTLED, never submitted: a record inside its edit window is still changing.
+ */
+const readinessFrom = (records = []) => {
+  const self = records.find((r) => r.reviewerType === "self");
+  const peers = records.filter((r) => r.reviewerType === "peer");
+
+  // ⚠️ A pool below the display minimum is never shown at all, so waiting on it would
+  // hold the review open for something that cannot arrive.
+  const colleagues =
+    peers.length >= PEER_DISPLAY_THRESHOLD
+      ? peers.filter((record) => !hasSettled(record)).length
+      : 0;
+
+  const missing = {
+    selfAssessment: !(self && hasSettled(self)),
+    colleagues,
+  };
+
+  return {
+    state: missing.selfAssessment || missing.colleagues ? "waiting" : "ready",
+    missing,
+  };
+};
+
+// The same question the team list answers, asked about one review. Exported so the form
+// that depends on it cannot grow a second copy of the rule.
+exports.readinessOn = async (reviewId) => {
+  const records = await Feedback.find({ reviewId }).select(
+    "reviewId reviewerType status submittedAt locksAt",
+  );
+  return readinessFrom(records);
+};
+
 // Somebody who leads nothing gets an empty team, which is a real answer.
 //
 // ⚠️ No coverage check: a reader role can ask about anybody's team, not only the units
@@ -229,10 +273,32 @@ exports.teamOn = async (userId, date) => {
     reviews.map((r) => [`${r.cycleId}:${r.userId}`, String(r._id)]),
   );
 
+  // ⚠️ ONE query for the whole team rather than one per person, and `reviewerId` stays
+  // unselected. Readiness is arithmetic about records; who wrote them is not part of it
+  // and must not be loaded to find out.
+  const records = reviews.length
+    ? await Feedback.find({ reviewId: { $in: reviews.map((r) => r._id) } }).select(
+        "reviewId reviewerType status submittedAt locksAt",
+      )
+    : [];
+
+  const byReview = new Map();
+  for (const record of records) {
+    const key = String(record.reviewId);
+    if (!byReview.has(key)) byReview.set(key, []);
+    byReview.get(key).push(record);
+  }
+
   const team = members
     .map((m) => {
       // Null is a real answer: for most of the year a group is between cycles.
       const cycle = cycleByGroup.get(m.userId.parGroup) || null;
+
+      // Null until the cycle opens and reviews are created, which is why the screen
+      // must handle its absence rather than assume one exists.
+      const reviewId = cycle
+        ? reviewIdByPerson.get(`${cycle.id}:${m.userId._id}`) || null
+        : null;
 
       return {
         ...asPerson(m.userId),
@@ -240,11 +306,9 @@ exports.teamOn = async (userId, date) => {
         unit: asUnit(m.unitId),
         parGroup: m.userId.parGroup || null,
         cycle,
-        // Null until the cycle opens and reviews are created, which is why the screen
-        // must handle its absence rather than assume one exists.
-        reviewId: cycle
-          ? reviewIdByPerson.get(`${cycle.id}:${m.userId._id}`) || null
-          : null,
+        reviewId,
+        // Null for the same reason: with no review there is nothing to be ready for.
+        readiness: reviewId ? readinessFrom(byReview.get(reviewId)) : null,
         // The mirror of `resolvedUpward`.
         viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
       };

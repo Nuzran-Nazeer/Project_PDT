@@ -86,6 +86,11 @@ const feedbackSchema = new mongoose.Schema(
       development: { type: String, default: null },
     },
 
+    // ⚠️ The digest of COLLEAGUE feedback that the employee eventually reads, not the
+    // supervisor's own view of them, and HR checks it against the raw comments before
+    // publication. Written by hand on a supervisor record; nothing generates it.
+    colleagueSummary: { type: String, default: null },
+
     status: { type: String, enum: FEEDBACK_STATUS, default: "assigned" },
 
     // Assigned when the reviewers are picked, NOT in submission order, so arrival
