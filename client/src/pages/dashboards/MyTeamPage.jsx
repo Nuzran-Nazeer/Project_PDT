@@ -3,14 +3,15 @@ import { useAuth } from "../../hooks/useAuth";
 import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
+import { byRunningCycle } from "../../utils/teamOrder";
 
-// ⚠️ If a reviewer column is ever added here it is a COUNT, never a name and never a
-// timestamp. In a team of eight the two together identify who wrote what.
+// ⚠️ A reviewer column here is a COUNT, never a name and never a timestamp. In a team of
+// eight the two together identify who wrote what.
 export default function MyTeamPage() {
   const { user, isSupervisor } = useAuth();
   const { team, loading, error } = useTeam();
 
-  const people = team?.team || [];
+  const people = byRunningCycle(team?.team || []);
   const leads = team?.leads || [];
 
   return (
@@ -43,8 +44,8 @@ export default function MyTeamPage() {
           {!isSupervisor
             ? "You do not lead a unit, so nobody reports to you."
             : leads.length === 0
-              ? "You led a unit recently, but not today, so nobody reports to you at the moment."
-              : "Nobody belongs to the unit you lead at the moment, so there is nobody to review."}
+              ? "You do not lead a unit at the moment."
+              : "Nobody belongs to the unit you lead at the moment."}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line bg-raised">
@@ -57,6 +58,7 @@ export default function MyTeamPage() {
                 <Th>Unit</Th>
                 <Th>This cycle</Th>
                 <Th>Review</Th>
+                <Th>Details</Th>
               </tr>
             </thead>
 
@@ -79,6 +81,9 @@ export default function MyTeamPage() {
                     <CycleCell person={person} />
                   </td>
                   <td className="px-4 py-3">
+                    <ReadinessCell person={person} />
+                  </td>
+                  <td className="px-4 py-3">
                     <Link
                       to={`/my-team/${person.id}`}
                       className="text-sm text-brand transition-colors hover:underline"
@@ -91,15 +96,6 @@ export default function MyTeamPage() {
             </tbody>
           </table>
         </div>
-      )}
-
-      {people.length > 0 && (
-        <p className="mt-4 max-w-prose text-[13px] text-muted">
-          <strong>This cycle</strong> is the appraisal cycle each person&rsquo;s group is
-          in, which is not always yours: the group comes from the month they joined, so
-          one team can span all three. Their own self-assessment and review status join
-          this column once reviews exist.
-        </p>
       )}
     </>
   );
@@ -120,6 +116,60 @@ function CycleCell({ person }) {
       <span className="mt-1 block text-[12px]">
         {person.cycle.status.replace(/_/g, " ")}
       </span>
+    </span>
+  );
+}
+
+// Everything after "ready" is the supervisor's own review moving, so these read as steps
+// rather than as a gate. Normalisation opens with the cycle, not with this row.
+const REVIEW_STATE = {
+  ready: { label: "Ready", tone: "font-medium text-success" },
+  draft: { label: "Draft saved", tone: "text-muted" },
+  submitted: {
+    label: "Submitted",
+    tone: "text-muted",
+    note: "correctable for five hours",
+  },
+  awaiting_normalisation: { label: "Awaiting normalisation", tone: "text-muted" },
+  normalisation_ready: {
+    label: "Ready to normalise",
+    tone: "font-medium text-success",
+  },
+};
+
+// ⚠️ Outstanding colleagues are a COUNT and never a list. A label seen waiting here and
+// seen arriving later is a submission time, which identifies a reviewer with no name.
+function ReadinessCell({ person }) {
+  const readiness = person.readiness;
+
+  if (!readiness) return <span className="text-muted">&mdash;</span>;
+
+  const step = REVIEW_STATE[readiness.state];
+  if (step) {
+    return (
+      <span className={step.tone}>
+        {step.label}
+        {step.note && (
+          <span className="mt-1 block text-[12px] font-normal text-muted">
+            {step.note}
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  const waitingFor = [
+    readiness.missing.selfAssessment && "their self-assessment",
+    readiness.missing.colleagues &&
+      `${readiness.missing.colleagues} colleague ${
+        readiness.missing.colleagues === 1 ? "response" : "responses"
+      }`,
+  ].filter(Boolean);
+
+  return (
+    <span className="text-muted">
+      Waiting
+      <span className="mt-1 block text-[12px]">for {waitingFor.join(" and ")}</span>
     </span>
   );
 }

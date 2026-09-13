@@ -1,3 +1,4 @@
+const Cycle = require("../models/cycle.model");
 const Feedback = require("../models/feedback.model");
 const OrgUnit = require("../models/orgunit.model");
 const Review = require("../models/review.model");
@@ -56,9 +57,7 @@ const climbToLead = async (startUnitId, day, skipUserId) => {
 };
 
 const asPerson = (user) =>
-  user
-    ? { id: user._id, name: user.name, employeeId: user.employeeId }
-    : null;
+  user ? { id: user._id, name: user.name, employeeId: user.employeeId } : null;
 
 const asUnit = (unit) =>
   unit ? { id: unit._id, name: unit.name, type: unit.type } : null;
@@ -156,8 +155,27 @@ const unitsSupervisedFrom = async (rootUnitId, day) => {
   return collected;
 };
 
+// ⚠️ The supervisor's OWN record decides the state as soon as one exists. Readiness falls
+// back to waiting when a late colleague record appears, and a review already written must
+// never read as unstarted.
+const stateFrom = (own, missing, cycle) => {
+  if (own && hasSettled(own)) {
+    // ⚠️ The one point the cycle stage changes what a supervisor can do. Normalisation
+    // opens for a whole appraisal group at once, never for one person.
+    return cycle?.status === "normalising"
+      ? "normalisation_ready"
+      : "awaiting_normalisation";
+  }
+
+  if (own?.submittedAt) return "submitted";
+  if (own?.status === "draft") return "draft";
+
+  return missing.selfAssessment || missing.colleagues ? "waiting" : "ready";
+};
+
 /**
- * Whether the supervisor may start writing, and what is holding it up if not.
+ * Whether the supervisor may start writing, what is holding it up if not, and where the
+ * review has got to once they have.
  *
  * ⚠️ EVERY assigned colleague has to be in, not the minimum. The supervisor's job at
  * this stage is to summarise what arrived, and a summary written from six of eight
@@ -166,7 +184,7 @@ const unitsSupervisedFrom = async (rootUnitId, day) => {
  *
  * ⚠️ SETTLED, never submitted: a record inside its edit window is still changing.
  */
-const readinessFrom = (records = []) => {
+const readinessFrom = (records = [], cycle = null) => {
   const self = records.find((r) => r.reviewerType === "self");
   const peers = records.filter((r) => r.reviewerType === "peer");
 
@@ -183,7 +201,11 @@ const readinessFrom = (records = []) => {
   };
 
   return {
-    state: missing.selfAssessment || missing.colleagues ? "waiting" : "ready",
+    state: stateFrom(
+      records.find((r) => r.reviewerType === "supervisor"),
+      missing,
+      cycle,
+    ),
     missing,
   };
 };
@@ -194,7 +216,13 @@ exports.readinessOn = async (reviewId) => {
   const records = await Feedback.find({ reviewId }).select(
     "reviewId reviewerType status submittedAt locksAt",
   );
-  return readinessFrom(records);
+
+  // ⚠️ Looked up rather than taken from the caller: the team list and the review form
+  // would otherwise answer this question differently for the same review.
+  const review = await Review.findById(reviewId).select("cycleId");
+  const cycle = review ? await Cycle.findById(review.cycleId).select("status") : null;
+
+  return readinessFrom(records, cycle);
 };
 
 // Somebody who leads nothing gets an empty team, which is a real answer.
@@ -252,6 +280,7 @@ exports.teamOn = async (userId, date) => {
             id: cycle._id,
             parGroup: cycle.parGroup,
             year: cycle.year,
+            startDate: cycle.startDate,
             status: cycle.status,
           }
         : null,
@@ -308,7 +337,7 @@ exports.teamOn = async (userId, date) => {
         cycle,
         reviewId,
         // Null for the same reason: with no review there is nothing to be ready for.
-        readiness: reviewId ? readinessFrom(byReview.get(reviewId)) : null,
+        readiness: reviewId ? readinessFrom(byReview.get(reviewId), cycle) : null,
         // The mirror of `resolvedUpward`.
         viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
       };

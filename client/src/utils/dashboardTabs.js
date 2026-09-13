@@ -264,9 +264,15 @@ export const TABS_BY_GROUP = {
       icon: "users",
       title: "My team",
       description: "The people you supervise this cycle",
-      // The only supervisor tab with data behind it. The PEOPLE are real, read from
-      // the unit tree and the dated leadership records; their submissions are not,
-      // because no cycle or review collection exists.
+      built: true,
+    },
+    {
+      id: "normalisation",
+      path: "/normalisation",
+      label: "Normalisation",
+      icon: "target",
+      title: "Normalisation",
+      description: "Check ratings across your team once the cycle reaches that stage",
       built: true,
     },
     {

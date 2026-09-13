@@ -3,12 +3,11 @@ import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 
-// Normalisation: the supervisor starts it, the system runs it, the supervisor checks it.
+// One person's normalisation step: the supervisor starts it, the system runs it, the
+// supervisor checks it.
 //
 // ⚠️ Designed and deliberately NOT built. Calibration earns its cost above roughly 100
-// employees and Altrium has 45, so the recorded position is to design it and decline to
-// build it at this scale. The archived walkthrough describes a meeting; that is an early
-// draft. See the walkthrough doc, section 3.9.
+// employees and Altrium has 45.
 export default function NormalisationShell() {
   const { id } = useParams();
   const { team } = useTeam();
@@ -23,38 +22,27 @@ export default function NormalisationShell() {
       />
 
       <Link
-        to={person ? `/my-team/${person.id}` : "/my-team"}
+        to="/normalisation"
         className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
       >
-        ← Back to {person ? person.name : "my team"}
+        ← Back to normalisation
       </Link>
 
       <div className="grid gap-5">
-        <FormSection
-          letter="A"
-          title="What the system would compare"
-          note="Ratings across teams, so that a lenient supervisor's 4 and a strict one's 4 mean the same thing."
-        >
-          <Empty>Nothing to compare. No reviews have been submitted.</Empty>
+        <FormSection letter="A" title="What the system would compare">
+          <Empty>Not built yet.</Empty>
         </FormSection>
 
         <FormSection
           letter="B"
           title="What it would give back"
-          note="A normalised rating per competency, each with the reason it moved or the reason it held."
+          note="A normalised rating per competency, with the reason it moved or held."
         >
-          <Empty>No result, because nothing has been run.</Empty>
-          <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A rating only ever changes with a written justification, and the distribution
-            it compares against is a guide for discussion rather than a quota.
-          </p>
+          <Empty>Not built yet.</Empty>
         </FormSection>
 
         <FormSection letter="C" title="Your decision">
-          <p className="max-w-prose text-sm text-muted">
-            Three ways out of this screen, and the third is the one that matters:
-          </p>
-          <ul className="mt-3 grid gap-2 text-sm text-muted">
+          <ul className="grid gap-2 text-sm text-muted">
             <li>
               <strong className="text-ink">Confirm</strong>: you are satisfied, and it
               goes to HR.
@@ -75,15 +63,6 @@ export default function NormalisationShell() {
             <Dead>Escalate to HR</Dead>
           </div>
         </FormSection>
-
-        <FormSection title="After this">
-          <p className="max-w-prose text-sm text-muted">
-            HR sees the outcome either way. They resolve anything outstanding, check the
-            colleague summary against the raw comments, and publish. What they publish is
-            what the employee finally sees: the normalised outcome and consolidated
-            themes, never the raw ratings, never who adjusted what, and never a reviewer.
-          </p>
-        </FormSection>
       </div>
     </>
   );
@@ -97,6 +76,8 @@ function Empty({ children }) {
   );
 }
 
+// ⚠️ Both controls disabled, not silent. A live-looking button that discards what
+// somebody typed is worse than no button.
 function Dead({ children }) {
   return (
     <button
