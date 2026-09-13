@@ -53,3 +53,38 @@ export const todayInput = () => {
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
 };
+
+// ⚠️ THE TWO SIDES OF THE [from, to) CONVENTION, and the only day arithmetic on the
+// client. Kept here for the reason the server keeps `dayAfter` in dateRange.js: it is
+// the kind of thing that gets reinvented slightly wrong inside a component, and the
+// error is always the same one day.
+//
+// The server stores an end as the first day NOT covered. HR never thinks that way:
+// they think about the last day somebody actually worked. So every end date crossing
+// this boundary is converted, in one direction on the way out and the other on the way
+// in.
+//
+// UTC throughout, over the date parts rather than a local Date, because a date-only
+// string pulled through a local timezone can land on the previous evening and lose a
+// day. Date.UTC normalises out-of-range values, so month ends, year ends and leap days
+// fall out on their own: 1 March minus a day is 29 February in a leap year and 28
+// February otherwise, with no special case.
+const shiftDays = (value, days) => {
+  const [year, month, day] = String(value || "")
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  if (!year || !month || !day) return "";
+
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+};
+
+// Stored end -> what HR reads. Use for anything labelled "last day" or "ended":
+// project.endDate, an assignment's `to`, and each period's `to`. NEVER for a `from` or
+// a `startDate`, which are already the first day covered.
+export const lastDayOf = (exclusiveEnd) => shiftDays(exclusiveEnd, -1);
+
+// What HR typed -> what the API stores. Use on any inclusive last working day being
+// sent as an exclusive `to`. Same name as the server's helper, doing the same job at
+// the other end of the request.
+export const dayAfter = (inclusiveLastDay) => shiftDays(inclusiveLastDay, 1);
