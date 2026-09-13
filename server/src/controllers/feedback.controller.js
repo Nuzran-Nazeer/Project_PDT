@@ -40,3 +40,25 @@ exports.submitSelf = asyncHandler(async (req, res) => {
 exports.getCollected = asyncHandler(async (req, res) => {
   res.json(await service.collectedFor(req.params.reviewId, req.user));
 });
+
+// Somebody else's own assessment, for the supervisor writing from it. Distinct from the
+// handlers above, which reach only the caller's own record.
+exports.getAssessment = asyncHandler(async (req, res) => {
+  res.json(await service.assessmentFor(req.params.reviewId, req.user));
+});
+
+// The supervisor's own review. The whole account is passed rather than the id alone,
+// because the gate is a relationship the service has to derive.
+exports.getSupervisorReview = asyncHandler(async (req, res) => {
+  res.json(await service.supervisorReviewFor(req.params.reviewId, req.user));
+});
+
+exports.saveSupervisorDraft = asyncHandler(async (req, res) => {
+  res.json(await service.saveSupervisorDraft(req.params.reviewId, req.user, req.body));
+});
+
+exports.submitSupervisorReview = asyncHandler(async (req, res) => {
+  res.json(
+    await service.submitSupervisorReview(req.params.reviewId, req.user, req.body),
+  );
+});

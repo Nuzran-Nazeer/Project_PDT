@@ -3,24 +3,17 @@ const Review = require("../models/review.model");
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { forConsumerList } = require("./feedback.privacy");
-const { teamOn } = require("./supervision.service");
+const { teamOn, readinessOn } = require("./supervision.service");
 const { currentCycleFor } = require("./cycle.service");
-const { competenciesFor, FEEDBACK_EDIT_WINDOW_HOURS } = require("../config/constants");
-
-const HOUR_MS = 60 * 60 * 1000;
+const {
+  competenciesFor,
+  FEEDBACK_EDIT_WINDOW_HOURS,
+  PEER_DISPLAY_THRESHOLD,
+} = require("../config/constants");
+const { isEditable, hasSettled, lockTimeFor } = require("./feedback.window");
 
 // Writing colleague feedback, and serving what has arrived to the one person allowed to
 // read it raw.
-
-// ⚠️ Editing stays open for a window AFTER submitting, so `submitted` does not mean
-// finished. Nothing flips the status to `locked` because no scheduled job exists; the
-// window is computed from `locksAt` on every read and write instead. A stored status
-// would claim a transition nobody performed.
-const isEditable = (doc, now = new Date()) => {
-  if (doc.status === "locked") return false;
-  if (!doc.submittedAt) return true;
-  return Boolean(doc.locksAt) && now.getTime() < doc.locksAt.getTime();
-};
 
 const asOwnRecord = (doc, competencies) => ({
   id: String(doc._id),
@@ -187,9 +180,7 @@ const applyAndSubmit = (doc, payload) => {
 
   if (!doc.submittedAt) {
     doc.submittedAt = new Date();
-    doc.locksAt = new Date(
-      doc.submittedAt.getTime() + FEEDBACK_EDIT_WINDOW_HOURS * HOUR_MS,
-    );
+    doc.locksAt = lockTimeFor(doc.submittedAt);
     doc.status = "submitted";
   }
 };
@@ -207,6 +198,13 @@ const submit = async (id, userId, payload) => {
 // that can be defended. It is narrow and targeted; the general scope rule is its own
 // story and this does not replace it.
 const assertMayRead = async (review, viewer) => {
+  // ⚠️ BEFORE the role check, never after. An HR officer is somebody's colleague too, and
+  // is appraised like everybody else: holding the role must not hand them the raw feedback
+  // written about THEMSELVES. Nobody reads their own, whatever they hold.
+  if (String(review.userId) === String(viewer.id)) {
+    throw new AppError("Review not found", 404);
+  }
+
   const held = viewer?.roles || [];
   if (held.includes("hr") || held.includes("head_of_hr")) return;
 
@@ -221,14 +219,22 @@ const assertMayRead = async (review, viewer) => {
 /**
  * What has arrived for one person, for the supervisor writing from it.
  *
- * ⚠️ NOTHING IS RELEASED UNTIL HALF THE ASSIGNED REVIEWERS HAVE SUBMITTED, and the rest
- * only once everyone is in. Releasing one at a time is the hole this closes: a trickle
- * can be correlated against who was on leave, or who mentioned they had a review to
- * write, and the reviewer is identified without a name ever being served.
+ * ⚠️ NOTHING IS RELEASED UNTIL HALF THE ASSIGNED REVIEWERS HAVE SETTLED, never fewer
+ * than the minimum, and the rest only once everyone is in. Releasing one at a time is
+ * the hole this closes: a trickle can be correlated against who was on leave, or who
+ * mentioned they had a review to write, and the reviewer is identified without a name
+ * ever being served.
+ *
+ * ⚠️ A POOL SMALLER THAN THE MINIMUM HAS NO COLLEAGUE SECTION AT ALL, which is a
+ * different answer from "not enough yet" and never resolves. Two voices in a sub-unit of
+ * eight are guessable, and a summary drawn from one is an attribution.
  *
  * The batch is the EARLIEST submissions by time, which is stable as more arrive, so a
  * record already shown never disappears again. The response is ordered by label, so the
  * ordering the server used is not the ordering the supervisor sees.
+ *
+ * ⚠️ `submittedCount` counts what has SETTLED, deliberately. The gap between that and
+ * what has merely been submitted is a submission time to within the edit window.
  */
 const collectedFor = async (reviewId, viewer) => {
   const review = await Review.findById(reviewId);
@@ -246,30 +252,43 @@ const collectedFor = async (reviewId, viewer) => {
     submittedAt: 1,
   });
 
-  const submitted = assigned.filter((d) => d.submittedAt);
-  const threshold = Math.ceil(assigned.length / 2);
-  const complete = assigned.length > 0 && submitted.length === assigned.length;
+  const settled = assigned.filter(hasSettled);
 
-  if (!assigned.length || submitted.length < threshold) {
-    return {
-      reviewId: String(reviewId),
-      released: false,
-      assignedCount: assigned.length,
-      submittedCount: submitted.length,
-      needed: Math.max(threshold - submitted.length, 0),
-      competencies,
-      items: [],
-      total: 0,
-    };
+  const held = {
+    reviewId: String(reviewId),
+    released: false,
+    assignedCount: assigned.length,
+    submittedCount: settled.length,
+    minimum: PEER_DISPLAY_THRESHOLD,
+    competencies,
+    items: [],
+    total: 0,
+  };
+
+  // Resolved here rather than left to the screen: a client comparing two numbers is a
+  // second copy of the rule, and this is the one it must never get wrong.
+  if (assigned.length < PEER_DISPLAY_THRESHOLD) {
+    return { ...held, reason: "below_minimum", needed: 0 };
   }
 
-  const batch = complete ? submitted : submitted.slice(0, threshold);
+  const threshold = Math.max(
+    Math.ceil(assigned.length / 2),
+    PEER_DISPLAY_THRESHOLD,
+  );
+
+  if (settled.length < threshold) {
+    return { ...held, reason: "waiting", needed: threshold - settled.length };
+  }
+
+  const complete = settled.length === assigned.length;
+  const batch = complete ? settled : settled.slice(0, threshold);
 
   return {
     reviewId: String(reviewId),
     released: true,
     assignedCount: assigned.length,
-    submittedCount: submitted.length,
+    submittedCount: settled.length,
+    minimum: PEER_DISPLAY_THRESHOLD,
     needed: 0,
     complete,
     competencies,
@@ -400,6 +419,202 @@ const submitSelf = async (userId, payload) => {
   return asSelfRecord(found);
 };
 
+// The supervisor's own review of one of their team. Same collection, same answer rules
+// and the same window; it is attributed, and it alone carries the colleague summary.
+
+// ⚠️ NOT the gate the collected read uses. HR may READ a supervisor review and may never
+// write one, so this check has no role branch at all: supervising somebody is a
+// relationship, and no role is a substitute for it.
+const assertSupervises = async (review, viewer) => {
+  const { team = [] } = await teamOn(viewer.id, new Date());
+
+  // The same refusal as a review that does not exist, so nobody can map the
+  // organisation by probing ids.
+  if (!team.some((p) => String(p.id) === String(review.userId))) {
+    throw new AppError("Review not found", 404);
+  }
+};
+
+const notReadyError = (readiness) => {
+  const missing = [
+    readiness.missing.selfAssessment && "the self-assessment is not in yet",
+    readiness.missing.colleagues &&
+      `${readiness.missing.colleagues} of the colleague responses are still outstanding`,
+  ].filter(Boolean);
+
+  return new AppError(`This review cannot be started yet: ${missing.join(", ")}`, 409);
+};
+
+const supervisorRecordFor = async (reviewId, viewer) => {
+  const review = await Review.findById(reviewId);
+  if (!review) throw new AppError("Review not found", 404);
+
+  await assertSupervises(review, viewer);
+
+  const reviewee = await User.findById(review.userId).select(
+    "name employeeId designation jobFamily",
+  );
+  if (!reviewee) throw new AppError("Employee not found", 404);
+
+  const doc = await Feedback.findOne({
+    reviewId: review._id,
+    reviewerId: viewer.id,
+    reviewerType: "supervisor",
+  });
+
+  const readiness = await readinessOn(review._id);
+
+  // ⚠️ The gate stops somebody STARTING one, and never touches a record that exists.
+  // Readiness can fall back to waiting when a late colleague record appears, and shutting
+  // an author out of their own half-written review would strand it.
+  if (!doc && readiness.state !== "ready") throw notReadyError(readiness);
+
+  return { review, reviewee, doc, readiness };
+};
+
+// Created by the first write, like the self-assessment: opening the form must not put an
+// empty review into the cycle for everybody a supervisor merely looked at.
+const openSupervisorRecord = async (reviewId, viewer) => {
+  const found = await supervisorRecordFor(reviewId, viewer);
+  if (found.doc) return found;
+
+  const doc = await Feedback.create({
+    reviewId: found.review._id,
+    reviewerId: viewer.id,
+    revieweeId: found.review.userId,
+    reviewerType: "supervisor",
+    // The REVIEWEE's family decides the questions, never the supervisor's.
+    formTemplateKey: found.reviewee.jobFamily,
+    formTemplateVersion: 1,
+    status: "assigned",
+  });
+
+  return { ...found, doc };
+};
+
+// ⚠️ Applied only here. The summary is a digest of OTHER people's feedback, so it has no
+// meaning on a self-assessment or a colleague's form and is ignored on both.
+const applyColleagueSummary = (doc, payload) => {
+  if (payload.colleagueSummary !== undefined) {
+    doc.colleagueSummary = payload.colleagueSummary ?? null;
+  }
+};
+
+const asSupervisorRecord = ({ review, reviewee, doc, readiness }) => ({
+  reviewId: String(review._id),
+  reviewee: {
+    id: String(reviewee._id),
+    name: reviewee.name,
+    employeeId: reviewee.employeeId,
+    designation: reviewee.designation,
+    jobFamily: reviewee.jobFamily,
+  },
+  // ⚠️ `not_started` is NOT a stored status: the record does not exist until the first
+  // save, so until then there is nothing to report one from.
+  status: doc ? doc.status : "not_started",
+  ratings: doc ? doc.ratings : [],
+  freeText: doc ? doc.freeText : { strengths: null, development: null },
+  colleagueSummary: doc ? doc.colleagueSummary : null,
+  submittedAt: doc ? doc.submittedAt : null,
+  locksAt: doc ? doc.locksAt : null,
+  editable: !doc || isEditable(doc),
+  readiness,
+  competencies: competenciesFor(reviewee.jobFamily),
+});
+
+const supervisorReviewFor = async (reviewId, viewer) =>
+  asSupervisorRecord(await supervisorRecordFor(reviewId, viewer));
+
+const saveSupervisorDraft = async (reviewId, viewer, payload) => {
+  const found = await openSupervisorRecord(reviewId, viewer);
+  assertOpen(found.doc);
+
+  applyAnswers(found.doc, payload);
+  applyColleagueSummary(found.doc, payload);
+
+  // Submitting is a one-way door here too: an already-submitted review stays submitted
+  // inside its window rather than dropping back to a draft.
+  if (!found.doc.submittedAt) found.doc.status = "draft";
+
+  await found.doc.save();
+  return asSupervisorRecord(found);
+};
+
+const submitSupervisorReview = async (reviewId, viewer, payload) => {
+  const found = await openSupervisorRecord(reviewId, viewer);
+
+  applyAndSubmit(found.doc, payload);
+  applyColleagueSummary(found.doc, payload);
+
+  await found.doc.save();
+  return asSupervisorRecord(found);
+};
+
+/**
+ * One person's own assessment, read by their supervisor or by HR.
+ *
+ * ⚠️ NOT `/feedback/self`, which takes no id and reaches only the caller's own record. That
+ * narrowness is the point of it, so this is a separate route with its own gate rather than a
+ * parameter added to that one.
+ *
+ * ⚠️ SETTLED, not submitted. The access matrix says "once submitted" and the state machine says
+ * nothing downstream reads a document until its window has closed; **the stricter of the two
+ * wins**, or a supervisor starts reading an assessment that is then rewritten underneath them.
+ */
+const assessmentFor = async (reviewId, viewer) => {
+  const review = await Review.findById(reviewId);
+  if (!review) throw new AppError("Review not found", 404);
+
+  // The same gate as the collected read, and deliberately not the form's: HR reads an
+  // assessment, and HR never writes the review drawn from it.
+  await assertMayRead(review, viewer);
+
+  const reviewee = await User.findById(review.userId).select(
+    "name employeeId designation jobFamily",
+  );
+  if (!reviewee) throw new AppError("Employee not found", 404);
+
+  const doc = await Feedback.findOne({
+    reviewId: review._id,
+    revieweeId: review.userId,
+    reviewerType: "self",
+  });
+
+  const shell = {
+    reviewId: String(reviewId),
+    reviewee: {
+      id: String(reviewee._id),
+      name: reviewee.name,
+      employeeId: reviewee.employeeId,
+      designation: reviewee.designation,
+      jobFamily: reviewee.jobFamily,
+    },
+    // Served in every state: a screen must never resolve a job family to wording itself.
+    competencies: competenciesFor(reviewee.jobFamily),
+  };
+
+  const withheld = (reason) => ({
+    ...shell,
+    available: false,
+    reason,
+    ratings: [],
+    freeText: { strengths: null, development: null },
+  });
+
+  // ⚠️ Two absences a screen has to tell apart: one is waiting on the author, the other on a
+  // clock that has already started. "Nothing written yet" in the second case is false.
+  //
+  // A draft is reported as not submitted rather than as a draft. Whether somebody has saved
+  // and not sent is theirs, and no criterion needs it.
+  if (!doc || !doc.submittedAt) return withheld("not_submitted");
+  if (!hasSettled(doc)) return withheld("in_window");
+
+  // ⚠️ No timestamps, even though this record is attributed and its author is its subject:
+  // every time-bearing field on a feedback record is identifying by default, and one is added
+  // only when something actually needs it.
+  return { ...shell, available: true, reason: null, ratings: doc.ratings, freeText: doc.freeText };
+};
+
 module.exports = {
   owedBy,
   getForReviewer,
@@ -410,4 +625,8 @@ module.exports = {
   selfAssessmentFor,
   saveSelfDraft,
   submitSelf,
+  supervisorReviewFor,
+  saveSupervisorDraft,
+  submitSupervisorReview,
+  assessmentFor,
 };

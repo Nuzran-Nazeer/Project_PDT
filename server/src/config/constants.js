@@ -189,6 +189,11 @@ const REVIEW_STATUS = [
 // figure of 3 and the per-reviewer load caps are a separate rule and are NOT here yet.
 const PEER_REVIEWS_TARGET = 8;
 
+// ⚠️ Nothing is released below this many settled responses, whatever the pool size, and
+// a pool with fewer than this ASSIGNED gets no colleague section at all. Not the
+// small-pool figure above: that is how many are ASKED, this is how many may be read.
+const PEER_DISPLAY_THRESHOLD = 3;
+
 // ⚠️ FOUR CONTINUOUS months, not four months added up across two separate stints. Two
 // short spells either side of a transfer are not the same evidence as one long one.
 const PEER_ELIGIBILITY_MONTHS = 4;
@@ -414,6 +419,7 @@ module.exports = {
   FEEDBACK_STATUS,
   REVIEW_STATUS,
   PEER_REVIEWS_TARGET,
+  PEER_DISPLAY_THRESHOLD,
   PEER_ELIGIBILITY_MONTHS,
   PEER_ELIGIBILITY_MONTHS_IN_CYCLE,
   FEEDBACK_EDIT_WINDOW_HOURS,
