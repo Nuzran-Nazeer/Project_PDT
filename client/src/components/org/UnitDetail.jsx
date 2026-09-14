@@ -467,18 +467,18 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               HR coverage
             </h3>
 
-            {/* Covers this unit and, unless overridden below, everything under it.
-                Once a unit has ANY direct coverage of its own, that stops the walk
-                entirely: a direct primary with no direct backup shows the backup as
-                vacant here, not inherited from further up. */}
+            {/* Each role is resolved on its own: a sub-unit with only a direct backup
+                still inherits its parent's primary. */}
             <p className="mt-2 text-[13px] text-muted">
-              {coverage?.resolvedUpward
-                ? `No HR officer is assigned directly to ${unit.name}, so it is covered from ${coverage.resolvedUnit?.name || "the unit above"}.`
-                : "Covers this unit and, unless a sub-unit has its own HR officer, everything beneath it too."}
+              Covers this unit and everything beneath it, unless a sub-unit has its own
+              officer for that role.
             </p>
 
             {["primary", "backup"].map((role) => {
               const holder = coverage?.[role] || null;
+              const inheritedFrom = coverage?.resolved?.[role]?.upward
+                ? coverage.resolved[role].unit
+                : null;
               const label = role === "primary" ? "Primary" : "Backup";
 
               return (
@@ -491,7 +491,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                         onClick={() => startAssignCoverage(role)}
                         className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                       >
-                        {holder && !coverage?.resolvedUpward
+                        {holder && !inheritedFrom
                           ? `Change ${label.toLowerCase()}`
                           : `Assign ${label.toLowerCase()}`}
                       </button>
@@ -506,12 +506,16 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                         {formatDate(holder.from)}
                         {holder.employeeId ? ` · ${holder.employeeId}` : ""}
                       </span>
+                      {inheritedFrom && (
+                        <span className="block text-[13px] text-muted">
+                          Not assigned directly, so covered from {inheritedFrom.name}.
+                        </span>
+                      )}
                     </p>
                   ) : (
                     <p className="mt-1.5 text-sm text-muted">
-                      {coverage?.resolvedUpward
-                        ? `No ${label.toLowerCase()} either, even from ${coverage.resolvedUnit?.name || "the unit above"}.`
-                        : `Nobody covers this unit as ${label.toLowerCase()}.`}
+                      Nobody covers this unit as {label.toLowerCase()}, here or in any
+                      unit above it.
                     </p>
                   )}
 
@@ -572,7 +576,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                         Only people holding the HR officer or Head of HR role can be
                         offered here.
                         {holder &&
-                          !coverage?.resolvedUpward &&
+                          !inheritedFrom &&
                           ` Assigning someone new ends the current ${label.toLowerCase()}'s term on the same date.`}
                       </p>
 

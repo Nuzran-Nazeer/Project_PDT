@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { createUnit, listUnits, updateUnit } from "../../services/orgUnits";
+import { getMyCoverage } from "../../services/hrCoverage";
 import { buildUnitSchema } from "../../schemas/orgUnitSchema";
 import UnitTree from "../../components/org/UnitTree";
 import UnitDetail from "../../components/org/UnitDetail";
 
-// The organisation structure. Head of HR builds it; HR and Leadership read it. The
-// tree is a navigation rail, not the content: the selected unit is the page.
+// The organisation structure. Head of HR builds it; an HR officer adds sub-units inside the
+// units they cover; HR and Leadership read it. The tree is a navigation rail, not the
+// content: the selected unit is the page.
 //
 // Creating and editing happen here rather than on separate routes, a unit being three
 // fields, and a separate page would hide the tree when you most need to see it.
@@ -40,6 +42,10 @@ export default function OrgTreePage() {
   // Wider than shaping the tree: HR places people and appoints leads. Same split the
   // server makes.
   const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
+  // An officer acts only inside the units they cover. Holding Leadership as well widens
+  // nothing here, so the Head of HR is the only exception.
+  const isOfficer = !canManage && Boolean(user?.roles?.includes("hr"));
+  const [coveredIds, setCoveredIds] = useState(() => new Set());
 
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +83,21 @@ export default function OrgTreePage() {
     };
   }, []);
 
+  // A failed read leaves the set empty, which offers nothing: erring toward hiding a
+  // control is safe, the server deciding regardless.
+  useEffect(() => {
+    if (!isOfficer) return undefined;
+    let cancelled = false;
+
+    getMyCoverage()
+      .then((data) => !cancelled && setCoveredIds(new Set(data.unitIds || [])))
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOfficer]);
+
   // THE SELECTED UNIT LIVES IN THE URL, not in state. A unit is now a page with
   // members and a lead on it, so it needs to be linkable and to survive a refresh.
   // and the tree stays beside it, which a separate route would have cost.
@@ -92,6 +113,11 @@ export default function OrgTreePage() {
 
   const hasRoot = units.some((unit) => !unit.parentUnitId);
 
+  const covers = (unit) => canManage || coveredIds.has(String(unit._id));
+  const canCreate =
+    canManage ||
+    (isOfficer && units.some((unit) => unit.active !== false && covers(unit)));
+
   // Which units may be offered as a parent. When editing, the unit itself and
   // everything under it are removed.
   const parentOptions = useMemo(() => {
@@ -100,6 +126,7 @@ export default function OrgTreePage() {
     // back door: its sub-tree would be operating again while it is marked shut.
     const live = units.filter((unit) => unit.active !== false);
 
+    if (isOfficer) return live.filter((unit) => coveredIds.has(String(unit._id)));
     if (mode !== "edit" || !selected) return live;
 
     const blocked = descendantsOf(units, selected._id);
@@ -107,13 +134,23 @@ export default function OrgTreePage() {
       (unit) =>
         String(unit._id) !== String(selected._id) && !blocked.has(String(unit._id)),
     );
-  }, [units, mode, selected]);
+  }, [units, mode, selected, isOfficer, coveredIds]);
 
   const select = (unit) => navigate(`/organisation/${unit._id}`);
 
   const startCreate = () => {
     setFormState({ mode: "create", forUnit: id ?? null });
-    setForm(EMPTY);
+    // An officer can make nothing but a sub-unit, so the type is fixed rather than offered,
+    // and the unit on screen is the likely parent when they cover it.
+    setForm(
+      isOfficer
+        ? {
+            ...EMPTY,
+            type: "sub-unit",
+            parentUnitId: selected && covers(selected) ? String(selected._id) : "",
+          }
+        : EMPTY,
+    );
     setFieldErrors({});
     setFormError("");
   };
@@ -209,11 +246,13 @@ export default function OrgTreePage() {
           <p className="mt-1 text-muted">
             {canManage
               ? "The company as a tree of units. Supervision is read from its shape."
-              : "The company as a tree of units. Only the Head of HR can change it."}
+              : isOfficer
+                ? "The company as a tree of units. You can add sub-units inside the units you cover; only the Head of HR can change the rest."
+                : "The company as a tree of units. Only the Head of HR can change it."}
           </p>
         </div>
 
-        {canManage && units.length > 0 && (
+        {canCreate && units.length > 0 && (
           <button
             type="button"
             onClick={startCreate}
@@ -272,7 +311,7 @@ export default function OrgTreePage() {
                     key={selected._id}
                     unit={selected}
                     units={units}
-                    canAssign={canAssign}
+                    canAssign={canAssign && covers(selected)}
                     canManage={canManage}
                     onChanged={reload}
                   />
@@ -326,21 +365,31 @@ export default function OrgTreePage() {
                   <label htmlFor="type" className={labelClass}>
                     Type
                   </label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={form.type}
-                    onChange={handleChange}
-                    aria-invalid={Boolean(fieldErrors.type)}
-                    className={inputClass}
-                  >
-                    <option value="">Choose…</option>
-                    {(constants?.orgUnitTypes || []).map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
+                  {isOfficer ? (
+                    <p id="type" className="text-sm text-ink">
+                      sub-unit
+                      <span className="block text-[13px] text-muted">
+                        HR officers add sub-units only. Units are created by the Head of
+                        HR.
+                      </span>
+                    </p>
+                  ) : (
+                    <select
+                      id="type"
+                      name="type"
+                      value={form.type}
+                      onChange={handleChange}
+                      aria-invalid={Boolean(fieldErrors.type)}
+                      className={inputClass}
+                    >
+                      <option value="">Choose…</option>
+                      {(constants?.orgUnitTypes || []).map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   {fieldErrors.type && (
                     <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.type}</p>
                   )}

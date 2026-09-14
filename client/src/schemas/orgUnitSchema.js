@@ -1,8 +1,8 @@
 import * as yup from "yup";
 
 // `orgUnitTypes` comes from GET /api/constants so the dropdown and the model cannot
-// offer different words. The server only sends it to the Head of HR, who is the only
-// role reaching this form. If that request failed the list check is skipped: a form
+// offer different words. The server sends it only to the Head of HR; an HR officer's form
+// fixes the type instead. If the list is missing the check is skipped: a form
 // refusing every value because a side request failed is worse than letting the server
 // have the final word, which it has regardless.
 

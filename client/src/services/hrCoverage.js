@@ -3,9 +3,13 @@ import { apiFetch, buildQuery } from "./api";
 export const listCoverage = (filters = {}) =>
   apiFetch(`/hr-coverage${buildQuery(filters)}`);
 
-// The resolved answer for a unit on a date: direct coverage, or inherited from the
-// nearest ancestor that has any -- see coverageOn() on the server, the one place this
-// is worked out.
+// `{ all, unitIds }`: every unit for the Head of HR, otherwise the units the caller covers
+// today. Decides what to offer, never what is allowed.
+export const getMyCoverage = () => apiFetch("/hr-coverage/mine");
+
+// The resolved answer for a unit on a date. Each role is direct or inherited on its own,
+// from the nearest unit holding that role; `resolved[role]` says which. Worked out only
+// in coverageOn() on the server.
 export const getEffectiveCoverage = (unitId, on) =>
   apiFetch(`/hr-coverage/effective/${unitId}${buildQuery(on ? { on } : {})}`);
 

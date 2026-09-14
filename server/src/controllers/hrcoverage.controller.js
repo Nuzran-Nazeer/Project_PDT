@@ -1,5 +1,15 @@
 const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/hrcoverage.service");
+const { coveredUnitIds } = require("../services/coverageAuth.service");
+
+// Which units the caller covers today, so the screens offer only what the server allows.
+// A guide rail: every write still runs its own coverage check.
+exports.getMyCoverage = asyncHandler(async (req, res) => {
+  if ((req.user.roles || []).includes("head_of_hr")) {
+    return res.json({ all: true, unitIds: [] });
+  }
+  res.json({ all: false, unitIds: [...(await coveredUnitIds(req.user))] });
+});
 
 exports.assignCoverage = asyncHandler(async (req, res) => {
   const record = await service.assignCoverage(req.body);
