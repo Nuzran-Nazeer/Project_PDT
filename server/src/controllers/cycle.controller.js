@@ -1,6 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/cycle.service");
 const User = require("../models/user.model");
+const { readScopeFor } = require("../services/coverageAuth.service");
 
 exports.createCycle = asyncHandler(async (req, res) => {
   const cycle = await service.createCycle(req.body);
@@ -8,7 +9,7 @@ exports.createCycle = asyncHandler(async (req, res) => {
 });
 
 exports.listCycles = asyncHandler(async (req, res) => {
-  res.json(await service.listCycles(req.query));
+  res.json(await service.listCycles(req.query, await readScopeFor(req.user)));
 });
 
 exports.getCycle = asyncHandler(async (req, res) => {
@@ -18,7 +19,17 @@ exports.getCycle = asyncHandler(async (req, res) => {
 // Behind the reader gate, unlike /current: that answers a question about the person
 // asking, this one about everybody else.
 exports.getCyclePeople = asyncHandler(async (req, res) => {
-  res.json(await service.peopleInCycle(req.params.id));
+  const [result, inScope] = await Promise.all([
+    service.peopleInCycle(req.params.id),
+    readScopeFor(req.user),
+  ]);
+  const items = result.items.filter((person) => inScope(person._id));
+  res.json({
+    ...result,
+    items,
+    total: items.length,
+    appraised: items.filter((p) => p.appraised).length,
+  });
 });
 
 //

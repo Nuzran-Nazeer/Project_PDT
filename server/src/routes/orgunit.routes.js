@@ -7,17 +7,16 @@ const {
 } = require("../validators/orgunit.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
-// Only the Head of HR shapes the tree. Reading is wider than writing: HR needs the
-// tree to assign coverage, Leadership reports by unit.
-//
-// ⚠️ An HR officer should also create sub-units inside units they cover. That needs
-// the coverage collection, which does not exist yet.
+// The Head of HR shapes the tree. An HR officer may create a sub-unit inside a unit they
+// cover, which the controller checks. Reading is wider than writing: HR needs the tree to
+// assign coverage, Leadership reports by unit.
 const CAN_MANAGE = ["head_of_hr"];
+const CAN_CREATE = ["hr", "head_of_hr"];
 const CAN_READ = ["hr", "head_of_hr", "leadership"];
 
 router
   .route("/")
-  .post(protect, authorize(...CAN_MANAGE), validateCreateUnit, controller.createUnit)
+  .post(protect, authorize(...CAN_CREATE), validateCreateUnit, controller.createUnit)
   .get(protect, authorize(...CAN_READ), controller.listUnits);
 
 // No DELETE, ever: a unit is somebody's appraisal history. Closing one has its own

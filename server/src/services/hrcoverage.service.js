@@ -125,26 +125,21 @@ const asHolder = (record) =>
     ? { ...asPerson(record.userId), coverageId: record._id, from: record.from }
     : null;
 
-// THE resolver. Climbs from `unitId` upward (itself first) and stops at the nearest
-// unit -- including the one asked about -- that has ANY open direct record on `date`.
-// That unit's own direct records answer BOTH roles from there: a sub-unit with a
-// direct primary but no direct backup shows backup as VACANT, not inherited, because
-// the walk has already stopped and does not resume per role. The reverse holds too.
-// Nothing falls further up the tree once a unit has stepped in for itself.
-//
-// Mirrors climbToLead in supervision.service.js; must stay the same shape so the two
-// features cannot drift into two different ideas of "how coverage travels down the
-// tree".
+// THE resolver. Climbs from `unitId` upward (itself first), and EACH ROLE stops at the
+// nearest unit with an open direct record for that role on `date` (B31). A sub-unit given
+// only its own backup still inherits its parent's primary: a direct record overrides the
+// inherited one for its own role, never for the other.
 exports.coverageOn = async (unitId, date) => {
   const day = toDay(date, "on");
   const requestedUnit = await OrgUnit.findById(unitId).select("name type parentUnitId");
   if (!requestedUnit) throw new AppError("Unit not found", 404);
 
+  const found = { primary: null, backup: null };
   const seen = new Set();
-  let cursorId = String(unitId);
   let cursorUnit = requestedUnit;
 
-  while (cursorUnit) {
+  while (cursorUnit && !(found.primary && found.backup)) {
+    const cursorId = String(cursorUnit._id);
     if (seen.has(cursorId)) {
       throw new AppError("The unit tree above this unit contains a loop", 409);
     }
@@ -155,30 +150,29 @@ exports.coverageOn = async (unitId, date) => {
       ...activeOn(day),
     }).populate("userId", "name employeeId");
 
-    if (records.length) {
-      return {
-        requestedUnit: asUnit(requestedUnit),
-        resolvedUnit: asUnit(cursorUnit),
-        primary: asHolder(records.find((r) => r.role === "primary")),
-        backup: asHolder(records.find((r) => r.role === "backup")),
-        resolvedUpward: cursorId !== String(unitId),
-      };
+    for (const role of ["primary", "backup"]) {
+      const record = records.find((r) => r.role === role);
+      if (!found[role] && record) found[role] = { record, unit: cursorUnit };
     }
 
-    if (!cursorUnit.parentUnitId) break;
-    cursorUnit = await OrgUnit.findById(cursorUnit.parentUnitId).select(
-      "name type parentUnitId",
-    );
-    cursorId = cursorUnit ? String(cursorUnit._id) : null;
+    cursorUnit = cursorUnit.parentUnitId
+      ? await OrgUnit.findById(cursorUnit.parentUnitId).select("name type parentUnitId")
+      : null;
   }
 
-  // Ran out of tree with nobody covering any unit along the way: both roles vacant.
+  const resolvedFor = (role) =>
+    found[role]
+      ? {
+          unit: asUnit(found[role].unit),
+          upward: String(found[role].unit._id) !== String(unitId),
+        }
+      : null;
+
   return {
     requestedUnit: asUnit(requestedUnit),
-    resolvedUnit: null,
-    primary: null,
-    backup: null,
-    resolvedUpward: false,
+    primary: found.primary ? asHolder(found.primary.record) : null,
+    backup: found.backup ? asHolder(found.backup.record) : null,
+    resolved: { primary: resolvedFor("primary"), backup: resolvedFor("backup") },
   };
 };
 

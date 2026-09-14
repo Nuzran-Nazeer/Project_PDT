@@ -6,7 +6,11 @@ const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { candidatesFor, notPeersOf } = require("./reviewerPool.service");
 const { teamOn, reportingLineOn } = require("./supervision.service");
-const { assertMayActOnEmployee } = require("./coverageAuth.service");
+const {
+  assertMayActOnEmployee,
+  assertHrMayRead,
+  readScopeFor,
+} = require("./coverageAuth.service");
 const { shuffled } = require("./review.service");
 const {
   PEER_REVIEWS_TARGET,
@@ -69,9 +73,16 @@ const supervises = async (actor, userId) => {
   return team.some((p) => same(p.id, userId));
 };
 
+// The person's supervisor today, or HR within their coverage. Outside both, the same 404
+// as a review that does not exist.
 const assertMayRead = async (review, actor) => {
   assertNotOwn(review, actor);
-  if (isHr(actor) || (await supervises(actor, review.userId))) return;
+  if (await supervises(actor, review.userId)) return;
+  if (
+    isHr(actor) &&
+    (await refusalOf(() => assertHrMayRead(actor, review.userId))) === null
+  )
+    return;
   throw new AppError("Review not found", 404);
 };
 
@@ -378,11 +389,14 @@ const listsForTeam = async (actor) => {
 };
 
 // Every review in a cycle, grouped by the person's current supervisor, for HR.
-const listsForCycle = async (cycleId) => {
+const listsForCycle = async (cycleId, actor) => {
   const cycle = await Cycle.findById(cycleId);
   if (!cycle) throw new AppError("Cycle not found", 404);
 
-  const reviews = await Review.find({ cycleId: cycle._id }).select("_id userId");
+  const inScope = await readScopeFor(actor, { asHr: true });
+  const reviews = (await Review.find({ cycleId: cycle._id }).select("_id userId")).filter(
+    (r) => inScope(r.userId),
+  );
   const reviewIds = reviews.map((r) => r._id);
 
   const [{ listByReview, peered }, people] = await Promise.all([

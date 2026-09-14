@@ -79,7 +79,9 @@ const coverageFor = async (parGroup, on = new Date()) => {
   });
 };
 
-exports.listCycles = async ({ parGroup, year, status } = {}) => {
+// `inScope` narrows the headcount to the people the caller may see, so a card never counts
+// more people than its own people page lists.
+exports.listCycles = async ({ parGroup, year, status } = {}, inScope = () => true) => {
   const filter = {};
   if (parGroup) filter.parGroup = parGroup;
   if (year) filter.year = Number(year);
@@ -98,7 +100,7 @@ exports.listCycles = async ({ parGroup, year, status } = {}) => {
   const counts = new Map();
   for (const group of groups) {
     const covered = await coverageFor(group);
-    counts.set(group, covered.filter((p) => p.appraised).length);
+    counts.set(group, covered.filter((p) => p.appraised && inScope(p._id)).length);
   }
 
   return {

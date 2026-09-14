@@ -1,5 +1,6 @@
 const asyncHandler = require("../utils/asyncHandler");
 const orgUnitService = require("../services/orgunit.service");
+const { assertMayCreateUnit } = require("../services/coverageAuth.service");
 
 // Thin HTTP layer: read the request, call the service, shape the response.
 //
@@ -8,6 +9,7 @@ const orgUnitService = require("../services/orgunit.service");
 // the body never says whether the request succeeded.
 
 exports.createUnit = asyncHandler(async (req, res) => {
+  await assertMayCreateUnit(req.user, req.body);
   const unit = await orgUnitService.createUnit(req.body);
   res.status(201).json(unit);
 });
@@ -29,7 +31,5 @@ exports.updateUnit = asyncHandler(async (req, res) => {
 // silently stamping today onto it would invent the one fact this whole story exists
 // to record honestly.
 exports.discontinueUnit = asyncHandler(async (req, res) => {
-  res.json(
-    await orgUnitService.discontinueUnit(req.params.id, req.body.lastDay),
-  );
+  res.json(await orgUnitService.discontinueUnit(req.params.id, req.body.lastDay));
 });

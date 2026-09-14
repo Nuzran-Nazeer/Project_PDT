@@ -5,7 +5,7 @@ const service = require("../services/reviewerList.service");
 // coverage the service has to derive. Every actor comes from the TOKEN, never the body.
 
 exports.listForCycle = asyncHandler(async (req, res) => {
-  res.json(await service.listsForCycle(req.query.cycleId));
+  res.json(await service.listsForCycle(req.query.cycleId, req.user));
 });
 
 exports.listForTeam = asyncHandler(async (req, res) => {
