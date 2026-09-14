@@ -36,7 +36,7 @@ function StatusPage() {
               {status.database}
             </strong>
           </li>
-          <li>DB name: {status.dbName || "—"}</li>
+          <li>DB name: {status.dbName || "Unknown"}</li>
         </ul>
       )}
     </div>

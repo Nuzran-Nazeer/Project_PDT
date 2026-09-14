@@ -16,6 +16,8 @@ const {
   REVIEW_LOAD_PER_SOURCE,
 } = require("../config/constants");
 
+const ADDABLE_SEARCH_LIMIT = 10;
+
 // Choosing colleague reviewers: the system builds the list, the supervisor confirms it, HR
 // decides any requested change, and HR draws from what is left.
 
@@ -101,14 +103,12 @@ const assertHrMayAct = async (review, actor, action) => {
   await assertMayActOnEmployee(actor, review.userId, new Date(), action);
 };
 
-const allowed = async (check) => {
-  try {
-    await check();
-    return true;
-  } catch {
-    return false;
-  }
-};
+// The refusal's own message, or null when allowed.
+const refusalOf = (check) =>
+  check().then(
+    () => null,
+    (err) => err.message,
+  );
 
 // ⚠️ Records that predate confirmed lists count as chosen: the demo cycle's reviewers were
 // drawn before this existed, and offering a second draw would break one pool per person.
@@ -254,7 +254,7 @@ const listFor = async (reviewId, actor) => {
 
   const state = stateOf({ cycle, list, hasPeers: Boolean(hasPeers) });
 
-  let candidates = [];
+  let candidates;
   if (list) {
     candidates = list.candidates.map((c) => ({
       userId: String(c.userId),
@@ -264,7 +264,7 @@ const listFor = async (reviewId, actor) => {
       sharedFrom: c.sharedFrom,
       sharedTo: c.sharedTo,
     }));
-  } else if (state === "to_confirm") {
+  } else {
     const built = await candidatesFor(review.userId, {
       from: cycle.startDate,
       to: cycle.endDate,
@@ -283,12 +283,20 @@ const listFor = async (reviewId, actor) => {
   }).select("name employeeId designation");
   const byId = new Map(people.map((p) => [String(p._id), p]));
 
-  const [canConfirm, canDecide] = await Promise.all([
-    state === "to_confirm" ? allowed(() => assertMayConfirm(review, actor)) : false,
+  const [confirmRefusal, decideRefusal] = await Promise.all([
+    state === "to_confirm" ? refusalOf(() => assertMayConfirm(review, actor)) : undefined,
     state === "awaiting_hr" || state === "ready_to_draw"
-      ? allowed(() => assertHrMayAct(review, actor, "act"))
-      : false,
+      ? refusalOf(() =>
+          assertHrMayAct(
+            review,
+            actor,
+            "decide changes to this list or draw its reviewers",
+          ),
+        )
+      : undefined,
   ]);
+  const canConfirm = confirmRefusal === null;
+  const canDecide = decideRefusal === null;
 
   return {
     reviewId: String(review._id),
@@ -315,6 +323,9 @@ const listFor = async (reviewId, actor) => {
       ? { count: list.drawnCount, shortfallAcknowledged: list.shortfallAcknowledged }
       : null,
     canConfirm,
+    // Only HR is told why: a supervisor's refusals are the generic kind that must not
+    // confirm a review exists.
+    whyNot: isHr(actor) ? (confirmRefusal ?? decideRefusal ?? null) : null,
     canDecide: canDecide && state === "awaiting_hr",
     canDraw: canDecide && state === "ready_to_draw",
     preview:
@@ -427,6 +438,53 @@ const listsForCycle = async (cycleId) => {
     undrawn: rows.filter((r) => !["drawn", "already_chosen"].includes(r.state)).length,
     awaitingHr: rows.filter((r) => r.state === "awaiting_hr").length,
   };
+};
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// People a list's confirmer could request to add, found by name. Supervisors cannot read the
+// employee list, so this serves name and designation only, and only people the addition
+// would accept.
+const addableFor = async (reviewId, actor, query) => {
+  const { review, cycle } = await loadReview(reviewId);
+  await assertMayConfirm(review, actor);
+  assertCollecting(cycle);
+
+  const [list, hasPeers] = await Promise.all([
+    ReviewerList.exists({ reviewId: review._id }),
+    Feedback.exists({ reviewId: review._id, reviewerType: "peer" }),
+  ]);
+  if (list || hasPeers) {
+    throw new AppError("This list is no longer open to changes", 409);
+  }
+
+  const period = { from: cycle.startDate, to: cycle.endDate };
+  const [{ candidates }, notPeers] = await Promise.all([
+    candidatesFor(review.userId, period),
+    notPeersOf(review.userId, period),
+  ]);
+  const excluded = new Set([
+    String(review.userId),
+    ...candidates.map((c) => c.id),
+    ...notPeers,
+  ]);
+
+  // ⚠️ Filtered AFTER the query, so the query over-fetches: a limit applied first would
+  // come back short whenever excluded people sort early.
+  const matches = await User.find({
+    status: "active",
+    name: { $regex: escapeRegex(query.trim()), $options: "i" },
+  })
+    .select("name designation")
+    .sort({ name: 1 })
+    .limit(ADDABLE_SEARCH_LIMIT + excluded.size);
+
+  const items = matches
+    .filter((u) => !excluded.has(String(u._id)))
+    .slice(0, ADDABLE_SEARCH_LIMIT)
+    .map((u) => ({ id: String(u._id), name: u.name, designation: u.designation }));
+
+  return { items };
 };
 
 // Writing
@@ -657,6 +715,7 @@ module.exports = {
   listFor,
   listsForTeam,
   listsForCycle,
+  addableFor,
   confirmList,
   decideChange,
   drawReviewers,

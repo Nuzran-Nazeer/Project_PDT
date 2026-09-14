@@ -34,6 +34,14 @@ exports.validateCycleQuery = (req, res, next) => {
   finish(errors, next);
 };
 
+exports.validateAddableQuery = (req, res, next) => {
+  const errors = [];
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (q.length < 2) errors.push("q must be at least 2 characters");
+  if (q.length > 60) errors.push("q must be at most 60 characters");
+  finish(errors, next);
+};
+
 exports.validateConfirm = (req, res, next) => {
   const errors = [];
   const { changes } = req.body || {};

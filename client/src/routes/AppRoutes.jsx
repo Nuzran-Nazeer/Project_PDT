@@ -28,6 +28,9 @@ import ProjectsPage from "../pages/projects/ProjectsPage";
 import ProjectDetailPage from "../pages/projects/ProjectDetailPage";
 import CyclesPage from "../pages/cycles/CyclesPage";
 import CyclePeoplePage from "../pages/cycles/CyclePeoplePage";
+import ReviewerListsPage from "../pages/reviewers/ReviewerListsPage";
+import ChooseReviewersPage from "../pages/reviewers/ChooseReviewersPage";
+import ReviewerListPage from "../pages/reviewers/ReviewerListPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // The single list of URL to page mappings. Sidebar tabs are generated from
@@ -51,6 +54,8 @@ const GROUP_ACCESS = {
 const TAB_PAGES = {
   "my-team": MyTeamPage,
   normalisation: NormalisationPage,
+  "reviewer-lists": ReviewerListsPage,
+  "choose-reviewers": ChooseReviewersPage,
 
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
@@ -149,6 +154,12 @@ function AppRoutes() {
             />
             <Route path="/my-team/:id/review" element={<SupervisorReviewFormPage />} />
             <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
+          </Route>
+
+          {/* HR as well as supervisors: HR decides and draws, and confirms for somebody
+              nobody supervises. */}
+          <Route element={<ProtectedRoute allow={["supervisor", "hr", "head_of_hr"]} />}>
+            <Route path="/reviewer-lists/:reviewId" element={<ReviewerListPage />} />
           </Route>
 
           {/* Reading the roster is wider than changing it, which the server enforces.

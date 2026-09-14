@@ -374,7 +374,7 @@ function Fact({ label, value }) {
   return (
     <div>
       <dt className="text-[12px] uppercase tracking-wide text-muted">{label}</dt>
-      <dd className="mt-0.5 text-sm text-ink">{value || "—"}</dd>
+      <dd className="mt-0.5 text-sm text-ink">{value || "Not recorded"}</dd>
     </div>
   );
 }

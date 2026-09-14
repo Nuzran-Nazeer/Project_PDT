@@ -18,7 +18,7 @@ function Row({ label, value, note }) {
     <div className="border-b border-line py-3 last:border-0 sm:flex sm:gap-6">
       <dt className="text-[13px] text-muted sm:w-52 sm:shrink-0 sm:py-0.5">{label}</dt>
       <dd className="mt-0.5 text-sm text-ink sm:mt-0 sm:py-0.5">
-        {value || "—"}
+        {value || "Not recorded"}
         {note && <span className="block text-[13px] text-muted">{note}</span>}
       </dd>
     </div>

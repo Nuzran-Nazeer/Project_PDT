@@ -67,9 +67,11 @@ export default function MyTeamPage() {
                 <tr key={person.id} className="border-b border-line last:border-0">
                   <td className="px-4 py-3 font-medium text-ink">{person.name}</td>
                   <td className="px-4 py-3 text-muted">{person.employeeId}</td>
-                  <td className="px-4 py-3 text-muted">{person.designation || "—"}</td>
                   <td className="px-4 py-3 text-muted">
-                    {person.unit?.name || "—"}
+                    {person.designation || "Not recorded"}
+                  </td>
+                  <td className="px-4 py-3 text-muted">
+                    {person.unit?.name || "No unit"}
                     {person.viaVacancy && (
                       <span className="mt-1 flex items-center gap-1.5 text-[12px] text-amber-700 dark:text-amber-400">
                         <Icon name="flag" className="h-3.5 w-3.5" />
@@ -104,7 +106,7 @@ export default function MyTeamPage() {
 // Three separate answers, and running them together loses the difference: no group at
 // all, a group with no cycle running, and a live cycle.
 function CycleCell({ person }) {
-  if (!person.parGroup) return <span>&mdash;</span>;
+  if (!person.parGroup) return <span>No appraisal group</span>;
 
   if (!person.cycle) {
     return <span>None running &middot; {person.parGroup} group</span>;
@@ -142,7 +144,7 @@ const REVIEW_STATE = {
 function ReadinessCell({ person }) {
   const readiness = person.readiness;
 
-  if (!readiness) return <span className="text-muted">&mdash;</span>;
+  if (!readiness) return <span className="text-muted">No review yet</span>;
 
   const step = REVIEW_STATE[readiness.state];
   if (step) {

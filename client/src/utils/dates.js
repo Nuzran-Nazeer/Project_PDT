@@ -3,10 +3,10 @@
 // YYYY-MM-DD.
 
 export const formatDate = (value) => {
-  if (!value) return "—";
+  if (!value) return "Not set";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "Not set";
 
   return date.toLocaleDateString(undefined, {
     day: "numeric",

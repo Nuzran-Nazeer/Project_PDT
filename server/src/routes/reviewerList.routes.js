@@ -4,6 +4,7 @@ const {
   validateReviewId,
   validateChangeId,
   validateCycleQuery,
+  validateAddableQuery,
   validateConfirm,
   validateDecision,
   validateDraw,
@@ -22,6 +23,10 @@ router
 router.route("/team").get(protect, controller.listForTeam);
 
 router.route("/:reviewId").get(protect, validateReviewId, controller.getList);
+
+router
+  .route("/:reviewId/addable")
+  .get(protect, validateReviewId, validateAddableQuery, controller.addable);
 
 router
   .route("/:reviewId/confirm")
