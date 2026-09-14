@@ -128,6 +128,20 @@ exports.assertMayCreateUnit = async (actor, { type, parentUnitId }, on = new Dat
   await exports.assertCoversUnit(actor, parentUnitId, on, "create a sub-unit inside it");
 };
 
+// Every unit an HR officer covers on `on`, as a Set of id strings. Empty for anyone without
+// the officer role; the Head of HR's unrestricted reach is the caller's to handle.
+exports.coveredUnitIds = async (actor, on = new Date()) => {
+  const covered = new Set();
+  if (!holds(actor, SCOPED_ROLE)) return covered;
+
+  const day = toDay(on, "date");
+  for (const unit of await OrgUnit.find().select("_id")) {
+    if (coversResolved(await coverageOn(unit._id, day), actor))
+      covered.add(String(unit._id));
+  }
+  return covered;
+};
+
 /**
  * A predicate for filtering a list of people: is this person within the actor's reach today?
  * Built once per request, because resolving coverage per person repeats the same tree walk.
@@ -140,11 +154,7 @@ exports.readScopeFor = async (actor, { on = new Date(), asHr = false } = {}) => 
   if (!holds(actor, SCOPED_ROLE)) return (userId) => same(userId, actor?.id);
 
   const day = toDay(on, "date");
-  const covered = new Set();
-  for (const unit of await OrgUnit.find().select("_id")) {
-    if (coversResolved(await coverageOn(unit._id, day), actor))
-      covered.add(String(unit._id));
-  }
+  const covered = await exports.coveredUnitIds(actor, day);
 
   const memberships = await UnitMembership.find(activeOn(day))
     .select("userId unitId")

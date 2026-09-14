@@ -23,6 +23,9 @@ const STATUS_FILTERS = [
 export default function EmployeeListPage() {
   const { user } = useAuth();
   const canManage = user?.roles?.includes("hr");
+  // Matches the server's filter: the Head of HR and Leadership read the whole roster.
+  const scoped =
+    canManage && !user.roles.some((role) => ["head_of_hr", "leadership"].includes(role));
 
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState("");
@@ -75,6 +78,11 @@ export default function EmployeeListPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Employees</h1>
           <p className="mt-1 text-muted">The people data every review depends on.</p>
+          {scoped && (
+            <p className="mt-1 text-[13px] text-muted">
+              People in the units you cover, and anyone not yet placed in a unit.
+            </p>
+          )}
         </div>
 
         {canManage && (
@@ -183,8 +191,8 @@ export default function EmployeeListPage() {
       </div>
 
       <p className="mt-3 text-[13px] text-muted">
-        Unit, project, supervisor and HR coverage are not shown here. All four are derived
-        from dated records that do not exist yet.
+        A person&apos;s unit is on their own record, as dated history. Who covers a unit
+        is on its page under Organisation.
       </p>
     </section>
   );

@@ -38,6 +38,10 @@ router
 // matches routes in registration order, so "/:id" declared first would swallow every
 // request to "/effective/:unitId" with "effective" bound to :id.
 router
+  .route("/mine")
+  .get(protect, authorize("hr", "head_of_hr"), controller.getMyCoverage);
+
+router
   .route("/effective/:unitId")
   .get(
     protect,
