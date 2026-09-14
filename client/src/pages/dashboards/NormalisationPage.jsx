@@ -95,7 +95,7 @@ function Row({ person }) {
             Open
           </Link>
         ) : (
-          <span className="text-muted">&mdash;</span>
+          <span className="text-muted">Not yet</span>
         )}
       </td>
     </tr>

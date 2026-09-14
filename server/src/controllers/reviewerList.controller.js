@@ -16,6 +16,10 @@ exports.getList = asyncHandler(async (req, res) => {
   res.json(await service.listFor(req.params.reviewId, req.user));
 });
 
+exports.addable = asyncHandler(async (req, res) => {
+  res.json(await service.addableFor(req.params.reviewId, req.user, req.query.q));
+});
+
 exports.confirm = asyncHandler(async (req, res) => {
   res.json(await service.confirmList(req.params.reviewId, req.user, req.body));
 });

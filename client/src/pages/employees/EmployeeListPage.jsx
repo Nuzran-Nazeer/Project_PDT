@@ -164,7 +164,9 @@ export default function EmployeeListPage() {
                   </td>
                   <td className="px-4 py-3 text-muted">{person.employeeId}</td>
                   <td className="px-4 py-3">
-                    <span className="text-ink">{person.designation || "—"}</span>
+                    <span className="text-ink">
+                      {person.designation || "Not recorded"}
+                    </span>
                     {person.jobFamily && (
                       <span className="block text-[13px] text-muted">
                         {person.jobFamily}

@@ -35,8 +35,8 @@ export default function FeedbackOwedPage() {
   const rows = items.map((item) => ({
     key: item.id,
     cells: [
-      item.reviewee.name || "—",
-      item.reviewee.designation || "—",
+      item.reviewee.name || "Not recorded",
+      item.reviewee.designation || "Not recorded",
       STATUS_LABEL[item.status] || item.status,
       <Link
         key="action"

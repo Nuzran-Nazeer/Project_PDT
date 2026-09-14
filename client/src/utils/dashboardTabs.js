@@ -155,6 +155,16 @@ export const TABS_BY_GROUP = {
     },
     {
       section: "Running the cycle",
+      id: "choose-reviewers",
+      path: "/choose-reviewers",
+      label: "Choose reviewers",
+      icon: "list",
+      title: "Choose reviewers",
+      description: "Decide requested changes to colleague lists, then draw the reviewers",
+      built: true,
+    },
+    {
+      section: "Running the cycle",
       id: "cycle-progress",
       path: "/cycle-progress",
       label: "Cycle progress",
@@ -276,6 +286,15 @@ export const TABS_BY_GROUP = {
       icon: "users",
       title: "My team",
       description: "The people you supervise this cycle",
+      built: true,
+    },
+    {
+      id: "reviewer-lists",
+      path: "/reviewer-lists",
+      label: "Reviewer lists",
+      icon: "list",
+      title: "Reviewer lists",
+      description: "Confirm who worked with each person you supervise",
       built: true,
     },
     {

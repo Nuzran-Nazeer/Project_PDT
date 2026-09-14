@@ -138,10 +138,10 @@ export default function CyclePeoplePage() {
                       </td>
                       <td className="px-4 py-3 text-muted">{person.employeeId}</td>
                       <td className="px-4 py-3 text-muted">
-                        {person.designation || "—"}
+                        {person.designation || "Not recorded"}
                       </td>
                       <td className="px-4 py-3 text-muted">
-                        {person.unit?.name || "—"}
+                        {person.unit?.name || "No unit"}
                         {!person.appraised && (
                           // Shown rather than hidden. Dropping these rows would leave
                           // the count short with nothing on screen to explain it, and
