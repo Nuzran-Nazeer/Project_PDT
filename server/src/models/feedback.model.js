@@ -23,6 +23,12 @@ const ratingSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// `sourceId`, not `id`: a path named `id` collides with the id virtual Mongoose adds.
+const drawnFromSchema = new mongoose.Schema(
+  { kind: { type: String, enum: ["unit", "project"] }, sourceId: String },
+  { _id: false },
+);
+
 const feedbackSchema = new mongoose.Schema(
   {
     // Nullable: a project lead writes at project close, when no cycle may be open. The
@@ -96,6 +102,10 @@ const feedbackSchema = new mongoose.Schema(
     // Assigned when the reviewers are picked, NOT in submission order, so arrival
     // order carries no information. It is the only handle a consumer ever gets.
     label: { type: String, default: null },
+
+    // ⚠️ IDENTIFYING. The unit or project the reviewer was drawn through: in a project of three
+    // that narrows to a name. Loaded only to count per-source load, and never served.
+    drawnFrom: { type: drawnFromSchema, select: false, default: null },
 
     submittedAt: { type: Date, default: null },
     locksAt: { type: Date, default: null },

@@ -185,9 +185,22 @@ const REVIEW_STATUS = [
   "under_appeal",
 ];
 
-// How many colleagues are asked to review one person. The floor of 5, the small-pool
-// figure of 3 and the per-reviewer load caps are a separate rule and are NOT here yet.
+// How many colleagues are asked to review one person, and also how many a person is asked
+// to write in a year: every review received was written by somebody, so the two are one number.
 const PEER_REVIEWS_TARGET = 8;
+
+// Below the minimum available, HR must acknowledge the shortfall before drawing; below the
+// small-pool figure there will be no colleague section at all.
+const PEER_REVIEWS_MINIMUM = 5;
+const PEER_REVIEWS_SMALL_POOL = 3;
+
+// Per reviewer, per cycle year across all three groups. The draw never passes the ceiling,
+// and never takes more than the per-source figure through one unit or one project.
+const REVIEW_LOAD_CEILING = 10;
+const REVIEW_LOAD_PER_SOURCE = 5;
+
+const LIST_CHANGE_TYPES = ["add", "remove"];
+const LIST_CHANGE_STATUS = ["pending", "approved", "refused"];
 
 // ⚠️ Nothing is released below this many settled responses, whatever the pool size, and
 // a pool with fewer than this ASSIGNED gets no colleague section at all. Not the
@@ -201,6 +214,10 @@ const PEER_ELIGIBILITY_MONTHS = 4;
 // At least this much of that stretch must fall INSIDE the cycle, so a pool cannot be
 // filled entirely by people who stopped working with the reviewee before it opened.
 const PEER_ELIGIBILITY_MONTHS_IN_CYCLE = 2;
+
+// A break this long or shorter does not end a working relationship: a three-week gap
+// between two projects would otherwise split two years of work into fragments.
+const PEER_CONTINUITY_GAP_MONTHS = 1;
 
 const FEEDBACK_STATUS = ["assigned", "draft", "submitted", "locked"];
 
@@ -223,13 +240,16 @@ const IDENTIFYING_FIELDS = [
   // submission time with one subtraction. The author still sees their own, which is
   // built by hand rather than serialised.
   "locksAt",
+
+  // The unit or project the reviewer was drawn through. In a project of three it is a name.
+  "drawnFrom",
 ];
 
 // ⚠️ The subset no response may EVER carry without an authorised identity read. Kept
 // apart from the list above because `createdAt` is ordinary on a user or a unit and
 // only becomes identifying on feedback, so guarding it globally would refuse every
 // endpoint in the system.
-const NEVER_SERVED_FIELDS = ["reviewerId", "reviewerName"];
+const NEVER_SERVED_FIELDS = ["reviewerId", "reviewerName", "drawnFrom"];
 
 // Competencies
 //
@@ -419,9 +439,16 @@ module.exports = {
   FEEDBACK_STATUS,
   REVIEW_STATUS,
   PEER_REVIEWS_TARGET,
+  PEER_REVIEWS_MINIMUM,
+  PEER_REVIEWS_SMALL_POOL,
+  REVIEW_LOAD_CEILING,
+  REVIEW_LOAD_PER_SOURCE,
+  LIST_CHANGE_TYPES,
+  LIST_CHANGE_STATUS,
   PEER_DISPLAY_THRESHOLD,
   PEER_ELIGIBILITY_MONTHS,
   PEER_ELIGIBILITY_MONTHS_IN_CYCLE,
+  PEER_CONTINUITY_GAP_MONTHS,
   FEEDBACK_EDIT_WINDOW_HOURS,
   IDENTIFYING_FIELDS,
   NEVER_SERVED_FIELDS,

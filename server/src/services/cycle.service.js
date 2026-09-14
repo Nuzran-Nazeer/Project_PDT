@@ -34,7 +34,6 @@ const assertUserExists = async (userId) => {
   return user;
 };
 
-
 exports.getCycleById = async (id) => {
   const cycle = await Cycle.findById(id).populate(
     "openedBy cancelledBy",
@@ -133,7 +132,6 @@ exports.currentCycleFor = async (parGroup) => {
   }).sort({ year: -1 });
 };
 
-
 // Always draft: opening is what starts the cancellation clock and records who did
 // it.
 exports.createCycle = async ({ parGroup, year, startDate, endDate }) => {
@@ -186,6 +184,14 @@ exports.advanceCycle = async (id, target, userId) => {
     await assertUserExists(userId);
     cycle.openedBy = userId;
     cycle.openedOn = new Date();
+  }
+
+  // Before the stage changes, so a failure leaves the cycle where it was.
+  // ⚠️ Required here, not at the top: review.service requires this file, and a require in
+  // both directions at load time hands one of them an empty exports object.
+  if (next === "collecting") {
+    const { openReviewsForCycle } = require("./review.service");
+    await openReviewsForCycle(cycle._id);
   }
 
   cycle.status = next;
