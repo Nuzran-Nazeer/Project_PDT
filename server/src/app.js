@@ -1,12 +1,17 @@
 const express = require("express");
 const cors = require("cors");
 
+const connectDB = require("./config/db");
 const routes = require("./routes");
 const identityGuard = require("./middleware/identityGuard");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
+
+// ⚠️ Vercel runs THIS file, not index.js: its builder only accepts an entry file that
+// requires express itself. Locally index.js connects before listening.
+if (process.env.VERCEL) connectDB();
 
 // Global middleware
 // One address, never a comma-separated list: CLIENT_URL also builds the invite link.
