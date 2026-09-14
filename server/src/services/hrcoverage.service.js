@@ -125,13 +125,33 @@ const asHolder = (record) =>
     ? { ...asPerson(record.userId), coverageId: record._id, from: record.from }
     : null;
 
-// THE resolver. Climbs from `unitId` upward (itself first), and EACH ROLE stops at the
-// nearest unit with an open direct record for that role on `date` (B31). A sub-unit given
-// only its own backup still inherits its parent's primary: a direct record overrides the
-// inherited one for its own role, never for the other.
-exports.coverageOn = async (unitId, date) => {
+// Everything the resolver reads for one date, in two queries however deep the tree. A
+// list resolving every unit would otherwise climb the tree once per unit, a query a level.
+exports.loadCoverageOn = async (date) => {
   const day = toDay(date, "on");
-  const requestedUnit = await OrgUnit.findById(unitId).select("name type parentUnitId");
+  const [units, records] = await Promise.all([
+    OrgUnit.find().select("name type parentUnitId"),
+    HrCoverage.find(activeOn(day)).populate("userId", "name employeeId"),
+  ]);
+
+  const recordsByUnit = new Map();
+  for (const record of records) {
+    const key = String(record.unitId);
+    if (!recordsByUnit.has(key)) recordsByUnit.set(key, []);
+    recordsByUnit.get(key).push(record);
+  }
+
+  return { units: new Map(units.map((u) => [String(u._id), u])), recordsByUnit };
+};
+
+// THE resolver. Climbs from `unitId` upward (itself first), and EACH ROLE stops at the
+// nearest unit with an open direct record for that role on the loaded date (B31). A
+// sub-unit given only its own backup still inherits its parent's primary: a direct record
+// overrides the inherited one for its own role, never for the other.
+exports.resolveCoverage = ({ units, recordsByUnit }, unitId) => {
+  // A map lookup cannot reject a malformed id the way findById did; keep that a 400.
+  if (!mongoose.isValidObjectId(unitId)) throw new AppError("Invalid _id", 400);
+  const requestedUnit = units.get(String(unitId));
   if (!requestedUnit) throw new AppError("Unit not found", 404);
 
   const found = { primary: null, backup: null };
@@ -145,10 +165,7 @@ exports.coverageOn = async (unitId, date) => {
     }
     seen.add(cursorId);
 
-    const records = await HrCoverage.find({
-      unitId: cursorId,
-      ...activeOn(day),
-    }).populate("userId", "name employeeId");
+    const records = recordsByUnit.get(cursorId) || [];
 
     for (const role of ["primary", "backup"]) {
       const record = records.find((r) => r.role === role);
@@ -156,7 +173,7 @@ exports.coverageOn = async (unitId, date) => {
     }
 
     cursorUnit = cursorUnit.parentUnitId
-      ? await OrgUnit.findById(cursorUnit.parentUnitId).select("name type parentUnitId")
+      ? units.get(String(cursorUnit.parentUnitId))
       : null;
   }
 
@@ -175,6 +192,9 @@ exports.coverageOn = async (unitId, date) => {
     resolved: { primary: resolvedFor("primary"), backup: resolvedFor("backup") },
   };
 };
+
+exports.coverageOn = async (unitId, date) =>
+  exports.resolveCoverage(await exports.loadCoverageOn(date), unitId);
 
 // Writing
 

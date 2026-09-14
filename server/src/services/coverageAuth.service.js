@@ -1,10 +1,9 @@
 const User = require("../models/user.model");
-const OrgUnit = require("../models/orgunit.model");
 const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
 const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
-const { coverageOn } = require("./hrcoverage.service");
+const { coverageOn, loadCoverageOn, resolveCoverage } = require("./hrcoverage.service");
 
 // ⚠️ THE ONE PLACE THAT DECIDES WHICH PEOPLE AND UNITS AN HR OFFICER MAY SEE OR ACT ON.
 // No caller may reimplement it, and no caller may work around it by reading coverage
@@ -134,10 +133,9 @@ exports.coveredUnitIds = async (actor, on = new Date()) => {
   const covered = new Set();
   if (!holds(actor, SCOPED_ROLE)) return covered;
 
-  const day = toDay(on, "date");
-  for (const unit of await OrgUnit.find().select("_id")) {
-    if (coversResolved(await coverageOn(unit._id, day), actor))
-      covered.add(String(unit._id));
+  const snapshot = await loadCoverageOn(toDay(on, "date"));
+  for (const unitId of snapshot.units.keys()) {
+    if (coversResolved(resolveCoverage(snapshot, unitId), actor)) covered.add(unitId);
   }
   return covered;
 };
