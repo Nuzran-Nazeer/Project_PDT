@@ -9,7 +9,8 @@ const errorHandler = require("./middleware/errorHandler");
 const app = express();
 
 // Global middleware
-app.use(cors());
+// One address, never a comma-separated list: CLIENT_URL also builds the invite link.
+app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
 app.use(express.json());
 
 // ⚠️ Before the routes, so every JSON response is checked on its way out. Refuses any
