@@ -4,6 +4,7 @@ const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { forConsumerList } = require("./feedback.privacy");
 const { teamOn, readinessOn } = require("./supervision.service");
+const { assertHrMayRead } = require("./coverageAuth.service");
 const { currentCycleFor } = require("./cycle.service");
 const {
   competenciesFor,
@@ -193,10 +194,8 @@ const submit = async (id, userId, payload) => {
   return asOwnRecord(doc, competenciesForRecord(doc));
 };
 
-// ⚠️ A REAL RELATIONSHIP CHECK, not the coarse role gate used elsewhere. This is the
-// only endpoint serving raw colleague text, so "any signed-in employee" is not a gate
-// that can be defended. It is narrow and targeted; the general scope rule is its own
-// story and this does not replace it.
+// ⚠️ A REAL RELATIONSHIP CHECK, not a role gate: HR within their coverage, or the person's
+// supervisor today. Holding both passes on either.
 const assertMayRead = async (review, viewer) => {
   // ⚠️ BEFORE the role check, never after. An HR officer is somebody's colleague too, and
   // is appraised like everybody else: holding the role must not hand them the raw feedback
@@ -206,7 +205,13 @@ const assertMayRead = async (review, viewer) => {
   }
 
   const held = viewer?.roles || [];
-  if (held.includes("hr") || held.includes("head_of_hr")) return;
+  if (held.includes("hr") || held.includes("head_of_hr")) {
+    const covered = await assertHrMayRead(viewer, review.userId).then(
+      () => true,
+      () => false,
+    );
+    if (covered) return;
+  }
 
   const { team = [] } = await teamOn(viewer.id, new Date());
   const supervises = team.some((p) => String(p.id) === String(review.userId));
@@ -271,10 +276,7 @@ const collectedFor = async (reviewId, viewer) => {
     return { ...held, reason: "below_minimum", needed: 0 };
   }
 
-  const threshold = Math.max(
-    Math.ceil(assigned.length / 2),
-    PEER_DISPLAY_THRESHOLD,
-  );
+  const threshold = Math.max(Math.ceil(assigned.length / 2), PEER_DISPLAY_THRESHOLD);
 
   if (settled.length < threshold) {
     return { ...held, reason: "waiting", needed: threshold - settled.length };
@@ -612,7 +614,13 @@ const assessmentFor = async (reviewId, viewer) => {
   // ⚠️ No timestamps, even though this record is attributed and its author is its subject:
   // every time-bearing field on a feedback record is identifying by default, and one is added
   // only when something actually needs it.
-  return { ...shell, available: true, reason: null, ratings: doc.ratings, freeText: doc.freeText };
+  return {
+    ...shell,
+    available: true,
+    reason: null,
+    ratings: doc.ratings,
+    freeText: doc.freeText,
+  };
 };
 
 module.exports = {
