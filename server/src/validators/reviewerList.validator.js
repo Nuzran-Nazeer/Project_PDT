@@ -1,8 +1,7 @@
 const AppError = require("../utils/AppError");
 const { LIST_CHANGE_TYPES } = require("../config/constants");
 
-// Request-SHAPE checks only. Whether a person may be added or removed depends on the list and
-// the reporting line, so that lives in the service.
+// Request-shape checks only. Rules about other records or state live in the service.
 
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 

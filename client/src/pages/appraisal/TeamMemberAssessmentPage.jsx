@@ -7,9 +7,6 @@ import { FormShell, FormSection } from "../../components/shells/FormShell";
 import CompetencyRatingField from "../../components/forms/CompetencyRatingField";
 import TextAreaField from "../../components/forms/TextAreaField";
 
-// A team member's own assessment, read by their supervisor.
-
-// A competency with no row is a real state, not a gap: the field says so itself.
 const valueFor = (assessment, key) => {
   const rating = (assessment.ratings || []).find((r) => r.competencyKey === key);
   return {
@@ -80,8 +77,7 @@ export default function TeamMemberAssessmentPage() {
     );
   }
 
-  // ⚠️ Two absences that read the same and are not: waiting on the author, or waiting on
-  // a clock that has already started.
+  // Two absences: waiting on the author, or on a clock that has already started.
   if (!assessment.available) {
     return (
       <>

@@ -11,13 +11,9 @@ const {
   overlapping,
 } = require("../utils/dateRange");
 
-// Who covers a unit for HR purposes, and (unless overridden) its sub-units.
-// Separate from UnitLead on purpose: a lead is the reporting line, an HR officer's
-// coverage is who in HR is responsible for the people in a unit. Two different
-// questions that happen to share a shape.
+// Who in HR is responsible for a unit's people. Separate from UnitLead on purpose: a
+// lead is the reporting line.
 
-// ⚠️ Enforced here, not only in the client's candidate picker: a request built by hand
-// must be refused the same way a form ever could be.
 const assertUserIsAssignableHrOfficer = async (userId) => {
   const user = await User.findById(userId).select("_id name status roles");
   if (!user) throw new AppError("Employee not found", 404);
@@ -40,10 +36,8 @@ const assertUserIsAssignableHrOfficer = async (userId) => {
   return user;
 };
 
-// Goes beyond what the design states, the same way unitlead's assertUnitExists does:
-// covering a unit that no longer operates would undo what discontinuing just did. Only
-// `assignCoverage` calls this, so closing a record inside a discontinued unit still
-// works (the cascade in orgunit.service.js relies on that).
+// Only `assignCoverage` calls this: closing a record inside a discontinued unit must still
+// work, because the discontinue cascade relies on it.
 const assertUnitExists = async (unitId) => {
   const unit = await OrgUnit.findById(unitId).select("_id name parentUnitId active");
   if (!unit) throw new AppError("Unit not found", 404);
@@ -56,9 +50,7 @@ const assertUnitExists = async (unitId) => {
   return unit;
 };
 
-// A unit has at most one PRIMARY and one BACKUP on any date. Scoped to unit+role, not
-// to the unit alone: a primary and a backup are both real coverage at once, unlike a
-// unit lead's single slot.
+// Scoped to unit and role: a primary and a backup are both real coverage at once.
 const assertNoOtherHolderForRole = async (unitId, role, from, to, excludeId) => {
   const filter = { unitId, role, ...overlapping(from, to) };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -72,9 +64,7 @@ const assertNoOtherHolderForRole = async (unitId, role, from, to, excludeId) => 
   );
 };
 
-// One person cannot be both officers on the same unit AT ONCE. Date-aware: two
-// non-overlapping stints (primary last year, backup this year) are ordinary history,
-// not a clash, so this checks OVERLAP, not "ever held the other role".
+// Checks overlap, not "ever held the other role": two non-overlapping stints are history.
 const assertNotBothRoles = async (unitId, userId, role, from, to) => {
   const otherRole = role === "primary" ? "backup" : "primary";
   const clash = await HrCoverage.findOne({
@@ -90,8 +80,6 @@ const assertNotBothRoles = async (unitId, userId, role, from, to) => {
     409,
   );
 };
-
-// Reading
 
 exports.listCoverage = async ({ unitId, userId, role, on } = {}) => {
   const filter = {};
@@ -125,8 +113,7 @@ const asHolder = (record) =>
     ? { ...asPerson(record.userId), coverageId: record._id, from: record.from }
     : null;
 
-// Everything the resolver reads for one date, in two queries however deep the tree. A
-// list resolving every unit would otherwise climb the tree once per unit, a query a level.
+// Two queries however deep the tree, so a list resolving every unit does not climb per unit.
 exports.loadCoverageOn = async (date) => {
   const day = toDay(date, "on");
   const [units, records] = await Promise.all([
@@ -144,12 +131,10 @@ exports.loadCoverageOn = async (date) => {
   return { units: new Map(units.map((u) => [String(u._id), u])), recordsByUnit };
 };
 
-// THE resolver. Climbs from `unitId` upward (itself first), and EACH ROLE stops at the
-// nearest unit with an open direct record for that role on the loaded date (B31). A
-// sub-unit given only its own backup still inherits its parent's primary: a direct record
-// overrides the inherited one for its own role, never for the other.
+// Climbs upward from `unitId`, and each role stops separately at the nearest unit with an
+// open direct record for it (B31): a direct backup never hides an inherited primary.
 exports.resolveCoverage = ({ units, recordsByUnit }, unitId) => {
-  // A map lookup cannot reject a malformed id the way findById did; keep that a 400.
+  // A map lookup cannot reject a malformed id the way findById did.
   if (!mongoose.isValidObjectId(unitId)) throw new AppError("Invalid _id", 400);
   const requestedUnit = units.get(String(unitId));
   if (!requestedUnit) throw new AppError("Unit not found", 404);
@@ -196,15 +181,8 @@ exports.resolveCoverage = ({ units, recordsByUnit }, unitId) => {
 exports.coverageOn = async (unitId, date) =>
   exports.resolveCoverage(await exports.loadCoverageOn(date), unitId);
 
-// Writing
-
-// Closing the old record and creating the replacement happen in one transaction: a
-// half-succeeded handover would otherwise leave a unit with either no primary (if the
-// close commits but the create fails) or two open primaries racing the unique index
-// (if the create commits but the close never ran). MongoDB Atlas is the one
-// deployment this project runs against (see README), and Atlas is always a replica
-// set, so transactions are available here unlike in most of this codebase's other
-// multi-write paths.
+// One transaction, or a half-succeeded handover leaves no primary or two. Atlas is always
+// a replica set, so transactions are available.
 const closeAndCreate = async ({ open, unitId, userId, role, from }) => {
   const session = await mongoose.startSession();
   try {
@@ -225,10 +203,8 @@ const closeAndCreate = async ({ open, unitId, userId, role, from }) => {
   }
 };
 
-// If the unit already has an open record for this ROLE, it is CLOSED on the same date
-// rather than overwritten, so a past appraisal decision (who was responsible for this
-// unit then) keeps pointing at whoever actually covered it. The other role's open
-// record, if any, is untouched -- a new primary does not disturb the backup.
+// An open record for the same role is closed on the handover date, never overwritten.
+// The other role's record is untouched.
 exports.assignCoverage = async ({ unitId, userId, role, from }) => {
   if (!HR_COVERAGE_ROLES.includes(role)) {
     throw new AppError(`role must be one of: ${HR_COVERAGE_ROLES.join(", ")}`, 400);
@@ -255,18 +231,13 @@ exports.assignCoverage = async ({ unitId, userId, role, from }) => {
     }
   }
 
-  // Checked as if the handover had already happened, catching a start date that would
-  // clash with a CLOSED record too (backdating across a past term). `open` is excluded
-  // because closing it, below, is what makes way for this assignment.
+  // `open` is excluded because closing it below is what makes way for this assignment.
   await assertNoOtherHolderForRole(unitId, role, start, null, open?._id);
   await assertNotBothRoles(unitId, userId, role, start, null);
 
   return closeAndCreate({ open, unitId, userId, role, from: start });
 };
 
-// Ending without a replacement. The role is then vacant on this unit, which the
-// resolver handles by climbing to the parent -- the same vacancy story a unit lead's
-// closed term tells.
 exports.closeCoverage = async (id, to) => {
   const record = await exports.getCoverageById(id);
   if (record.to) {

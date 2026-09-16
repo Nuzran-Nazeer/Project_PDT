@@ -1,15 +1,7 @@
 const AppError = require("../utils/AppError");
 const { HR_COVERAGE_ROLES } = require("../config/constants");
 
-// Request-shape checks for the dated collections: are the references shaped like
-// references, and is a date present where one is required.
-//
-// Whether the dates make SENSE -- one unit at a time, a lead who sits in the parent
-// unit, a move dated before the stint it ends -- are rules about the other records
-// in the collection, so they stay in the services. Same split as everywhere else.
-//
-// Both dated collections share this file because their request shapes are identical
-// down to the field names, and two copies would drift.
+// Request-shape checks only. Rules about other records or state live in the service.
 
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 
@@ -23,9 +15,6 @@ const checkId = (value, field, errors, { required = true } = {}) => {
   }
 };
 
-// Only the SHAPE is checked here. A date that parses but is nonsense in context --
-// an end before a start -- is caught in the service, which is the only layer that
-// knows what it is being compared against.
 const checkDate = (value, field, errors, { required = true } = {}) => {
   if (value === undefined || value === null || value === "") {
     if (required) errors.push(`${field} is required`);
@@ -56,7 +45,6 @@ exports.validateCreateMembership = (req, res, next) => {
   checkId(req.body.userId, "userId", errors);
   checkId(req.body.unitId, "unitId", errors);
   checkDate(req.body.from, "from", errors);
-  // Optional: present only when backfilling a stint that is already over.
   checkDate(req.body.to, "to", errors, { required: false });
   finish(errors, next);
 };
@@ -83,8 +71,7 @@ exports.validateClose = (req, res, next) => {
   finish(errors, next);
 };
 
-// Query filters are all optional, but a malformed one must not reach the database
-// as a cast error -- that surfaces as a 500 for what is really a bad request.
+// A malformed filter must not reach the database as a cast error, which surfaces as a 500.
 exports.validateHistoryQuery = (req, res, next) => {
   const errors = [];
   checkId(req.query.userId, "userId", errors, { required: false });
@@ -93,9 +80,6 @@ exports.validateHistoryQuery = (req, res, next) => {
   finish(errors, next);
 };
 
-// The reporting line takes the person in the path and the date in the query. `on` is
-// optional and means today when it is left off; a malformed one is still refused,
-// because silently reading a bad date as today would answer a question nobody asked.
 exports.validateReportingLineQuery = (req, res, next) => {
   const errors = [];
   checkId(req.params.userId, "userId", errors);
@@ -112,9 +96,6 @@ exports.validateAssignCoverage = (req, res, next) => {
   finish(errors, next);
 };
 
-// Same split as validateHistoryQuery, with `role` added: still shape only, so an
-// unrecognised role reaches the service, which reads as "no record has this role" and
-// returns an empty list rather than a 400 for what may just be a typo worth seeing.
 exports.validateCoverageHistoryQuery = (req, res, next) => {
   const errors = [];
   checkId(req.query.userId, "userId", errors, { required: false });
@@ -123,8 +104,6 @@ exports.validateCoverageHistoryQuery = (req, res, next) => {
   finish(errors, next);
 };
 
-// The unit is in the path, `on` is optional in the query and means today when left
-// off, same convention as validateReportingLineQuery.
 exports.validateEffectiveCoverageQuery = (req, res, next) => {
   const errors = [];
   checkId(req.params.unitId, "unitId", errors);

@@ -11,11 +11,7 @@ const {
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
-// Request-shape validation: fast-fail before touching the service or the database.
-// Business rules (duplicate email, immutable fields) stay in the service layer.
-//
-// The lists come from config/constants.js, never from the model, so the model and
-// the validator cannot drift apart, and neither can be renamed without the other.
+// Request-shape checks only. Rules about other records or state live in the service.
 
 const checkRoles = (roles, errors) => {
   if (roles === undefined) return;
@@ -49,7 +45,7 @@ exports.validateCreateUser = (req, res, next) => {
   if (!joinedDate) errors.push("joinedDate is required");
   else if (Number.isNaN(Date.parse(joinedDate))) errors.push("joinedDate is not a date");
 
-  // Optional at creation: HR may leave it for the employee to set via invite.
+  // Optional: HR may leave it for the employee to set through an invite.
   if (password !== undefined && String(password).length < MIN_PASSWORD_LENGTH)
     errors.push(`password must be at least ${MIN_PASSWORD_LENGTH} characters`);
 

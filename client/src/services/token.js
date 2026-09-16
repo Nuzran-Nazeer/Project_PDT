@@ -1,18 +1,15 @@
-// `sessionStorage`, not `localStorage`: the token dies when the tab closes but still
-// survives a refresh. Neither store is safe from a cross-site scripting bug; the
-// secure option is an httpOnly cookie, which is a server change. (Build decision B8)
+// `sessionStorage`, not `localStorage`: the token dies with the tab but survives a refresh (B8).
 const TOKEN_KEY = "pdt-token";
 const USER_KEY = "pdt-user";
 
-// A window event rather than a direct call: the API layer must not import the auth
-// context, which already imports the API layer, so the two would form a cycle.
+// A window event: the API layer importing the auth context would be a cycle.
 export const SESSION_EXPIRED = "pdt:session-expired";
 
 const safe = (fn, fallback = null) => {
   try {
     return fn();
   } catch {
-    return fallback; // storage blocked: private mode, cookies disabled
+    return fallback;
   }
 };
 

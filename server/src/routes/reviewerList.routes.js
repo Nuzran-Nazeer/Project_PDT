@@ -11,8 +11,7 @@ const {
 } = require("../validators/reviewerList.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
-// ⚠️ The role gates here are coarse. Supervising somebody is a relationship, not a role, and
-// HR's coverage depends on which person: both are checked in the service.
+// Coarse role gates only; supervising and HR coverage are checked in the service.
 const HR = ["hr", "head_of_hr"];
 
 router

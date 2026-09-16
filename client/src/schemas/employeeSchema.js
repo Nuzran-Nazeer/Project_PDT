@@ -1,11 +1,7 @@
 import * as yup from "yup";
 
-// Functions taking the payload from GET /api/constants, because the valid values are
-// the server's to decide. Hardcoding them drifts silently: the form offers an option
-// the server rejects with a 400 nobody can explain.
-//
-// If that request failed, `constants` is null and each list check is skipped, letting
-// the server have the final word, which it has regardless.
+// The lists come from GET /api/constants. If that failed, `constants` is null and each
+// list check is skipped: the server has the final word.
 
 const names = (list) => (list || []).map((entry) => entry.name ?? entry);
 
@@ -17,8 +13,6 @@ const idPattern = (constants) => {
 const optionalIn = (list, message) =>
   yup.string().test("in-list", message, (value) => !value || list.includes(value));
 
-// Settable only at creation: `employeeId` and `joinedDate` are immutable on the
-// server, the joined date deciding the appraisal group.
 export const buildCreateEmployeeSchema = (constants) => {
   const pattern = idPattern(constants);
   const designations = names(constants?.designations);
@@ -45,7 +39,6 @@ export const buildCreateEmployeeSchema = (constants) => {
       .date()
       .typeError("Enter a valid date")
       .required("Joined date is required"),
-    // Optional on the server too. When given it cannot precede the joined date.
     probationEndDate: yup
       .date()
       .nullable()
@@ -61,8 +54,7 @@ export const buildCreateEmployeeSchema = (constants) => {
   });
 };
 
-// Narrower: the server refuses to change employeeId, username, joinedDate and
-// parGroup, so offering them produces a 400 the user cannot act on.
+// Narrower: employeeId, username, joinedDate and parGroup are immutable on the server.
 export const buildUpdateEmployeeSchema = (constants) => {
   const designations = names(constants?.designations);
   const locations = constants?.locations || [];

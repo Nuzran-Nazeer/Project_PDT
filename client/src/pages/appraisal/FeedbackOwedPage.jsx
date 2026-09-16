@@ -83,9 +83,7 @@ export default function FeedbackOwedPage() {
       )}
 
       <p className="mt-4 max-w-prose text-[13px] text-muted">
-        A reviewer is only ever picked from people you actually worked with: four
-        continuous months, at least two of them inside the cycle. The form asks the
-        competencies of their job, not yours, worded for a colleague.
+        The form asks the competencies of their job, not yours.
       </p>
     </>
   );

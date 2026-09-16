@@ -1,16 +1,11 @@
-// ⚠️ Nothing outside this file types one of these strings. A typo'd role written
-// inline is a silent bug; imported from here it is `undefined` and fails loudly.
+// ⚠️ Nothing outside this file types one of these strings: imported, a typo fails loudly.
 
-// ⚠️ `supervisor` is DERIVED, never stored: you are one because you lead a unit on a
-// date. Storing it goes stale the moment anyone moves. The User record holds only
-// GRANTED roles.
+// ⚠️ `supervisor` is derived from leading a unit on a date, never stored.
 const GRANTABLE_ROLES = ["employee", "hr", "head_of_hr", "leadership", "admin"];
 const DERIVED_ROLES = ["supervisor"];
 const ROLES = [...GRANTABLE_ROLES, ...DERIVED_ROLES];
 
-// Which dashboard a multi-role user lands on: the first entry they hold. A ROUTING
-// order, not seniority. `employee` is last because everyone holds it, so it always
-// matches. (Build decision B7)
+// A routing order, not seniority: the first entry held decides the landing page (B7).
 const ROLE_PRECEDENCE = [
   "head_of_hr",
   "hr",
@@ -20,31 +15,20 @@ const ROLE_PRECEDENCE = [
   "employee",
 ];
 
-// Three states, not a boolean: a boolean cannot tell "invited but never activated"
-// from "no longer works here".
 const USER_STATUS = ["invited", "active", "inactive"];
 
 const LOCATIONS = ["Colombo"];
 
-// ⚠️ "team" is deliberately absent: a team is the slice of one unit on one project,
-// derived from assignments and never in the org tree.
-//
-// These are LABELS, not depths. Nothing checks that a sub-unit sits under a unit: the
-// tree is recursive and three names cannot describe five levels.
+// ⚠️ "team" is deliberately absent: a team is one unit's people on one project, derived.
+// These are labels, not depths.
 const ORG_UNIT_TYPES = ["company", "unit", "sub-unit"];
 
-// HR coverage: which HR officer is responsible for a unit (and, unless overridden,
-// its sub-units). A unit may hold one open PRIMARY and one open BACKUP at once — see
-// models/hrcoverage.model.js.
 const HR_COVERAGE_ROLES = ["primary", "backup"];
 
-// ⚠️ Who may be named as an HR officer. Enforced in hrcoverage.service.js, not only in
-// the client's candidate picker: a request built by hand must be refused the same way
-// a form ever could be.
+// Who may be named as an HR officer. Enforced in hrcoverage.service.js.
 const HR_OFFICER_ROLES = ["hr", "head_of_hr"];
 
-// The review form is chosen by JOB FAMILY, not designation, so HR can add a
-// designation without anyone building a form.
+// The review form is chosen by job family, not designation.
 const JOB_FAMILIES = [
   "Engineering",
   "Quality",
@@ -101,8 +85,7 @@ const DESIGNATIONS = {
 
 const DESIGNATION_NAMES = Object.keys(DESIGNATIONS);
 
-// ⚠️ Set ONCE at creation and never moved: moving someone between groups changes
-// which cycle their history belongs to.
+// ⚠️ Set once at creation and never moved.
 const PAR_GROUPS = ["April", "August", "December"];
 
 // Joining month (0 = January) -> group.
@@ -114,23 +97,19 @@ function parGroupFor(joinedDate) {
   return "April"; // Dec to Mar
 }
 
-// ⚠️ The username is generated from this ID's digits, so the shape is enforced:
-// `ALT-0241` and `A-0241` would otherwise generate the same username.
+// The username is generated from the digits, so the shape is enforced.
 const EMPLOYEE_ID_PATTERN = /^ALT-\d{4}$/;
 
 const BCRYPT_COST = 10; // OWASP Password Storage Cheat Sheet: work factor >= 10
 const MIN_PASSWORD_LENGTH = 8;
 
-// 32 random bytes, so 64 hex characters. See utils/inviteCode.js for why that allows
-// a fast hash rather than a slow one.
+// 32 random bytes, so 64 hex characters: enough entropy for a fast hash (utils/inviteCode.js).
 const INVITE_CODE_BYTES = 32;
 
-// Long enough to survive a weekend and a first day, short enough that a forgotten
-// invite is not open for a month. Not specified by the design; one line to change.
+// Not specified by the design.
 const INVITE_EXPIRY_DAYS = 7;
 
-// ⚠️ THE ORDER IS THE RULE, not documentation: a cycle moves forward one stage at a
-// time, and the service checks every requested move against this sequence.
+// ⚠️ The order is the rule: a cycle moves forward one stage at a time through this sequence.
 const CYCLE_STAGES = [
   "draft",
   "open",
@@ -141,24 +120,18 @@ const CYCLE_STAGES = [
   "closed",
 ];
 
-// Cancelled is deliberately not in that list: it is a branch, not a stage, and
-// keeping it out stops "advance one stage" landing on it.
+// A branch, not a stage, so "advance one stage" can never land on it.
 const CYCLE_CANCELLED = "cancelled";
 
 const CYCLE_STATUS = [...CYCLE_STAGES, CYCLE_CANCELLED];
 
-// The next stage after each one, or null where there is nowhere to go.
 const NEXT_STAGE = CYCLE_STAGES.reduce((map, stage, i) => {
   map[stage] = CYCLE_STAGES[i + 1] || null;
   return map;
 }, {});
 
-// ⚠️ Measured from OPENING, not creation. Everything in a cycle happens at its end,
-// so 30 days is guaranteed to fall before anybody has submitted anything. That
-// guarantee is why the figure is what it is, and it holds only from opening.
+// ⚠️ Measured from opening, not creation: 30 days from opening falls before anybody has submitted.
 const CYCLE_CANCEL_WINDOW_DAYS = 30;
-
-// Feedback
 
 const REVIEWER_TYPES = [
   "self",
@@ -169,9 +142,8 @@ const REVIEWER_TYPES = [
   "upward",
 ];
 
-// ⚠️ THE TWO TYPES THAT MUST NEVER REACH A REVIEWEE OR THEIR SUPERVISOR WITH A NAME
-// ON THEM. The other four are ATTRIBUTED on purpose: feedback an employee cannot
-// attribute is feedback they cannot follow up. Wrong in either direction is a bug.
+// ⚠️ Never reach a reviewee or their supervisor with a name on them. The other four are
+// attributed on purpose; wrong in either direction is a bug.
 const CONFIDENTIAL_REVIEWER_TYPES = ["peer", "upward"];
 
 const REVIEW_STATUS = [
@@ -185,86 +157,57 @@ const REVIEW_STATUS = [
   "under_appeal",
 ];
 
-// How many colleagues are asked to review one person, and also how many a person is asked
-// to write in a year: every review received was written by somebody, so the two are one number.
+// Reviews received and reviews written in a year are one number: every review has an author.
 const PEER_REVIEWS_TARGET = 8;
 
-// Below the minimum available, HR must acknowledge the shortfall before drawing; below the
-// small-pool figure there will be no colleague section at all.
+// Below the minimum HR must acknowledge the shortfall; below the small-pool figure there
+// is no colleague section at all.
 const PEER_REVIEWS_MINIMUM = 5;
 const PEER_REVIEWS_SMALL_POOL = 3;
 
-// Per reviewer, per cycle year across all three groups. The draw never passes the ceiling,
-// and never takes more than the per-source figure through one unit or one project.
+// Per reviewer, per cycle year across all three groups, and per unit or project.
 const REVIEW_LOAD_CEILING = 10;
 const REVIEW_LOAD_PER_SOURCE = 5;
 
 const LIST_CHANGE_TYPES = ["add", "remove"];
 const LIST_CHANGE_STATUS = ["pending", "approved", "refused"];
 
-// ⚠️ Nothing is released below this many settled responses, whatever the pool size, and
-// a pool with fewer than this ASSIGNED gets no colleague section at all. Not the
-// small-pool figure above: that is how many are ASKED, this is how many may be read.
+// ⚠️ How many settled responses may be read, not how many are asked (the small-pool figure).
 const PEER_DISPLAY_THRESHOLD = 3;
 
-// ⚠️ FOUR CONTINUOUS months, not four months added up across two separate stints. Two
-// short spells either side of a transfer are not the same evidence as one long one.
+// ⚠️ Four continuous months, not four added up across separate stints.
 const PEER_ELIGIBILITY_MONTHS = 4;
 
-// At least this much of that stretch must fall INSIDE the cycle, so a pool cannot be
-// filled entirely by people who stopped working with the reviewee before it opened.
+// At least this much of the stretch must fall inside the cycle.
 const PEER_ELIGIBILITY_MONTHS_IN_CYCLE = 2;
 
-// A break this long or shorter does not end a working relationship: a three-week gap
-// between two projects would otherwise split two years of work into fragments.
+// A break this long or shorter does not end a working relationship.
 const PEER_CONTINUITY_GAP_MONTHS = 1;
 
 const FEEDBACK_STATUS = ["assigned", "draft", "submitted", "locked"];
 
-// The author may still edit for this long after submitting. `locksAt` is `submittedAt`
-// plus this window, and the next stage stays gated until it passes so nobody reviews a
-// document that is still changing.
+// The author may still edit for this long after submitting; `locksAt` is `submittedAt` plus this.
 const FEEDBACK_EDIT_WINDOW_HOURS = 5;
 
-// ⚠️ Stripped from a FEEDBACK record served to a reviewee or their supervisor. The
-// timestamps are here because a submission time is an identity: it correlates against
-// who was on leave, or who mentioned they had a review to write.
+// ⚠️ Stripped from a feedback record served to a reviewee or their supervisor. A
+// submission time is an identity, and `locksAt` is that time plus a fixed window.
 const IDENTIFYING_FIELDS = [
   "reviewerId",
   "reviewerName",
   "submittedAt",
   "createdAt",
   "updatedAt",
-
-  // ⚠️ `locksAt` is `submittedAt` plus a fixed window, so serving it hands back the
-  // submission time with one subtraction. The author still sees their own, which is
-  // built by hand rather than serialised.
   "locksAt",
-
-  // The unit or project the reviewer was drawn through. In a project of three it is a name.
   "drawnFrom",
 ];
 
-// ⚠️ The subset no response may EVER carry without an authorised identity read. Kept
-// apart from the list above because `createdAt` is ordinary on a user or a unit and
-// only becomes identifying on feedback, so guarding it globally would refuse every
-// endpoint in the system.
+// ⚠️ The subset no response may ever carry without an authorised identity read. Kept
+// apart because `createdAt` is ordinary on a user or a unit.
 const NEVER_SERVED_FIELDS = ["reviewerId", "reviewerName", "drawnFrom"];
 
-// Competencies
-//
-// SIX PER REVIEW: four shared by everyone, plus two for the reviewee's job family.
-//
-// ⚠️ NOTHING MAY HARDCODE THE NUMBER SIX. Anything iterating competencies reads the
-// list; anything averaging divides by what it FOUND, never by a literal. Changing this
-// list should cost an edit to this file and nothing else.
-//
-// ⚠️ THE KEY IS THE IDENTITY, NEVER THE NAME. Feedback stores `competencyKey`, so
-// renaming a competency leaves every stored record meaning what it meant. A key must
-// never be renamed, and never reused for a different competency.
+// Four shared plus two per job family. ⚠️ Nothing may hardcode the number six, and a
+// key must never be renamed or reused: feedback stores `competencyKey`.
 
-// These four carry cross-family comparison, so they must read identically for an
-// engineer, a tester and an HR officer.
 const SHARED_COMPETENCIES = [
   {
     key: "collaboration",
@@ -291,8 +234,6 @@ const SHARED_COMPETENCIES = [
   },
 ];
 
-// Keyed by job family, itself derived from designation, so nobody picks their own
-// form.
 const FAMILY_COMPETENCIES = {
   Engineering: [
     {
@@ -398,13 +339,11 @@ const FAMILY_COMPETENCIES = {
   ],
 };
 
-// Shared first, then the pair. Returns the shared four alone for a family with no
-// pair rather than throwing: a short review beats one that cannot open.
+// A family with no pair gets the shared four: a short review beats one that cannot open.
 function competenciesFor(jobFamily) {
   return [...SHARED_COMPETENCIES, ...(FAMILY_COMPETENCIES[jobFamily] || [])];
 }
 
-// Built from the lists rather than typed out, so it cannot fall behind them.
 const COMPETENCY_KEYS = [
   ...SHARED_COMPETENCIES.map((c) => c.key),
   ...Object.values(FAMILY_COMPETENCIES).flatMap((list) => list.map((c) => c.key)),

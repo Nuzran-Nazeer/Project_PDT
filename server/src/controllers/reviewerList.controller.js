@@ -1,8 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/reviewerList.service");
 
-// The whole account is passed rather than the id: who may act is a relationship or a
-// coverage the service has to derive. Every actor comes from the TOKEN, never the body.
+// The whole account is passed: who may act is a relationship the service derives.
 
 exports.listForCycle = asyncHandler(async (req, res) => {
   res.json(await service.listsForCycle(req.query.cycleId, req.user));

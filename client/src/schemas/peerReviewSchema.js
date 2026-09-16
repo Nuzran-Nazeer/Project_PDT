@@ -1,8 +1,7 @@
 import * as yup from "yup";
 
-// Built from the competencies the ENDPOINT served with this record, never from
-// constants: a peer answers for the REVIEWEE's job family, not their own. Only
-// checked before submit; a draft may be partial, matching the server.
+// ⚠️ Built from the competencies served with the record, never from constants: a peer
+// answers for the reviewee's job family. Only checked before submit; a draft may be partial.
 export const buildPeerReviewSchema = (competencies = []) =>
   yup.object({
     ratings: yup
@@ -11,8 +10,7 @@ export const buildPeerReviewSchema = (competencies = []) =>
         yup.object({
           competencyKey: yup.string().required(),
           notObserved: yup.boolean().default(false),
-          // A real answer, not a blank: declining stores neither a score nor
-          // evidence, so both are required together and forbidden together.
+          // Declining stores neither a score nor evidence.
           score: yup
             .number()
             .nullable()

@@ -1,19 +1,12 @@
 import { useMemo } from "react";
 
-// The tree, assembled here from the flat list the server sends. No expand and
-// collapse: Altrium's tree is a handful of units, and hiding four of them behind a
-// chevron would be machinery in place of information.
-
-// Depth is carried by nesting rather than a stored level, so nothing needs keeping in
-// sync when a unit moves. Indentation alone is a weak signal ("Backend" exists under
-// two different parents), so each level also gets a guide line and a size step.
+// Assembled from the flat list the server sends. Depth is carried by nesting, not a stored level.
 const LEVEL = ["text-[15px] font-semibold", "text-sm font-medium", "text-sm font-normal"];
 
 const levelClass = (depth) => LEVEL[Math.min(depth, LEVEL.length - 1)];
 
 export default function UnitTree({ units, selectedId, onSelect }) {
-  // Grouped once per change of the list rather than filtered inside the recursion,
-  // which would be a pass over every unit for every unit.
+  // Grouped once, not filtered inside the recursion.
   const childrenOf = useMemo(() => {
     const map = new Map();
     units.forEach((unit) => {
@@ -24,12 +17,10 @@ export default function UnitTree({ units, selectedId, onSelect }) {
     return map;
   }, [units]);
 
-  // Recursion rather than a flattened list: the nesting is what makes a screen reader
-  // announce the tree as a tree.
+  // Recursion: the nesting is what makes a screen reader announce the tree as a tree.
   const branch = (parentKey, depth) => {
     const children = childrenOf.get(parentKey) || [];
-    // A leaf renders no list at all. An empty one would still draw its guide line,
-    // leaving a stub under every unit with no children.
+    // An empty list would still draw its guide line.
     if (children.length === 0) return null;
 
     return (
@@ -47,8 +38,6 @@ export default function UnitTree({ units, selectedId, onSelect }) {
               <button
                 type="button"
                 onClick={() => onSelect(unit)}
-                // Name left, type flush right, so the types line up as a column
-                // instead of starting wherever each name happened to end.
                 className={`flex w-full items-baseline justify-between gap-4 rounded-md px-2.5 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${levelClass(
                   depth,
                 )} ${

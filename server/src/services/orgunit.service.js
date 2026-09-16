@@ -5,16 +5,12 @@ const HrCoverage = require("../models/hrcoverage.model");
 const AppError = require("../utils/AppError");
 const { toDay, dayAfter, overlapping } = require("../utils/dateRange");
 
-// The invariants live here, not on the model, because each is a rule about OTHER
-// documents and a model validator sees only the one being saved.
-//
 // ⚠️ A write that bypasses this service bypasses every invariant. The seed script must
 // call createUnit(), never OrgUnit.create().
 
 const CREATABLE_FIELDS = ["name", "type", "parentUnitId"];
 
-// `active` is absent on purpose: closing a unit is a considered operation with three
-// checks in front of it, not a field anybody may flip on an ordinary edit.
+// `active` is absent on purpose: closing a unit goes through discontinueUnit.
 const UPDATABLE_FIELDS = ["name", "type", "parentUnitId"];
 
 const pick = (source, fields) =>
@@ -23,8 +19,7 @@ const pick = (source, fields) =>
     return out;
   }, {});
 
-// Invariant 1: exactly one unit has no parent. Two roots means two disconnected
-// trees, and "who is my supervisor" stops having one answer.
+// Exactly one unit has no parent.
 const assertNoOtherRoot = async (excludeId) => {
   const filter = { parentUnitId: null };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -38,9 +33,7 @@ const assertNoOtherRoot = async (excludeId) => {
   }
 };
 
-// Invariant 2: a unit may not be its own ancestor. Walk up from the PROPOSED parent;
-// a loop makes every later walk up the tree non-terminating. Doubles as the
-// parent-exists check.
+// A unit may not be its own ancestor. Doubles as the parent-exists check.
 const assertParentIsUsable = async (unitId, parentUnitId) => {
   const movingUnit = unitId ? String(unitId) : null;
   const seen = new Set();
@@ -56,7 +49,6 @@ const assertParentIsUsable = async (unitId, parentUnitId) => {
       );
     }
 
-    // A looped tree would otherwise spin here forever.
     if (seen.has(step)) {
       throw new AppError("The unit tree above this unit contains a loop", 409);
     }
@@ -69,9 +61,7 @@ const assertParentIsUsable = async (unitId, parentUnitId) => {
   }
 };
 
-// Invariant 3: only the top unit may be a "company". NOT a depth rule: nothing checks
-// that a sub-unit sits under a unit, because three type names cannot label the five
-// levels the tree is expected to reach. The reverse is not enforced either.
+// Not a depth rule: three type names cannot label the five levels the tree can reach.
 const assertCompanyIsRoot = (type, parentUnitId) => {
   if (type === "company" && parentUnitId) {
     throw new AppError(
@@ -81,10 +71,7 @@ const assertCompanyIsRoot = (type, parentUnitId) => {
   }
 };
 
-// Invariant 4: siblings may not share a name. Scoped to SIBLINGS, not the collection:
-// "Backend" under Engineering and under Data are different real things.
-// Invariant 5: nothing new may be hung on a discontinued unit. Checked on the
-// PROPOSED parent only, so moving a unit OUT of one stays allowed.
+// Checked on the proposed parent only, so moving a unit out of a discontinued one stays allowed.
 const assertParentIsLive = async (parentUnitId) => {
   if (!parentUnitId) return;
 
@@ -102,7 +89,6 @@ const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$
 const assertNameFreeAmongSiblings = async (name, parentUnitId, excludeId) => {
   const filter = {
     parentUnitId: parentUnitId || null,
-    // Case-insensitive: "Backend" and "backend" are the same unit to a reader.
     name: new RegExp(`^${escapeRegex(String(name).trim())}$`, "i"),
   };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -134,8 +120,6 @@ exports.createUnit = async (data) => {
   return OrgUnit.create(fields);
 };
 
-// Flat: each unit carries its parent, so a caller assembles the tree in one pass. A
-// nested response would have to decide what to do with an orphan.
 exports.listUnits = async () => {
   const items = await OrgUnit.find().sort({ name: 1 });
   return { items, total: items.length };
@@ -147,15 +131,13 @@ exports.getUnitById = async (id) => {
   return unit;
 };
 
-// Load, assign, save, so a document hook added later fires here too.
 exports.updateUnit = async (id, data) => {
   const unit = await OrgUnit.findById(id);
   if (!unit) throw new AppError("Unit not found", 404);
 
   const fields = pick(data, UPDATABLE_FIELDS);
 
-  // ⚠️ Every check below judges the RESULT, not what was sent, so a request changing
-  // one field is still judged against the fields it did not change.
+  // Every check below judges the result, not what was sent.
   const nextType = "type" in fields ? fields.type : unit.type;
   const nextName = "name" in fields ? fields.name : unit.name;
   const nextParent =
@@ -163,20 +145,17 @@ exports.updateUnit = async (id, data) => {
 
   assertCompanyIsRoot(nextType, nextParent);
 
-  // A rename must not pay for a walk to the root, nor fail because of one.
   const parentChanged = String(nextParent) !== String(unit.parentUnitId);
   if (parentChanged) {
     if (nextParent) {
       await assertParentIsUsable(unit._id, nextParent);
       await assertParentIsLive(nextParent);
     } else {
-      // Detaching would make a second root.
       await assertNoOtherRoot(unit._id);
     }
   }
 
-  // Runs when EITHER half changes: a move can collide with a name that was fine
-  // where the unit was before.
+  // A move can collide with a name that was fine where the unit was before.
   const nameChanged = String(nextName).trim() !== String(unit.name).trim();
   if (parentChanged || nameChanged) {
     await assertNameFreeAmongSiblings(nextName, nextParent, unit._id);
@@ -187,14 +166,9 @@ exports.updateUnit = async (id, data) => {
   return unit;
 };
 
-// The unit is marked closed, never deleted: past appraisals were run inside it.
-//
-// ⚠️ THIS REFUSES RATHER THAN CASCADING. Quietly closing the memberships would drop
-// everyone out of the appraisal cycle with no error and nothing visible on any screen,
-// because a person with no unit is not appraised. The leadership record and any open
-// HR coverage ARE closed automatically, which is safe in both cases because the thing
-// each one resolves to (the reporting line, HR coverage) climbs to the unit above on
-// its own.
+// ⚠️ Refuses while members remain rather than cascading: closing memberships would drop
+// everyone out of the appraisal cycle silently. Lead and coverage records are closed,
+// because both resolve to the unit above on their own.
 exports.discontinueUnit = async (id, lastDay) => {
   const unit = await OrgUnit.findById(id);
   if (!unit) throw new AppError("Unit not found", 404);
@@ -202,8 +176,7 @@ exports.discontinueUnit = async (id, lastDay) => {
     throw new AppError(`${unit.name} has already been discontinued`, 409);
   }
 
-  // ⚠️ `assertNoOtherRoot` does not filter on `active`, so a discontinued root would
-  // still occupy the one root slot and no replacement could ever be created.
+  // A discontinued root would still occupy the one root slot.
   if (!unit.parentUnitId) {
     throw new AppError(
       `${unit.name} is the top of the tree and cannot be discontinued`,
@@ -214,7 +187,6 @@ exports.discontinueUnit = async (id, lastDay) => {
   const finalDay = toDay(lastDay, "lastDay");
   const closesOn = dayAfter(finalDay);
 
-  // Checked before members: the cheaper query and the more common mistake.
   const children = await OrgUnit.find({
     parentUnitId: unit._id,
     active: true,
@@ -228,9 +200,7 @@ exports.discontinueUnit = async (id, lastDay) => {
     );
   }
 
-  // `overlapping(closesOn, null)` catches anyone still in the unit on the closing day
-  // AND anyone whose membership starts after it, which a plain as-at check would miss
-  // on a backfilled record.
+  // `overlapping` also catches a backfilled membership starting after the closing day.
   const members = await UnitMembership.find({
     unitId: unit._id,
     ...overlapping(closesOn, null),
@@ -244,7 +214,6 @@ exports.discontinueUnit = async (id, lastDay) => {
     );
   }
 
-  // Before the unit is marked inactive, so a bad date fails with nothing written.
   const term = await UnitLead.findOne({ unitId: unit._id, to: null });
   if (term) {
     if (closesOn.getTime() <= term.from.getTime()) {
@@ -259,14 +228,9 @@ exports.discontinueUnit = async (id, lastDay) => {
     await term.save();
   }
 
-  // Same closing, for HR coverage. Up to two records here, one per role, unlike the
-  // lead above: a discontinued unit cannot go on being someone's direct coverage
-  // either.
   const coverageRecords = await HrCoverage.find({ unitId: unit._id, to: null });
 
-  // ⚠️ EVERY date is checked before the first save. Validating inside the writing loop
-  // would close the primary and then throw on the backup, leaving the unit half
-  // covered by a record nobody asked to keep open.
+  // ⚠️ Every date is checked before the first save, or the primary closes and the backup throws.
   for (const record of coverageRecords) {
     if (closesOn.getTime() <= record.from.getTime()) {
       throw new AppError(
@@ -283,8 +247,7 @@ exports.discontinueUnit = async (id, lastDay) => {
     await record.save();
   }
 
-  // ⚠️ The LAST day it operated, not `closesOn`, which is the storage form. This field
-  // is read back by HR, so it holds what HR typed.
+  // The last day it operated, not `closesOn`: this field holds what HR typed.
   unit.active = false;
   unit.discontinuedOn = finalDay;
   await unit.save();

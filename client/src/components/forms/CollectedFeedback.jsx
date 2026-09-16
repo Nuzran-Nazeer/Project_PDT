@@ -1,14 +1,12 @@
 import ResponseCard from "./ResponseCard";
 import { summariseRatings } from "../../utils/ratingSummary";
 
-// ⚠️ No name, no time, and outstanding responses are a COUNT: a label seen waiting and
-// later seen arriving is a submission time. (B17)
+// ⚠️ No name, no time, and outstanding responses are a count: a label seen waiting and
+// later seen arriving is a submission time (B17).
 
 export default function CollectedFeedback({ collected, personId }) {
   if (!collected.released) {
-    // ⚠️ Below the minimum there is no colleague section at all, however many people
-    // reply, so counting down towards a number that cannot arrive is the wrong thing to
-    // put on screen.
+    // ⚠️ Below the minimum there is no colleague section at all, however many reply.
     const belowMinimum = collected.reason === "below_minimum";
 
     return (

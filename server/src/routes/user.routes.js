@@ -6,11 +6,8 @@ const {
 } = require("../validators/user.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
-// HR owns people-data; admin is a technical account with no part in it. Reading is
-// wider than writing.
-//
-// ⚠️ The role check below is a coarse gate only. Limiting HR to the units they cover
-// is a scope check inside the service.
+// Admin is a technical account with no part in people data.
+// Coarse role gates only; HR coverage is checked in the controller and service.
 const CAN_MANAGE = ["hr"];
 const CAN_READ = ["hr", "head_of_hr", "leadership"];
 
@@ -19,8 +16,7 @@ router
   .post(protect, authorize(...CAN_MANAGE), validateCreateUser, controller.createUser)
   .get(protect, authorize(...CAN_READ), controller.listUsers);
 
-// An HR action on an employee record, so it sits here behind the same gate as
-// editing one. Redeeming is public and lives in auth.routes.js.
+// Redeeming is public and lives in auth.routes.js.
 router.post("/:id/invite", protect, authorize(...CAN_MANAGE), controller.createInvite);
 
 router

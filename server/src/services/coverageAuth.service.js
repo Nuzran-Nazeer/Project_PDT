@@ -5,14 +5,11 @@ const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { coverageOn, loadCoverageOn, resolveCoverage } = require("./hrcoverage.service");
 
-// ⚠️ THE ONE PLACE THAT DECIDES WHICH PEOPLE AND UNITS AN HR OFFICER MAY SEE OR ACT ON.
-// No caller may reimplement it, and no caller may work around it by reading coverage
-// directly. The routes keep their coarse role gates; these are the fine checks beneath,
-// which depend on which person or unit, on which date.
+// ⚠️ The one place that decides which people and units an HR officer may see or act on.
+// No caller may reimplement it or read coverage directly instead.
 
 const UNRESTRICTED_ROLE = "head_of_hr";
 const SCOPED_ROLE = "hr";
-// Read the whole roster: Leadership reads people data and never writes it.
 const ROSTER_READERS = ["head_of_hr", "leadership"];
 
 const isoDay = (date) => date.toISOString().slice(0, 10);
@@ -24,16 +21,8 @@ const coversResolved = (coverage, actor) =>
     (holder) => holder && same(holder.id, actor.id),
   );
 
-/**
- * Refuses unless `actor` may act on `employeeId` as at `on`.
- *
- * The Head of HR passes unconditionally. An HR officer passes only as the effective primary
- * or backup covering that person's unit on that date. `action` completes the refusal
- * message ("close this project").
- *
- * ⚠️ Somebody in no unit is a REFUSAL unless `allowUnplaced`: an unknown owner is not
- * permission. Only records HR must reach to place a new starter pass it.
- */
+// `action` completes the refusal message ("close this project").
+// ⚠️ Somebody in no unit is a refusal unless `allowUnplaced`: an unknown owner is not permission.
 exports.assertMayActOnEmployee = async (
   actor,
   employeeId,
@@ -76,12 +65,11 @@ exports.assertMayActOnEmployee = async (
   }
 };
 
-// Review content as HR: coverage only. Holding Leadership as well grants nothing here.
+// Coverage only: holding Leadership as well grants nothing here.
 exports.assertHrMayRead = (actor, employeeId, on = new Date()) =>
   exports.assertMayActOnEmployee(actor, employeeId, on, "view this person's reviews");
 
-// An employee record: yourself, anyone for a roster reader, otherwise HR coverage with
-// people in no unit included, so new starters can be found.
+// People in no unit are included, so new starters can be found.
 exports.assertMayReadEmployee = async (actor, employeeId, on = new Date()) => {
   if (same(employeeId, actor?.id)) return;
   if (ROSTER_READERS.some((role) => holds(actor, role))) return;
@@ -113,8 +101,6 @@ exports.assertCoversUnit = async (actor, unitId, on, action) => {
   }
 };
 
-// The Head of HR creates anything anywhere; an officer creates sub-units only, inside a
-// unit they cover.
 exports.assertMayCreateUnit = async (actor, { type, parentUnitId }, on = new Date()) => {
   if (holds(actor, UNRESTRICTED_ROLE)) return;
 
@@ -127,8 +113,7 @@ exports.assertMayCreateUnit = async (actor, { type, parentUnitId }, on = new Dat
   await exports.assertCoversUnit(actor, parentUnitId, on, "create a sub-unit inside it");
 };
 
-// Every unit an HR officer covers on `on`, as a Set of id strings. Empty for anyone without
-// the officer role; the Head of HR's unrestricted reach is the caller's to handle.
+// Empty for anyone without the officer role; the Head of HR's reach is the caller's to handle.
 exports.coveredUnitIds = async (actor, on = new Date()) => {
   const covered = new Set();
   if (!holds(actor, SCOPED_ROLE)) return covered;
@@ -140,12 +125,8 @@ exports.coveredUnitIds = async (actor, on = new Date()) => {
   return covered;
 };
 
-/**
- * A predicate for filtering a list of people: is this person within the actor's reach today?
- * Built once per request, because resolving coverage per person repeats the same tree walk.
- *
- * `asHr` ignores Leadership, for lists that carry review state rather than a roster.
- */
+// A predicate built once per request: resolving coverage per person repeats the tree walk.
+// `asHr` ignores Leadership, for lists that carry review state rather than a roster.
 exports.readScopeFor = async (actor, { on = new Date(), asHr = false } = {}) => {
   if (holds(actor, UNRESTRICTED_ROLE)) return () => true;
   if (!asHr && ROSTER_READERS.some((role) => holds(actor, role))) return () => true;

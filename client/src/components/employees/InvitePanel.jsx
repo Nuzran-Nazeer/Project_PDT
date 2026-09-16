@@ -2,20 +2,10 @@ import { useState } from "react";
 import { createInvite } from "../../services/invite";
 import { formatDate } from "../../utils/dates";
 
-// The HR half of the invite, on the record it belongs to.
-//
-// It lives here rather than on a screen of its own because generating an invite needs
-// the record's id, and finding the right person IS the roster. A standalone invite
-// form would have to grow its own employee search, which is this list built twice.
-//
-// THE CODE IS SHOWN ONCE AND IS NOT RECOVERABLE. The database keeps a hash of it, so
-// nothing on the server can ever display it again. Losing it means issuing a new one,
-// which is also how an invite is cancelled: the new hash replaces the old and the
-// previous code stops matching anything.
+// ⚠️ The code is shown once and is not recoverable: the database keeps a hash. Re-issuing
+// replaces it, which is also how an invite is cancelled.
 
-// Clipboard access can fail: an insecure origin, a browser that blocks it, a denied
-// permission. The code stays selectable on screen either way, so a failure costs a
-// manual selection rather than the invite.
+// Clipboard access can fail; the code stays selectable on screen either way.
 const copy = async (text, onDone) => {
   try {
     await navigator.clipboard.writeText(text);
@@ -50,9 +40,7 @@ export default function InvitePanel({ person, onIssued }) {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
 
-  // `inviteExpiresAt` comes back on the record; the token itself never does. So HR can
-  // see that an invite is outstanding and when it lapses, without the code being
-  // recoverable, which is exactly the split the design asks for.
+  // `inviteExpiresAt` comes back on the record; the token itself never does.
   const outstanding =
     person.inviteExpiresAt && new Date(person.inviteExpiresAt) > new Date();
 
@@ -110,8 +98,8 @@ export default function InvitePanel({ person, onIssued }) {
             role="status"
             className="rounded-lg border border-brand/40 bg-brand/10 px-3 py-2.5 text-[13px] text-ink"
           >
-            Copy this before leaving the page. It is stored as a hash, so nothing can show
-            it to you again. If it is lost, generate a new one.
+            Copy this before leaving the page: it cannot be shown again. If it is lost,
+            generate a new one.
           </p>
 
           <div className="mt-4">

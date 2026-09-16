@@ -1,14 +1,7 @@
 import Icon from "../common/Icon";
 
-// The greeting card, and the one thing on the dashboard that is entirely real today.
-//
-// Every value here comes off the signed in person's own record: their name, the role
-// label, their employee ID, and today's date. Nothing is invented and nothing is
-// fetched, because the session already carries all of it.
 export default function IdentityCard({ name, roleLabel, employeeId }) {
   return (
-    // `h-full` so it matches the cycle card beside it instead of ending short, and
-    // the content is centred in whatever height the taller of the two sets.
     <div className="flex h-full items-center gap-6 rounded-xl border border-line bg-raised p-7">
       <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand text-xl font-bold text-white">
         {initials(name)}
@@ -45,8 +38,7 @@ function greeting() {
   return "Good evening";
 }
 
-// Written out rather than a locale format, so the date reads the same on every
-// machine the team demonstrates this on.
+// Not a locale format, so the date reads the same on every machine.
 function today() {
   return new Date().toLocaleDateString("en-GB", {
     day: "numeric",

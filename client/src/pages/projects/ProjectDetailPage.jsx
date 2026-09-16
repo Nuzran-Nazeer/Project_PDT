@@ -8,9 +8,6 @@ import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 import ProjectTeamPanel from "../../components/projects/ProjectTeamPanel";
 
-// One project: who runs it, who is on it, and the one write that belongs to the
-// project rather than to a person on it.
-
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -54,17 +51,12 @@ export default function ProjectDetailPage() {
 
     setCloseSaving(true);
     try {
-      // ⚠️ Sent AS TYPED. This is the one end date the server takes inclusively -- it
-      // works out the stored value itself, exactly as discontinuing a unit does.
-      // Converting here would close the project a day late.
+      // ⚠️ Sent as typed: this is the one end date the server takes inclusively.
       await closeProject(id, lastDay);
       setClosing(false);
-      // Bumped so the team reloads too: closing the project closed every assignment
-      // that was still open on that date.
+      // The team reloads too: closing the project closed every open assignment.
       setReloadKey((key) => key + 1);
     } catch (err) {
-      // The server's own words: an assignment starting after the closing date, or
-      // coverage refusing this officer for the project's lead.
       setCloseError(err.message);
     } finally {
       setCloseSaving(false);
@@ -86,8 +78,7 @@ export default function ProjectDetailPage() {
             ? [
                 project.leadId?.name ? `Led by ${project.leadId.name}` : null,
                 `Started ${formatDate(project.startDate)}`,
-                // `endDate` is the first day NOT covered, so the last day it ran is the
-                // day before.
+                // `endDate` is the first day not covered.
                 closed
                   ? `Ran until ${formatDate(lastDayOf(project.endDate))}`
                   : "Running",
@@ -126,8 +117,6 @@ export default function ProjectDetailPage() {
               reloadKey={reloadKey}
             />
 
-            {/* Closing the project. Never for one that has already closed: nothing
-                reopens, the same way a discontinued unit stays discontinued. */}
             {canManage && !closed && (
               <section className="mt-8 rounded-xl border border-line bg-raised p-5">
                 {!closing ? (
@@ -169,9 +158,7 @@ export default function ProjectDetailPage() {
                         }}
                         aria-invalid={Boolean(closeFieldError)}
                       />
-                      {/* Deliberately not prefilled with today. A project closing is a
-                          decision with a date somebody chose, and guessing at it
-                          invents the fact being recorded. */}
+                      {/* Not prefilled with today: guessing would invent the fact being recorded. */}
                       {closeFieldError && (
                         <p className="mt-1.5 text-[13px] text-danger">
                           {closeFieldError}

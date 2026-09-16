@@ -21,7 +21,6 @@ function StatusPage() {
         employee growth plans.
       </p>
 
-      {/* System Status Section */}
       <h3 className="mt-8 text-lg font-semibold text-ink">System Status</h3>
       {error && <p className="mt-2 text-danger">Backend error: {error}</p>}
       {!status && !error && <p className="mt-2 text-muted">Checking…</p>}

@@ -7,10 +7,8 @@ import { FormShell, FormSection } from "../../components/shells/FormShell";
 import CompetencyRatingField from "../../components/forms/CompetencyRatingField";
 import TextAreaField from "../../components/forms/TextAreaField";
 
-// ⚠️ The label in the URL is the only handle there is: the record's real id is replaced
-// by it before the record leaves the server, and no timestamp comes with it.
+// ⚠️ The label in the URL is the only handle there is: the real id never leaves the server.
 
-// A competency with no row is a real state, not a gap: the field says so itself.
 const valueFor = (item, key) => {
   const rating = (item.ratings || []).find((r) => r.competencyKey === key);
   return {

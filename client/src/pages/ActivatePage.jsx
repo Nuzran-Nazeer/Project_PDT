@@ -21,20 +21,15 @@ function EyeIcon({ open }) {
   );
 }
 
-// Sits OUTSIDE ProtectedRoute and AppLayout: the person opening it cannot sign in yet.
-//
-// ⚠️ Nothing is fetched before the code is submitted. An endpoint confirming whose
+// ⚠️ Nothing is fetched before the code is submitted: an endpoint confirming whose
 // account a code opens would answer the question an attacker is asking.
 export default function ActivatePage() {
   const [searchParams] = useSearchParams();
 
-  // The link carries the code, so the field is hidden when it arrives intact. The
-  // paste box is for a mangled URL, or somebody opening the app directly.
+  // The paste box is for a mangled link, or somebody opening the app directly.
   const rawCodeFromLink = (searchParams.get("code") || "").trim();
 
-  // Checked BEFORE anything is typed: otherwise a truncated link looks fine until
-  // after the password is submitted. Only catches a MANGLED code; expiry and re-issue
-  // are knowable only on the server, so a dead code is still refused at submit.
+  // Only catches a mangled code; expiry and re-issue are knowable only on the server.
   const linkCodeUsable = CODE_SHAPE_EXACT.test(rawCodeFromLink);
   const linkWasMangled = Boolean(rawCodeFromLink) && !linkCodeUsable;
   const codeFromLink = linkCodeUsable ? rawCodeFromLink : "";
@@ -46,8 +41,7 @@ export default function ActivatePage() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
-  // Set when the server refuses the CODE rather than the password. The form is then
-  // replaced outright, since a retry cannot possibly work.
+  // Set when the server refuses the code rather than the password: a retry cannot work.
   const [linkDead, setLinkDead] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -79,26 +73,14 @@ export default function ActivatePage() {
     try {
       await activateAccount(form.code.trim(), form.password);
 
-      // No session to store: activation deliberately returns no token. They go to
-      // the sign-in screen and use the password they just chose, which is also the
-      // cheapest moment to discover a typo. (Build decision B11)
+      // Activation returns no token (B11).
       navigate("/login", {
         replace: true,
         state: { notice: "Your account is ready. Sign in with your new password." },
       });
     } catch (err) {
-      // The server's message, shown as-is. It says the same thing for a code that was
-      // never issued, one already used and one that has expired. Splitting those
-      // apart here would leak the difference it hides.
-      //
-      // THE PAGE CANNOT KNOW A CODE IS SPENT UNTIL IT ASKS, and it must not be able
-      // to: an endpoint that reported whether a code was still live, without
-      // consuming it, is exactly the oracle the single shared message exists to
-      // deny. So the check happens on submit, once, and the answer is final.
-      //
-      // Matching on the message is the weak part. The clean version is a status of
-      // its own from the server. 410 Gone fits, and says nothing about WHICH of the
-      // three causes it was. That is a server-branch change.
+      // ⚠️ One server message covers never issued, used and expired; never split it apart.
+      // Matching on the message is the weak part: a 410 from the server would be cleaner.
       if (/invite code/i.test(err.message)) setLinkDead(true);
 
       setFormError(err.message);
@@ -111,7 +93,6 @@ export default function ActivatePage() {
 
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-surface px-4">
-      {/* Decorative only, and inert to assistive technology. */}
       <div className="blob-float-1 pointer-events-none absolute -top-32 -left-28 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_30%_30%,var(--color-brand),transparent_70%)] opacity-25" />
       <div className="blob-float-2 pointer-events-none absolute -right-32 -bottom-36 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_60%_60%,var(--color-brand),transparent_70%)] opacity-20" />
 
@@ -230,9 +211,8 @@ export default function ActivatePage() {
               >
                 Confirm password
               </label>
-              {/* Deliberately shares the show/hide toggle above rather than adding a
-                second one: two toggles on one form invite the user to reveal one
-                field and not the other, which defeats the point of confirming. */}
+              {/* Shares the show/hide toggle above: revealing one field and not the
+                other defeats the point of confirming. */}
               <input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -252,8 +232,6 @@ export default function ActivatePage() {
             </div>
 
             {formError && (
-              // `role="alert"` so a screen reader announces it. Without it the
-              // message appears silently and a non-sighted user is left waiting.
               <p
                 role="alert"
                 className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"

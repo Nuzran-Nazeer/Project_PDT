@@ -7,13 +7,8 @@ const {
 } = require("../validators/orgstructure.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
-// Same access as membership, and for the same reason -- these two are one job done
-// in two records, and splitting who may do them would mean HR could place someone in
-// a unit but not say who runs it.
-//
-// Reading matters more here than it looks: this collection IS the reporting line, so
-// a wider read grant would tell anyone holding it who supervises whom across the
-// whole company.
+// ⚠️ This collection is the reporting line: a wider read grant tells anyone who
+// supervises whom across the whole company.
 const CAN_WRITE = ["hr", "head_of_hr"];
 const CAN_READ = ["hr", "head_of_hr", "leadership"];
 

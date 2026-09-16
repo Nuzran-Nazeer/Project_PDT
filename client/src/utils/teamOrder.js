@@ -1,5 +1,4 @@
-// Earliest-starting running cycle first, then no cycle, then by name. Nobody is hidden: a
-// supervisor who cannot find someone assumes they have left the team.
+// Earliest-starting running cycle first, then no cycle, then by name.
 const startOf = (person) =>
   person.cycle ? new Date(person.cycle.startDate).getTime() : Infinity;
 

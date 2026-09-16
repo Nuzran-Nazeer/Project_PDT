@@ -1,11 +1,7 @@
 import TextAreaField from "./TextAreaField";
 
-// One competency, asked as one question. Every rater in the appraisal answers the same
-// six, so this is written once and the wording of the prompt is what changes.
-//
-// ⚠️ "Not observed" sits IN the same radio group as the five scores, because it is an
-// answer to the question rather than an escape from it. Split into a separate control it
-// reads as a skip, and a skipped competency and a declined one are not the same record.
+// ⚠️ "Not observed" sits in the same radio group as the five scores: it is an answer, not
+// a skip, and a skipped competency and a declined one are not the same record.
 
 const SCALE = [
   { score: 1, label: "Unsatisfactory" },
@@ -35,8 +31,7 @@ export default function CompetencyRatingField({
       ? String(value.score)
       : "";
 
-  // Declining stores neither a score nor evidence, and the server refuses a record
-  // carrying both, so the switch clears the other side rather than leaving it behind.
+  // Declining stores neither a score nor evidence, so the switch clears the other side.
   const choose = (next) =>
     onChange(
       next === NOT_OBSERVED
@@ -119,17 +114,13 @@ export default function CompetencyRatingField({
   );
 }
 
-// Spelled out rather than shown as the chosen pill among six: a closed record is read,
-// not scanned for which control is lit.
 function answerText(value) {
   if (value.notObserved) return "Not observed.";
   const step = SCALE.find((s) => s.score === value.score);
   return step ? `${step.score} \u00b7 ${step.label}` : "No answer given.";
 }
 
-// The radio carries the meaning and the span carries the look. Hiding the input with
-// `sr-only` rather than swapping it for a button keeps arrow-key movement through the
-// scale, which is what a rating group is supposed to do.
+// The input is `sr-only` rather than a button, which keeps arrow-key movement through the scale.
 function Choice({ name, value, chosen, onChoose, disabled, dashed, children }) {
   const border = dashed ? "border-dashed border-line" : "border-line";
 

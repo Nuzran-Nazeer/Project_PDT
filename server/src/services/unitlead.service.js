@@ -10,8 +10,7 @@ const {
   overlapping,
 } = require("../utils/dateRange");
 
-// Supervision is read out of this collection rather than stored. This file only
-// RECORDS; answering "who supervises whom" belongs to supervision.service.js.
+// This file only records; "who supervises whom" belongs to supervision.service.js.
 
 const assertUserExists = async (userId) => {
   const user = await User.findById(userId).select("_id name");
@@ -19,9 +18,7 @@ const assertUserExists = async (userId) => {
   return user;
 };
 
-// ⚠️ Goes beyond what the design states: appointing a lead to a unit that no longer
-// operates would undo what discontinuing just did. Only `appointLead` calls this, so
-// closing a term inside a discontinued unit still works.
+// Only `appointLead` calls this, so closing a term inside a discontinued unit still works.
 const assertUnitExists = async (unitId) => {
   const unit = await OrgUnit.findById(unitId).select("_id name parentUnitId active");
   if (!unit) throw new AppError("Unit not found", 404);
@@ -34,11 +31,7 @@ const assertUnitExists = async (unitId) => {
   return unit;
 };
 
-// A unit has at most one lead on any date
-// Scoped to the UNIT, not the person: one person leading two units at once is
-// ordinary in a company this size, while one unit having two leads at once makes
-// "the lead of your unit on that date" ambiguous, which is the one thing supervision
-// cannot be.
+// Scoped to the unit, not the person: one person may lead two units at once.
 const assertUnitHasNoOtherLead = async (unitId, from, to, excludeId) => {
   const filter = { unitId, ...overlapping(from, to) };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -52,14 +45,8 @@ const assertUnitHasNoOtherLead = async (unitId, from, to, excludeId) => {
   );
 };
 
-// A lead belongs to the unit ABOVE the one they lead, which is what keeps the
-// reporting line pointing upward. A lead of Backend who was a member of Backend would
-// be their own supervisor, closing the chain into a loop.
-//
-// ⚠️ THE ROOT IS EXEMPT: the company unit has no parent, so there is no unit its lead
-// could belong to. The consequence is deliberate rather than merely tolerated, because
-// someone at the top who belongs to no unit has no supervisor and is not appraised,
-// which is what the design already says about leadership.
+// A lead belongs to the unit above the one they lead, or they would be their own
+// supervisor. The root is exempt: it has no parent.
 const assertLeadSitsInParentUnit = async (unit, userId, from) => {
   if (!unit.parentUnitId) return;
 
@@ -78,9 +65,6 @@ const assertLeadSitsInParentUnit = async (unit, userId, from) => {
     409,
   );
 };
-
-// Reading
-
 
 exports.listLeads = async ({ unitId, userId, on } = {}) => {
   const filter = {};
@@ -102,23 +86,15 @@ exports.getLeadById = async (id) => {
   return record;
 };
 
-// Who led this unit on this date, or null when nobody did, which is a real answer the
-// reporting line handles by looking at the parent unit. `select` is explicit rather
-// than open: a bare populate would carry the whole user document into a response.
+// Null when nobody did. `select` is explicit: a bare populate would serve the whole user.
 exports.leadOn = async (unitId, date) =>
   UnitLead.findOne({ unitId, ...activeOn(toDay(date, "date")) }).populate(
     "userId",
     "name employeeId designation",
   );
 
-// Writing
-
-// If the unit already has a lead, that record is CLOSED on the same date rather than
-// overwritten, so past appraisals keep pointing at whoever ran the unit then.
-//
-// This differs from memberships on purpose: a second open membership is refused
-// because a person in two units is an error, while a second lead is an implied
-// handover.
+// An existing lead's record is closed on the same date, never overwritten: a second lead
+// is an implied handover, unlike a second membership.
 exports.appointLead = async ({ unitId, userId, from }) => {
   await assertUserExists(userId);
   const unit = await assertUnitExists(unitId);
@@ -144,15 +120,13 @@ exports.appointLead = async ({ unitId, userId, from }) => {
     await open.save();
   }
 
-  // Still checked after the handover above: it catches an appointment backdated
-  // across a CLOSED leadership record, which closing the open one does not.
+  // Still needed after the handover: it catches backdating across a closed record.
   await assertUnitHasNoOtherLead(unitId, start, null);
 
   return UnitLead.create({ unitId, userId, from: start, to: null });
 };
 
-// A unit left with no lead, allowed on purpose: the reporting line resolves upward to
-// the parent's lead, so nobody is left unsupervised while the post is vacant.
+// A unit may be left with no lead: the reporting line resolves upward.
 exports.closeLead = async (id, to) => {
   const record = await exports.getLeadById(id);
   if (record.to) {

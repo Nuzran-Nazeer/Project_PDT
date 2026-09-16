@@ -2,10 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
 import { getReportingLine } from "../services/supervision";
 
-// Takes no id, deliberately: it reads the id out of the session, so there is no
-// argument that would let a caller ask about somebody else. That is only the client's
-// half of the rule. Hiding the question is not refusing to answer it, and the refusal
-// lives on the server, which compares the id in the URL against the id in the token.
+// Takes no id: it reads the session's. The refusal itself lives on the server.
 export function useReportingLine() {
   const { user } = useAuth();
   const userId = user?._id;

@@ -17,7 +17,6 @@ const {
 
 const userSchema = new mongoose.Schema(
   {
-    // Identity
     employeeId: {
       type: String,
       required: [true, "Employee ID is required"],
@@ -38,8 +37,7 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    // Generated in pre('validate'), never typed by anyone. Login accepts either this
-    // or the email address.
+    // Generated in pre('validate'), never typed.
     username: {
       type: String,
       unique: true,
@@ -47,14 +45,8 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Credentials
-    // NAMED FOR WHAT IS ASSIGNED, NOT WHAT IS STORED. Every write site assigns
-    // PLAINTEXT and the pre('save') hook below hashes it. Do not hash before
-    // assigning. The hook would hash it a second time and the account would be
-    // permanently unopenable, with no error raised anywhere.  (Build decision B1)
-    //
-    // `select: false` keeps it out of every query result. Login is the only place
-    // allowed to ask for it back, via .select("+password").
+    // ⚠️ Assign plaintext; the pre('save') hook hashes it. Hashing before assigning
+    // double-hashes and the account is permanently unopenable, with no error (B1).
     password: {
       type: String,
       minlength: [
@@ -73,18 +65,11 @@ const userSchema = new mongoose.Schema(
       default: "invited",
     },
 
-    // Set when HR generates an invite, cleared the moment it is redeemed.
-    //
-    // This holds a SHA-256 HASH of the code, never the code itself. The raw code
-    // exists once, in the response HR reads, and is never stored. `select: false`
-    // keeps the hash out of query results; `index: true` is for the redemption
-    // lookup, which finds the account BY this field. See utils/inviteCode.js.
+    // A SHA-256 hash of the code, never the code itself. See utils/inviteCode.js.
     inviteToken: { type: String, select: false, index: true },
     inviteExpiresAt: { type: Date },
 
-    // Roles
-    // GRANTED roles only. `supervisor` is never stored: it is derived from who
-    // leads which unit on a given date. See config/constants.js.
+    // ⚠️ Granted roles only. `supervisor` is never stored: it is derived from unit leads.
     roles: {
       type: [
         {
@@ -98,7 +83,6 @@ const userSchema = new mongoose.Schema(
       default: ["employee"],
     },
 
-    // Job
     designation: {
       type: String,
       enum: {
@@ -106,7 +90,7 @@ const userSchema = new mongoose.Schema(
         message: "{VALUE} is not a recognised designation",
       },
     },
-    // Derived from designation in pre('validate'). Selects the review form.
+    // Derived from designation in pre('validate').
     jobFamily: {
       type: String,
       enum: {
@@ -114,7 +98,6 @@ const userSchema = new mongoose.Schema(
         message: "{VALUE} is not a valid job family",
       },
     },
-    // Free label, e.g. "SE II". A promotion-track indicator; drives nothing.
     level: { type: String, trim: true },
     location: {
       type: String,
@@ -124,9 +107,7 @@ const userSchema = new mongoose.Schema(
       },
     },
 
-    // Dates
-    // Immutable because it decides parGroup, and an appraisal group must never move
-    // once set, because moving it changes which cycle a person's history belongs to.
+    // Immutable because it decides parGroup, and an appraisal group must never move.
     joinedDate: {
       type: Date,
       required: [true, "Joined date is required"],
@@ -145,22 +126,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Runs before validation so the derived values are validated too.
-//
-// ⚠️ Mongoose 9 hooks are promise-based and receive NO `next` callback. Tutorials
-// writing `function (next)` throw "next is not a function".
+// ⚠️ Mongoose 9 hooks take no `next` callback: `function (next)` throws "next is not a function".
 userSchema.pre("validate", function () {
   if (this.designation) {
     this.jobFamily = DESIGNATIONS[this.designation];
   }
 
-  // `immutable: true` blocks later changes anyway; this makes the intent explicit.
   if (this.isNew && this.joinedDate && !this.parGroup) {
     this.parGroup = parGroupFor(this.joinedDate);
   }
 
-  // Last word of the name plus the employee ID's digits, so "Nuzran Nazeer" with
-  // ALT-0241 becomes nazeer0241. Collision-free because the ID is unique.
+  // Last word of the name plus the employee ID's digits: ALT-0241 gives nazeer0241.
   if (this.isNew && !this.username && this.name && this.employeeId) {
     const words = this.name.trim().split(/\s+/);
     const lastName = words[words.length - 1].toLowerCase().replace(/[^a-z]/g, "");
@@ -169,9 +145,8 @@ userSchema.pre("validate", function () {
   }
 });
 
-// ⚠️ The ONE path a password takes into the database, so no write site can forget.
-// The isModified guard is not optional: without it any unrelated save re-hashes the
-// existing hash and locks the user out.
+// ⚠️ The one path a password takes into the database. Without the isModified guard any
+// unrelated save re-hashes the hash and locks the user out.
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   if (!this.password) return;
@@ -184,8 +159,7 @@ userSchema.methods.comparePassword = function (plainText) {
   return bcrypt.compare(plainText, this.password);
 };
 
-// Belt and braces alongside `select: false`: a query that re-selects the password
-// still cannot leak it through a response.
+// A query that re-selects the password still cannot leak it through a response.
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
     delete ret.password;

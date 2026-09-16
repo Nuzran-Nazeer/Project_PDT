@@ -7,10 +7,8 @@ const {
 } = require("../validators/feedback.validator");
 const { protect } = require("../middleware/auth.middleware");
 
-// ⚠️ NO `authorize()` ANYWHERE HERE, and that is deliberate rather than forgotten.
-// Being asked to review a colleague is not a role, it is a record with your id on it,
-// so a role gate would answer the wrong question. Every handler filters by the id in
-// the token instead, which is narrower than any role check could be.
+// ⚠️ No `authorize()` here on purpose: being asked to review a colleague is a record
+// with your id on it, not a role. Every handler filters by the id in the token.
 
 router.route("/owed").get(protect, controller.listOwed);
 
@@ -19,15 +17,12 @@ router
   .get(protect, validateFeedbackId, controller.getOwed)
   .put(protect, validateFeedbackId, validateAnswers, controller.saveDraft);
 
-// Its own route rather than a status field on the update: submitting starts a window
-// after which the record can no longer change, and a general PUT would invite a client
-// to set `status` to anything.
+// Its own route: a general PUT would invite a client to set `status` to anything.
 router
   .route("/owed/:id/submit")
   .put(protect, validateFeedbackId, validateAnswers, controller.submit);
 
-// Your own assessment. No id in the path, deliberately: the record is reached through
-// the token alone, which is narrower than any check on an id could be.
+// ⚠️ No id in the path, deliberately: the record is reached through the token alone.
 router
   .route("/self")
   .get(protect, controller.getSelfAssessment)
@@ -35,21 +30,17 @@ router
 
 router.route("/self/submit").put(protect, validateAnswers, controller.submitSelf);
 
-// The supervisor's read. Gated on actually supervising the person, in the service,
-// because the role alone does not say whose feedback this is.
+// Gated on actually supervising the person, in the service.
 router
   .route("/collected/:reviewId")
   .get(protect, validateReviewId, controller.getCollected);
 
-// Somebody else's own assessment. A separate path from `/self` above rather than an id added
-// to it: that route takes no id at all, and keeping it that way is what guarantees there is no
-// request shape reaching another person's record through it.
+// Somebody else's assessment. ⚠️ Never an optional id on `/self`: that route takes none.
 router
   .route("/self-assessment/:reviewId")
   .get(protect, validateReviewId, controller.getAssessment);
 
-// The supervisor's own review, keyed by the REVIEW rather than by a record id: until the
-// first save there is no record to name, and the person it is about is not the caller.
+// Keyed by the review: until the first save there is no record to name.
 router
   .route("/supervisor/:reviewId")
   .get(protect, validateReviewId, controller.getSupervisorReview)
@@ -59,6 +50,6 @@ router
   .route("/supervisor/:reviewId/submit")
   .put(protect, validateReviewId, validateAnswers, controller.submitSupervisorReview);
 
-// NO DELETE. A submitted piece of feedback is part of somebody's appraisal record.
+// No DELETE: submitted feedback is part of somebody's appraisal record.
 
 module.exports = router;

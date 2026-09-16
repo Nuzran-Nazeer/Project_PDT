@@ -33,14 +33,9 @@ import ChooseReviewersPage from "../pages/reviewers/ChooseReviewersPage";
 import ReviewerListPage from "../pages/reviewers/ReviewerListPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
-// The single list of URL to page mappings. Sidebar tabs are generated from
-// dashboardTabs.js, so the sidebar can never link somewhere that does not route.
-//
-// ⚠️ Every gate here HIDES rather than protects. Anyone can call the API directly, so the
-// real check is on the server. (Build rule 1)
+// ⚠️ Every gate here hides rather than protects: the real check is on the server.
 
-// `null` means any signed-in user. Entries for groups that render nothing stay, so a group
-// added later is gated rather than open by omission.
+// `null` means any signed-in user.
 const GROUP_ACCESS = {
   employee: null,
   supervisor: ["supervisor"],
@@ -50,7 +45,6 @@ const GROUP_ACCESS = {
   admin: ["admin"],
 };
 
-// A built tab names its page here; everything else gets the placeholder.
 const TAB_PAGES = {
   "my-team": MyTeamPage,
   normalisation: NormalisationPage,
@@ -65,14 +59,11 @@ const TAB_PAGES = {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Reaching this with a session replaces it silently, which looks like two accounts
-          active at once. */}
       <Route element={<SignedOutRoute />}>
         <Route path="/login" element={<LoginPage />} />
       </Route>
 
-      {/* The one-time code is the credential, so this is deliberately NOT behind
-          SignedOutRoute: somebody finishing setup on a borrowed laptop still can. */}
+      {/* Deliberately not behind SignedOutRoute: the code is the credential. */}
       <Route path="/activate" element={<ActivatePage />} />
       <Route path="/status" element={<StatusPage />} />
 
@@ -84,9 +75,8 @@ function AppRoutes() {
 
           {Object.entries(TABS_BY_GROUP).map(([group, tabs]) => {
             const allow = GROUP_ACCESS[group];
-            // ⚠️ `ownRoute` tabs are SKIPPED: their hand-written routes carry finer gates
-            // than a group gate can express, and a generated route would sit before those
-            // and quietly narrow them.
+            // ⚠️ `ownRoute` tabs are skipped: a generated route would sit before the
+            // hand-written one and quietly narrow its gate.
             const routes = tabs
               .filter((tab) => !tab.ownRoute)
               .map((tab) => {
@@ -109,7 +99,7 @@ function AppRoutes() {
             );
           })}
 
-          {/* Per-role paths, kept as redirects. Each still checks the role first. */}
+          {/* Per-role paths, kept as redirects. */}
           <Route element={<ProtectedRoute allow={["employee"]} />}>
             <Route path="/employee" element={<Navigate to="/dashboard" replace />} />
           </Route>
@@ -129,11 +119,8 @@ function AppRoutes() {
             <Route path="/supervisor" element={<Navigate to="/dashboard" replace />} />
           </Route>
 
-          {/* Drill-downs, not sidebar destinations. The team routes read a self-scoped
-              endpoint, so a non-supervisor reaching one by URL finds an empty screen. */}
+          {/* Drill-downs, not sidebar destinations. */}
           <Route path="/my-self-assessment/form" element={<SelfAssessmentFormPage />} />
-          {/* A colleague review always belongs to an assignment, so an id-less form has no
-              record it could ever save to. */}
           <Route
             path="/feedback-i-owe/form"
             element={<Navigate to="/feedback-i-owe" replace />}
@@ -146,8 +133,7 @@ function AppRoutes() {
               path="/my-team/:id/self-assessment"
               element={<TeamMemberAssessmentPage />}
             />
-            {/* ⚠️ The label is the only handle a consumer gets, so it is what addresses
-                the record here: the real id never leaves the server. */}
+            {/* ⚠️ Addressed by label: the real id never leaves the server. */}
             <Route
               path="/my-team/:id/feedback/:label"
               element={<CollectedResponsePage />}
@@ -156,14 +142,11 @@ function AppRoutes() {
             <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
           </Route>
 
-          {/* HR as well as supervisors: HR decides and draws, and confirms for somebody
-              nobody supervises. */}
+          {/* HR too: HR decides and draws, and confirms for somebody nobody supervises. */}
           <Route element={<ProtectedRoute allow={["supervisor", "hr", "head_of_hr"]} />}>
             <Route path="/reviewer-lists/:reviewId" element={<ReviewerListPage />} />
           </Route>
 
-          {/* Reading the roster is wider than changing it, which the server enforces.
-              Admin reaches none of it, being a technical account. */}
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/employees" element={<EmployeeListPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
@@ -173,8 +156,6 @@ function AppRoutes() {
             <Route path="/employees/:id/edit" element={<EmployeeFormPage />} />
           </Route>
 
-          {/* ⚠️ An HR officer should reach only units they cover. That needs the coverage
-              collection, so every gate here is coarse until it exists. */}
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/cycles" element={<CyclesPage />} />
             <Route path="/cycles/:id/people" element={<CyclePeoplePage />} />
@@ -182,29 +163,18 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/organisation" element={<OrgTreePage />} />
-            {/* Same screen: the unit in the URL makes it linkable and survives a refresh,
-                with the tree still beside it. */}
             <Route path="/organisation/:id" element={<OrgTreePage />} />
           </Route>
 
-          {/* Same three roles as the tree, and the same split inside: Leadership reads
-              the team, HR and the Head of HR record it. Written by hand rather than
-              generated, which is why the tab carries `ownRoute`.
-
-              ⚠️ The project screens are the one place where a coarse gate is NOT the
-              whole story. An HR officer reaches every project here, but the server
-              refuses a write about somebody they do not cover, so the refusal arrives
-              in the response rather than as a missing button. */}
+          {/* An HR officer reaches every project; a write about somebody they do not
+              cover is refused in the response rather than as a missing button. */}
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/projects" element={<ProjectsPage />} />
-            {/* The project is in the URL so the team can be linked to. */}
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
           </Route>
         </Route>
       </Route>
 
-      {/* Unrecognised paths go back through the landing resolver, which sends a signed out
-          visitor to /login and everyone else to their own dashboard. */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -2,11 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const orgUnitService = require("../services/orgunit.service");
 const { assertMayCreateUnit } = require("../services/coverageAuth.service");
 
-// Thin HTTP layer: read the request, call the service, shape the response.
-//
-// Response shape (build decision B3): a single resource comes back plain, a
-// collection comes back as { items, total }. The HTTP status carries the verdict:
-// the body never says whether the request succeeded.
+// A single resource comes back plain, a collection as { items, total } (B3).
 
 exports.createUnit = asyncHandler(async (req, res) => {
   await assertMayCreateUnit(req.user, req.body);
@@ -26,10 +22,7 @@ exports.updateUnit = asyncHandler(async (req, res) => {
   res.json(await orgUnitService.updateUnit(req.params.id, req.body));
 });
 
-// `lastDay` is the final day the unit operated. Unlike a leaver's last working day
-// it has NO default: a unit closing is a dated event somebody decided on, and
-// silently stamping today onto it would invent the one fact this whole story exists
-// to record honestly.
+// `lastDay` has no default: stamping today onto a closing would invent the fact being recorded.
 exports.discontinueUnit = asyncHandler(async (req, res) => {
   res.json(await orgUnitService.discontinueUnit(req.params.id, req.body.lastDay));
 });

@@ -12,12 +12,8 @@ import {
 } from "../../schemas/orgStructureSchema";
 import { formatDate, todayInput } from "../../utils/dates";
 
-// Members are read-only here: moving someone happens on their own record. An "Add
-// member" button would read as ADD and hide the rule that a person holds one
-// membership at a time. Appointing a lead is the exception, a lead being a property of
-// the unit.
+// Members are read-only here: moving someone happens on their own record.
 
-// Local calendar date, not UTC. See the note on todayInput.
 const today = todayInput;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -26,7 +22,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const unitId = String(unit._id);
   const parent = units.find((u) => String(u._id) === String(unit.parentUnitId));
   const closed = unit.active === false;
-  // The root is not closeable. The server refuses it; this hides the button.
   const isRoot = !unit.parentUnitId;
 
   const [members, setMembers] = useState([]);
@@ -34,8 +29,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const [coverage, setCoverage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // Bumped after an appointment to re-run the read, rather than patching state by
-  // hand with a second copy of what the server decided.
   const [reloadKey, setReloadKey] = useState(0);
 
   const [appointing, setAppointing] = useState(false);
@@ -46,8 +39,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Which HR coverage role a form is open for, or null. Only one role's form is open
-  // at a time, the same way appointing a lead is one form, not two.
+  // Which HR coverage role a form is open for, or null.
   const [assigningRole, setAssigningRole] = useState(null);
   const [coverageForm, setCoverageForm] = useState({ userId: "", from: today() });
   const [coverageCandidates, setCoverageCandidates] = useState([]);
@@ -62,11 +54,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
   const [closeError, setCloseError] = useState("");
   const [closingSaving, setClosingSaving] = useState(false);
 
-  // Both reads are "as at today". The server would answer a past date, every filter
-  // used here taking an `on` already, but no screen asks for one.
-  // No setLoading(true) in the effect body: the lint rule rejects the second render
-  // pass. Mounted with a `key` of the unit id, so switching unit gives a fresh
-  // component with `loading` already true.
+  // No setLoading(true) in the effect body: mounted with a `key` of the unit id instead.
   useEffect(() => {
     let cancelled = false;
 
@@ -90,16 +78,8 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
     };
   }, [unitId, reloadKey]);
 
-  // Who may be offered as this unit's lead.
-  //
-  // The rule is that a lead belongs to the unit ABOVE the one they lead, or they
-  // would supervise themselves and the reporting line closes into a loop. So the
-  // list is the PARENT unit's members, and it is re-read whenever the date changes,
-  // because membership is dated and eligibility is judged on the day the
-  // appointment starts.
-  //
-  // The company unit is the exception the server also makes: it has no parent, so
-  // there is no unit its lead could belong to, and anyone may be offered.
+  // Candidates for lead are the parent unit's members on the appointment date; the
+  // root has no parent, so anyone may be offered.
   useEffect(() => {
     if (!appointing || !ISO_DATE.test(form.from)) return undefined;
 
@@ -128,14 +108,8 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
     };
   }, [appointing, unit.parentUnitId, form.from]);
 
-  // Who may be offered as an HR officer: anyone ACTIVE who holds one of the roles the
-  // server itself enforces (`constants.hrOfficerRoles`), so this list can never offer
-  // someone the server would then refuse. Not scoped to this unit or its parent --
-  // unlike a lead, an HR officer does not have to belong to the unit they cover.
-  //
-  // ⚠️ `status: "active"` is explicit rather than left to the default: the roster's
-  // default hides only LEAVERS, so an invited joiner who has never opened their account
-  // would otherwise be offered, and the server refuses exactly those.
+  // ⚠️ `status: "active"` is explicit: the roster's default hides only leavers, and the
+  // server refuses an invited joiner.
   useEffect(() => {
     if (!assigningRole) return undefined;
 
@@ -201,9 +175,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
       setAppointing(false);
       setReloadKey((key) => key + 1);
     } catch (err) {
-      // The server's own words: a lead who was not in the parent unit on that date,
-      // a handover dated before the current term began, a person who already leads
-      // this unit, a discontinued unit. Each names the rule that stopped it.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -250,9 +221,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
       setAssigningRole(null);
       setReloadKey((key) => key + 1);
     } catch (err) {
-      // The server's own words: someone not on the hr/head_of_hr roster, a handover
-      // dated before the current holder's term began, the same person already
-      // covering this unit as the other role, a discontinued unit.
       setCoverageFormError(err.message);
     } finally {
       setCoverageSaving(false);
@@ -275,13 +243,9 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
       await discontinueUnit(unitId, lastDay);
       setClosing(false);
       setReloadKey((key) => key + 1);
-      // The tree itself has to be re-read, not just this panel: the unit is now
-      // struck through in the rail beside us, and the page owns that list.
+      // The page owns the tree, which now shows this unit struck through.
       onChanged?.();
     } catch (err) {
-      // The server's own words, and these are the ones that matter most in this
-      // the unit still has members, and they are NAMED, so HR is told where
-      // to move them rather than being told no.
       setCloseError(err.message);
     } finally {
       setClosingSaving(false);
@@ -302,12 +266,10 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
         {parent && <span className="text-[13px] text-muted">inside {parent.name}</span>}
       </div>
 
-      {/* `discontinuedOn` is the LAST DAY the unit operated, not the day the record
-          closed: the server stores what HR typed for exactly this line to read back. */}
+      {/* `discontinuedOn` is the last day the unit operated, as HR typed it. */}
       {closed && (
         <p className="mt-2 text-[13px] text-muted">
-          Discontinued. Its last day was {formatDate(unit.discontinuedOn)}. It stays in
-          the tree because the appraisal history recorded against it has to stay readable.
+          Discontinued. Its last day was {formatDate(unit.discontinuedOn)}.
         </p>
       )}
 
@@ -329,9 +291,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
                 Lead
               </h3>
-              {/* A discontinued unit cannot be given a lead: closing one
-                  deliberately ends its leadership record, and allowing a new one
-                  straight afterwards would undo what had just happened. */}
               {canAssign && !appointing && !closed && (
                 <button
                   type="button"
@@ -353,9 +312,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 </span>
               </p>
             ) : (
-              // Not an error state. A unit with no lead is allowed: the reporting
-              // line resolves upward to the parent's lead, so nobody is left
-              // without a supervisor while the post is vacant.
               <p className="mt-2 text-sm text-muted">
                 Nobody leads this unit. Its members report to the lead of the unit above.
               </p>
@@ -467,8 +423,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               HR coverage
             </h3>
 
-            {/* Each role is resolved on its own: a sub-unit with only a direct backup
-                still inherits its parent's primary. */}
+            {/* Each role is resolved on its own. */}
             <p className="mt-2 text-[13px] text-muted">
               Covers this unit and everything beneath it, unless a sub-unit has its own
               officer for that role.
@@ -659,9 +614,6 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
             )}
           </section>
 
-          {/* Closing the unit. Head of HR only: an HR officer can move people between
-              units but cannot close one out from under them. Never for the root, or
-              for a unit that is already closed. */}
           {canManage && !closed && !isRoot && (
             <section className="mt-8 border-t border-line pt-5">
               {!closing ? (
@@ -705,10 +657,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                       aria-invalid={Boolean(closeFieldError)}
                       className={inputClass}
                     />
-                    {/* Deliberately not prefilled with today. Every other date on
-                        these screens has a sensible default; this one does not,
-                        because a unit closing is a decision with a date somebody
-                        chose, and guessing at it invents the fact being recorded. */}
+                    {/* Not prefilled with today: guessing would invent the fact being recorded. */}
                     {closeFieldError && (
                       <p className="mt-1.5 text-[13px] text-danger">{closeFieldError}</p>
                     )}

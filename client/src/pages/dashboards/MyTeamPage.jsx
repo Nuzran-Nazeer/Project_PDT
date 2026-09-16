@@ -103,8 +103,7 @@ export default function MyTeamPage() {
   );
 }
 
-// Three separate answers, and running them together loses the difference: no group at
-// all, a group with no cycle running, and a live cycle.
+// Three separate answers: no group, a group with no cycle running, a live cycle.
 function CycleCell({ person }) {
   if (!person.parGroup) return <span>No appraisal group</span>;
 
@@ -122,8 +121,7 @@ function CycleCell({ person }) {
   );
 }
 
-// Everything after "ready" is the supervisor's own review moving, so these read as steps
-// rather than as a gate. Normalisation opens with the cycle, not with this row.
+// Normalisation opens with the cycle, not with this row.
 const REVIEW_STATE = {
   ready: { label: "Ready", tone: "font-medium text-success" },
   draft: { label: "Draft saved", tone: "text-muted" },
@@ -139,8 +137,8 @@ const REVIEW_STATE = {
   },
 };
 
-// ⚠️ Outstanding colleagues are a COUNT and never a list. A label seen waiting here and
-// seen arriving later is a submission time, which identifies a reviewer with no name.
+// ⚠️ Outstanding colleagues are a count and never a list: a label seen waiting and later
+// seen arriving is a submission time.
 function ReadinessCell({ person }) {
   const readiness = person.readiness;
 

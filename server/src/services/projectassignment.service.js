@@ -11,9 +11,7 @@ const {
 } = require("../utils/dateRange");
 const { assertMayActOnEmployee } = require("./coverageAuth.service");
 
-// Putting people on projects, with dates. Nothing is ever overwritten: a change closes
-// one record and opens another, which is what keeps "who was on Apollo in March"
-// answerable after the team has moved on.
+// Nothing is ever overwritten: a change closes one record and opens another.
 
 const isoDay = (date) => date.toISOString().slice(0, 10);
 
@@ -29,9 +27,7 @@ const assertUserIsAssignable = async (userId) => {
   return user;
 };
 
-// ⚠️ A CLOSED PROJECT ACCEPTS NOTHING, including a backfill of work that really
-// happened. Assignments are recorded while the project runs; afterwards its team is
-// settled history and closing it is what settled it.
+// A closed project accepts nothing, including a backfill: closing is what settled its team.
 const assertProjectIsOpen = async (projectId) => {
   const project = await Project.findById(projectId).select("_id name startDate endDate");
   if (!project) throw new AppError("Project not found", 404);
@@ -45,10 +41,7 @@ const assertProjectIsOpen = async (projectId) => {
   return project;
 };
 
-// ⚠️ Scoped to ONE project. Two overlapping records on the same project make "when did
-// she join Apollo" ambiguous, so they are refused -- but the same person on two
-// DIFFERENT projects at once is the normal case and is deliberately untouched by this
-// filter.
+// Scoped to one project: the same person on two different projects at once is normal.
 const assertNoOverlapOnProject = async (project, userId, from, to, excludeId) => {
   const filter = { projectId: project._id, userId, ...overlapping(from, to) };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -63,14 +56,11 @@ const assertNoOverlapOnProject = async (project, userId, from, to, excludeId) =>
   );
 };
 
-// The open team-lead row, if the project currently has one.
 const openTeamLead = async (projectId) =>
   ProjectAssignment.findOne({ projectId, isTeamLead: true, to: null });
 
-// ⚠️ The partial unique index constrains OPEN rows only, so it cannot see a backdated
-// change landing inside a team-lead period that has already been closed. Amali leading
-// January to June and Bob being made team lead from March is two leads at once, and
-// this is the only thing that catches it.
+// ⚠️ The partial unique index constrains open rows only, so this is the only thing that
+// catches a backdated change landing inside a closed team-lead period.
 const assertNoOtherTeamLead = async (projectId, from, excludeId) => {
   const filter = { projectId, isTeamLead: true, ...overlapping(from, null) };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -84,8 +74,6 @@ const assertNoOtherTeamLead = async (projectId, from, excludeId) => {
     409,
   );
 };
-
-// Reading
 
 exports.listAssignments = async ({ projectId, userId, on } = {}) => {
   const filter = {};
@@ -107,10 +95,7 @@ exports.getAssignmentById = async (id) => {
   return record;
 };
 
-// Writing
-
-// AC2. `to` is optional: present only when recording a stint whose end is already
-// known, absent for ongoing work.
+// `to` is optional, for recording a stint whose end is already known.
 exports.createAssignment = async ({ projectId, userId, from, to }, actor) => {
   await assertUserIsAssignable(userId);
   const project = await assertProjectIsOpen(projectId);
@@ -139,7 +124,6 @@ exports.createAssignment = async ({ projectId, userId, from, to }, actor) => {
   });
 };
 
-// Ending one person's stint without closing the project.
 exports.closeAssignment = async (id, to, actor) => {
   const record = await exports.getAssignmentById(id);
 
@@ -157,12 +141,8 @@ exports.closeAssignment = async (id, to, actor) => {
   return record;
 };
 
-// AC5. Recorded by CLOSING AND REOPENING rather than flipping `isTeamLead`, so the
-// previous team lead's period survives as a record of who led when.
-//
-// Up to four writes: the outgoing lead's row is closed and reopened without the role
-// (they stay on the project, they just stop leading it), and the incoming row is
-// closed and reopened with it.
+// Recorded by closing and reopening rows rather than flipping `isTeamLead`, so the
+// previous lead's period survives. Up to four writes.
 exports.markTeamLead = async (id, from, actor) => {
   const record = await exports.getAssignmentById(id);
 
@@ -179,8 +159,7 @@ exports.markTeamLead = async (id, from, actor) => {
   const start = toDay(from, "from");
   await assertMayActOnEmployee(actor, record.userId, start, "change the team lead");
 
-  // ⚠️ BOTH DATE CHECKS RUN BEFORE ANY WRITE. Without them a backdated change closes a
-  // row before it began, or leaves one covering no days at all.
+  // ⚠️ Both date checks run before any write.
   if (start.getTime() <= record.from.getTime()) {
     throw new AppError(
       `The change date must be after ${isoDay(record.from)}, when this assignment began`,
@@ -197,17 +176,14 @@ exports.markTeamLead = async (id, from, actor) => {
     );
   }
 
-  // `current` is excluded because closing it, below, is what makes way for this
-  // change: afterwards it ends exactly where the new period begins, so the two do not
-  // overlap. Anything else still holding the role over this period is a real clash.
+  // `current` is excluded because closing it below is what makes way for this change.
   await assertNoOtherTeamLead(record.projectId, start, current?._id);
 
   const session = await mongoose.startSession();
   try {
     let created;
     await session.withTransaction(async () => {
-      // Closed BEFORE the new leading row is created, or the two would both be open
-      // and trip the partial unique index.
+      // Closed before the new leading row is created, or both are open and trip the index.
       if (current) {
         current.to = start;
         await current.save({ session });

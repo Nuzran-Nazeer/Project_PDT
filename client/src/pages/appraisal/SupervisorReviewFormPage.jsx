@@ -13,8 +13,7 @@ import CompetencyRatingField from "../../components/forms/CompetencyRatingField"
 import TextAreaField from "../../components/forms/TextAreaField";
 import EditWindowNotice from "../../components/forms/EditWindowNotice";
 
-// Keyed by competencyKey rather than held as the array the server wants: a row is looked
-// up on every keystroke, and turned into that array only when saving or submitting.
+// Keyed by competencyKey; turned into the server's array only when saving or submitting.
 const answersFrom = (competencies, existingRatings) => {
   const byKey = Object.fromEntries(
     (existingRatings || []).map((r) => [r.competencyKey, r]),
@@ -31,9 +30,8 @@ const answersFrom = (competencies, existingRatings) => {
   );
 };
 
-// ⚠️ Only answered rows are sent. A placeholder row per competency makes a draft carry the
-// same "needs a score" refusal as a submit, because the server validates every row IN the
-// array rather than every competency on the form.
+// ⚠️ Only answered rows are sent: the server validates every row in the array, so a
+// placeholder row makes a draft fail like a submit.
 const isAnswered = (row) => row.notObserved || row.score !== null;
 
 const ratingsArrayFrom = (answers) =>
@@ -54,9 +52,8 @@ const STATUS_LABEL = {
   locked: "Submitted",
 };
 
-// ⚠️ The colleague summary is written here BY HAND; nothing generates it.
-// ⚠️ Two supervisors in one cycle means two separate reviews, never one averaged. Not
-// handled: every record is written against period 0.
+// ⚠️ The colleague summary is written by hand; nothing generates it. Two supervisors in
+// one cycle is not handled: every record is written against period 0.
 export default function SupervisorReviewFormPage() {
   const { id } = useParams();
   const { team, loading: teamLoading } = useTeam();
@@ -66,13 +63,10 @@ export default function SupervisorReviewFormPage() {
 
   const [record, setRecord] = useState(null);
   const [loadError, setLoadError] = useState("");
-  // A review that is not ready yet is a state, not a failure, so it is drawn as an
-  // explanation rather than as something that went wrong.
+  // Not ready is a state, not a failure.
   const [notReady, setNotReady] = useState("");
 
-  // ⚠️ DERIVED, never a flag set inside the effect. A flag cleared only when a fetch
-  // finishes never clears for somebody with no review to fetch, leaving this page on
-  // "Loading…" for ever.
+  // ⚠️ Derived, never a flag set in the effect: somebody with no review to fetch would load for ever.
   const loading = teamLoading || Boolean(reviewId && !record && !loadError && !notReady);
 
   const [answers, setAnswers] = useState({});
@@ -102,7 +96,7 @@ export default function SupervisorReviewFormPage() {
       .then((data) => !cancelled && applyRecord(data))
       .catch((err) => {
         if (cancelled) return;
-        // The gate lives on the server and answers 409. Anything else is a real failure.
+        // The readiness gate answers 409.
         if (err.status === 409) setNotReady(err.message);
         else setLoadError(err.message);
       });
@@ -136,8 +130,7 @@ export default function SupervisorReviewFormPage() {
       setSuccessMessage(savedMessage);
     } catch (err) {
       setFormError(err.message);
-      // ⚠️ The window can close while this page sits open. The server owns that rule, so
-      // its refusal is what flips the screen to the closed record.
+      // ⚠️ The window can close while this page sits open; the server's refusal flips the screen.
       if (err.status === 409) {
         getSupervisorReview(reviewId)
           .then(applyRecord)
@@ -150,9 +143,7 @@ export default function SupervisorReviewFormPage() {
 
   const onSaveDraft = () => runSave(saveSupervisorDraft, payload(), "Draft saved.");
 
-  // ⚠️ Yup reports `ratings[2].evidence`, and that 2 indexes the array SENT, which holds
-  // only answered rows. Read as a position in the full competency list it puts the message
-  // under the wrong question.
+  // ⚠️ Yup's `ratings[2]` indexes the array sent, not the full competency list.
   const errorsByCompetency = (validationError, sent) => {
     const errors = {};
     validationError.inner.forEach((err) => {
@@ -251,18 +242,13 @@ export default function SupervisorReviewFormPage() {
 
   const editable = record.editable;
 
-  // ⚠️ Closed means no controls, not disabled controls. A greyed-out form reads as a page
-  // that failed to load and invites somebody to keep clicking.
+  // Closed means no controls, not disabled controls.
   const body = (
     <FormShell>
       <FormSection
         letter="A"
         title="Competency ratings"
-        note={
-          editable
-            ? "Every rating needs written evidence."
-            : "As you answered them."
-        }
+        note={editable ? "Every rating needs written evidence." : "As you answered them."}
       >
         <div className="grid gap-4">
           {(record.competencies || []).map((competency) => (
@@ -346,8 +332,7 @@ export default function SupervisorReviewFormPage() {
           )}
 
           <div className="mt-1 flex flex-wrap items-center gap-3">
-            {/* ⚠️ Not a submit: a draft is allowed to be incomplete, so it must never
-                reach the schema the submit button is checked against. */}
+            {/* Not a submit: a draft may be incomplete and must never reach the schema. */}
             <button
               type="button"
               disabled={saving}
@@ -366,8 +351,8 @@ export default function SupervisorReviewFormPage() {
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A submitted review can still be corrected for{" "}
-            <strong>five hours</strong> before it locks.
+            A submitted review can still be corrected for <strong>five hours</strong>{" "}
+            before it locks.
           </p>
         </div>
       )}
@@ -415,8 +400,6 @@ function Written({ label, value }) {
   );
 }
 
-// Shown rather than hidden: a screen that simply omits a planned feature reads as a
-// screen that forgot it.
 function NotYet({ children }) {
   return (
     <p className="mt-4 rounded-lg border border-dashed border-line p-4 text-[13px] text-muted">

@@ -13,9 +13,6 @@ const {
 } = require("../config/constants");
 const { isEditable, hasSettled, lockTimeFor } = require("./feedback.window");
 
-// Writing colleague feedback, and serving what has arrived to the one person allowed to
-// read it raw.
-
 const asOwnRecord = (doc, competencies) => ({
   id: String(doc._id),
   reviewId: String(doc.reviewId),
@@ -38,21 +35,12 @@ const asOwnRecord = (doc, competencies) => ({
   competencies,
 });
 
-// The reviewee's family decides the questions, never the reviewer's: a Tech Lead
-// reviewing a QA Engineer answers the QA set.
+// The reviewee's family decides the questions, never the reviewer's.
 const competenciesForRecord = (doc) =>
   competenciesFor(doc.revieweeId?.jobFamily || doc.formTemplateKey);
 
-/**
- * Everything this person has been asked to write, with the questions attached.
- *
- * A reviewer only ever sees their OWN assignments: the query is filtered by the id in
- * the token, so there is no request shape that returns somebody else's.
- */
 const owedBy = async (userId) => {
-  // ⚠️ The self-assessment lives in this collection with the author as its own
-  // reviewer, so without this exclusion a person's own form appears in the list of
-  // colleagues they have been asked to review.
+  // ⚠️ The self-assessment has the author as its own reviewer, so it must be excluded here.
   const items = await Feedback.find({ reviewerId: userId, reviewerType: { $ne: "self" } })
     .populate("revieweeId", "name employeeId designation jobFamily")
     .sort({ status: 1, createdAt: 1 });
@@ -64,9 +52,8 @@ const owedBy = async (userId) => {
   };
 };
 
-// ⚠️ The ownership check for every write below. It matches on reviewerId AND the id, so
-// a reviewer asking for a record that is not theirs gets the same 404 as one that does
-// not exist. A 403 would confirm the record exists and who it belongs to.
+// ⚠️ Matches on reviewerId and id together: a record that is not yours 404s like one that
+// does not exist. A 403 would confirm it exists.
 const ownedBy = async (id, userId) => {
   const doc = await Feedback.findOne({ _id: id, reviewerId: userId }).populate(
     "revieweeId",
@@ -81,8 +68,6 @@ const getForReviewer = async (id, userId) => {
   return asOwnRecord(doc, competenciesForRecord(doc));
 };
 
-// Rules about the ANSWERS rather than the request's shape, so they live here: they read
-// the competency list the record was assigned against.
 const assertAnswersValid = (ratings = [], doc) => {
   const allowed = new Set(competenciesForRecord(doc).map((c) => c.key));
   const seen = new Set();
@@ -98,8 +83,7 @@ const assertAnswersValid = (ratings = [], doc) => {
     }
     seen.add(row.competencyKey);
 
-    // A real answer, not a blank: declining stores neither a score nor evidence, so
-    // sending either alongside it means the form asked two things at once.
+    // Declining stores neither a score nor evidence.
     if (row.notObserved) {
       if (row.score !== null && row.score !== undefined) {
         errors.push(`${row.competencyKey} is marked not observed but carries a score`);
@@ -113,7 +97,6 @@ const assertAnswersValid = (ratings = [], doc) => {
     if (row.score === null || row.score === undefined) {
       errors.push(`${row.competencyKey} needs a score or must be marked not observed`);
     }
-    // A number on its own is not accepted anywhere in this system.
     if (row.score !== null && row.score !== undefined && !row.evidence) {
       errors.push(`${row.competencyKey} needs evidence for the score given`);
     }
@@ -154,22 +137,18 @@ const saveDraft = async (id, userId, payload) => {
 
   applyAnswers(doc, payload);
 
-  // Submitting is a one-way door: an already-submitted record stays submitted while it
-  // is still inside its window, rather than dropping back to a draft.
+  // A submitted record inside its window never drops back to a draft.
   if (!doc.submittedAt) doc.status = "draft";
 
   await doc.save();
   return asOwnRecord(doc, competenciesForRecord(doc));
 };
 
-// Everything a submission does once the record has been found. The colleague form and
-// the self-assessment differ in how they find it and in nothing after that.
 const applyAndSubmit = (doc, payload) => {
   assertOpen(doc);
   applyAnswers(doc, payload);
 
-  // Every competency has to be answered one way or the other before it counts as
-  // submitted. A draft may be partial; a submission may not.
+  // A draft may be partial; a submission may not.
   const expected = competenciesForRecord(doc).length;
   if (doc.ratings.length !== expected) {
     throw new AppError(
@@ -194,12 +173,9 @@ const submit = async (id, userId, payload) => {
   return asOwnRecord(doc, competenciesForRecord(doc));
 };
 
-// ⚠️ A REAL RELATIONSHIP CHECK, not a role gate: HR within their coverage, or the person's
-// supervisor today. Holding both passes on either.
+// A relationship check, not a role gate: HR within their coverage, or the supervisor today.
 const assertMayRead = async (review, viewer) => {
-  // ⚠️ BEFORE the role check, never after. An HR officer is somebody's colleague too, and
-  // is appraised like everybody else: holding the role must not hand them the raw feedback
-  // written about THEMSELVES. Nobody reads their own, whatever they hold.
+  // ⚠️ Before the role check: nobody reads the raw feedback about themselves, whatever they hold.
   if (String(review.userId) === String(viewer.id)) {
     throw new AppError("Review not found", 404);
   }
@@ -216,40 +192,20 @@ const assertMayRead = async (review, viewer) => {
   const { team = [] } = await teamOn(viewer.id, new Date());
   const supervises = team.some((p) => String(p.id) === String(review.userId));
 
-  // The same refusal whether the review is out of reach or does not exist, so nobody
-  // can map the organisation by probing.
+  // The same refusal as a review that does not exist, so nobody can map the organisation.
   if (!supervises) throw new AppError("Review not found", 404);
 };
 
-/**
- * What has arrived for one person, for the supervisor writing from it.
- *
- * ⚠️ NOTHING IS RELEASED UNTIL HALF THE ASSIGNED REVIEWERS HAVE SETTLED, never fewer
- * than the minimum, and the rest only once everyone is in. Releasing one at a time is
- * the hole this closes: a trickle can be correlated against who was on leave, or who
- * mentioned they had a review to write, and the reviewer is identified without a name
- * ever being served.
- *
- * ⚠️ A POOL SMALLER THAN THE MINIMUM HAS NO COLLEAGUE SECTION AT ALL, which is a
- * different answer from "not enough yet" and never resolves. Two voices in a sub-unit of
- * eight are guessable, and a summary drawn from one is an attribution.
- *
- * The batch is the EARLIEST submissions by time, which is stable as more arrive, so a
- * record already shown never disappears again. The response is ordered by label, so the
- * ordering the server used is not the ordering the supervisor sees.
- *
- * ⚠️ `submittedCount` counts what has SETTLED, deliberately. The gap between that and
- * what has merely been submitted is a submission time to within the edit window.
- */
+// ⚠️ Nothing is released until half the reviewers have settled, never fewer than the
+// minimum, and the rest only once everyone is in: a trickle identifies its authors. A pool
+// below the minimum has no colleague section at all. `submittedCount` counts the settled.
 const collectedFor = async (reviewId, viewer) => {
   const review = await Review.findById(reviewId);
   if (!review) throw new AppError("Review not found", 404);
 
   await assertMayRead(review, viewer);
 
-  // Resolved here, never by the reader: a rating is stored under a stable key and the
-  // wording that key stands for belongs to the reviewee's job family, not the
-  // supervisor's. A client working it out is a second copy of that rule.
+  // The wording belongs to the reviewee's job family, resolved here, never by the screen.
   const reviewee = await User.findById(review.userId).select("jobFamily");
   const competencies = competenciesFor(reviewee?.jobFamily);
 
@@ -270,8 +226,6 @@ const collectedFor = async (reviewId, viewer) => {
     total: 0,
   };
 
-  // Resolved here rather than left to the screen: a client comparing two numbers is a
-  // second copy of the rule, and this is the one it must never get wrong.
   if (assigned.length < PEER_DISPLAY_THRESHOLD) {
     return { ...held, reason: "below_minimum", needed: 0 };
   }
@@ -301,13 +255,8 @@ const collectedFor = async (reviewId, viewer) => {
   };
 };
 
-// The self-assessment. Same collection, same answer rules and the same five-hour
-// window; the author is also the subject, and it is attributed rather than
-// confidential, so nothing here strips anything.
-
-// ⚠️ NO ID IN ANY OF THESE. The cycle comes from the signed-in person's own appraisal
-// group and the review from their own id, so there is no request shape that reaches
-// somebody else's self-assessment, and none can be added by taking a parameter.
+// ⚠️ The self-assessment takes no id anywhere: cycle and review come from the signed-in
+// person, so no request shape reaches somebody else's. Never add a parameter.
 const liveReviewFor = async (userId) => {
   const user = await User.findById(userId).select(
     "name employeeId designation jobFamily parGroup",
@@ -332,9 +281,7 @@ const asCycle = (cycle) =>
       }
     : null;
 
-// ⚠️ `not_started` is NOT a stored status. The record is created by the first save, so
-// until then there is nothing to report one from. Creating it on sight would put an
-// empty document into the cycle for everybody who never opened the form.
+// `not_started` is not a stored status: the record is created by the first save.
 const asSelfRecord = ({ user, cycle, review, doc }) => ({
   cycle: asCycle(cycle),
   reviewId: review ? String(review._id) : null,
@@ -350,8 +297,6 @@ const asSelfRecord = ({ user, cycle, review, doc }) => ({
 const selfAssessmentFor = async (userId) => {
   const { user, cycle, review } = await liveReviewFor(userId);
 
-  // Null is a real answer twice over: for most of the year a group is between cycles,
-  // and somebody in no unit has no review to attach one to.
   const doc = review
     ? await Feedback.findOne({
         reviewId: review._id,
@@ -363,8 +308,6 @@ const selfAssessmentFor = async (userId) => {
   return asSelfRecord({ user, cycle, review, doc });
 };
 
-// Created by the first write rather than when the cycle opens. A second one is
-// impossible regardless: the unique index on review + reviewee + reviewer refuses it.
 const openSelfRecord = async (userId) => {
   const { user, cycle, review } = await liveReviewFor(userId);
 
@@ -390,7 +333,6 @@ const openSelfRecord = async (userId) => {
     reviewerId: user._id,
     revieweeId: user._id,
     reviewerType: "self",
-    // The subject's job family decides the questions, and here that is the author.
     formTemplateKey: user.jobFamily,
     formTemplateVersion: 1,
     status: "assigned",
@@ -405,8 +347,6 @@ const saveSelfDraft = async (userId, payload) => {
 
   applyAnswers(found.doc, payload);
 
-  // Submitting is a one-way door here too: an already-submitted assessment stays
-  // submitted inside its window rather than dropping back to a draft.
   if (!found.doc.submittedAt) found.doc.status = "draft";
 
   await found.doc.save();
@@ -421,17 +361,11 @@ const submitSelf = async (userId, payload) => {
   return asSelfRecord(found);
 };
 
-// The supervisor's own review of one of their team. Same collection, same answer rules
-// and the same window; it is attributed, and it alone carries the colleague summary.
-
-// ⚠️ NOT the gate the collected read uses. HR may READ a supervisor review and may never
-// write one, so this check has no role branch at all: supervising somebody is a
-// relationship, and no role is a substitute for it.
+// ⚠️ Not the gate the collected read uses: HR may read a supervisor review and may never
+// write one, so there is no role branch here.
 const assertSupervises = async (review, viewer) => {
   const { team = [] } = await teamOn(viewer.id, new Date());
 
-  // The same refusal as a review that does not exist, so nobody can map the
-  // organisation by probing ids.
   if (!team.some((p) => String(p.id) === String(review.userId))) {
     throw new AppError("Review not found", 404);
   }
@@ -466,16 +400,13 @@ const supervisorRecordFor = async (reviewId, viewer) => {
 
   const readiness = await readinessOn(review._id);
 
-  // ⚠️ The gate stops somebody STARTING one, and never touches a record that exists.
-  // Readiness can fall back to waiting when a late colleague record appears, and shutting
-  // an author out of their own half-written review would strand it.
+  // ⚠️ The gate stops somebody starting one and never touches a record that exists, or a
+  // late colleague record would strand a half-written review.
   if (!doc && readiness.state !== "ready") throw notReadyError(readiness);
 
   return { review, reviewee, doc, readiness };
 };
 
-// Created by the first write, like the self-assessment: opening the form must not put an
-// empty review into the cycle for everybody a supervisor merely looked at.
 const openSupervisorRecord = async (reviewId, viewer) => {
   const found = await supervisorRecordFor(reviewId, viewer);
   if (found.doc) return found;
@@ -485,7 +416,6 @@ const openSupervisorRecord = async (reviewId, viewer) => {
     reviewerId: viewer.id,
     revieweeId: found.review.userId,
     reviewerType: "supervisor",
-    // The REVIEWEE's family decides the questions, never the supervisor's.
     formTemplateKey: found.reviewee.jobFamily,
     formTemplateVersion: 1,
     status: "assigned",
@@ -494,8 +424,7 @@ const openSupervisorRecord = async (reviewId, viewer) => {
   return { ...found, doc };
 };
 
-// ⚠️ Applied only here. The summary is a digest of OTHER people's feedback, so it has no
-// meaning on a self-assessment or a colleague's form and is ignored on both.
+// Only the supervisor's review carries a colleague summary; the other forms ignore it.
 const applyColleagueSummary = (doc, payload) => {
   if (payload.colleagueSummary !== undefined) {
     doc.colleagueSummary = payload.colleagueSummary ?? null;
@@ -511,8 +440,6 @@ const asSupervisorRecord = ({ review, reviewee, doc, readiness }) => ({
     designation: reviewee.designation,
     jobFamily: reviewee.jobFamily,
   },
-  // ⚠️ `not_started` is NOT a stored status: the record does not exist until the first
-  // save, so until then there is nothing to report one from.
   status: doc ? doc.status : "not_started",
   ratings: doc ? doc.ratings : [],
   freeText: doc ? doc.freeText : { strengths: null, development: null },
@@ -534,8 +461,6 @@ const saveSupervisorDraft = async (reviewId, viewer, payload) => {
   applyAnswers(found.doc, payload);
   applyColleagueSummary(found.doc, payload);
 
-  // Submitting is a one-way door here too: an already-submitted review stays submitted
-  // inside its window rather than dropping back to a draft.
   if (!found.doc.submittedAt) found.doc.status = "draft";
 
   await found.doc.save();
@@ -552,23 +477,12 @@ const submitSupervisorReview = async (reviewId, viewer, payload) => {
   return asSupervisorRecord(found);
 };
 
-/**
- * One person's own assessment, read by their supervisor or by HR.
- *
- * ⚠️ NOT `/feedback/self`, which takes no id and reaches only the caller's own record. That
- * narrowness is the point of it, so this is a separate route with its own gate rather than a
- * parameter added to that one.
- *
- * ⚠️ SETTLED, not submitted. The access matrix says "once submitted" and the state machine says
- * nothing downstream reads a document until its window has closed; **the stricter of the two
- * wins**, or a supervisor starts reading an assessment that is then rewritten underneath them.
- */
+// Somebody else's self-assessment, for their supervisor or HR. Kept apart from
+// `/feedback/self`, which takes no id. Released once settled, not once submitted.
 const assessmentFor = async (reviewId, viewer) => {
   const review = await Review.findById(reviewId);
   if (!review) throw new AppError("Review not found", 404);
 
-  // The same gate as the collected read, and deliberately not the form's: HR reads an
-  // assessment, and HR never writes the review drawn from it.
   await assertMayRead(review, viewer);
 
   const reviewee = await User.findById(review.userId).select(
@@ -591,7 +505,6 @@ const assessmentFor = async (reviewId, viewer) => {
       designation: reviewee.designation,
       jobFamily: reviewee.jobFamily,
     },
-    // Served in every state: a screen must never resolve a job family to wording itself.
     competencies: competenciesFor(reviewee.jobFamily),
   };
 
@@ -603,17 +516,11 @@ const assessmentFor = async (reviewId, viewer) => {
     freeText: { strengths: null, development: null },
   });
 
-  // ⚠️ Two absences a screen has to tell apart: one is waiting on the author, the other on a
-  // clock that has already started. "Nothing written yet" in the second case is false.
-  //
-  // A draft is reported as not submitted rather than as a draft. Whether somebody has saved
-  // and not sent is theirs, and no criterion needs it.
+  // A draft reports as not submitted: whether somebody has saved and not sent is theirs.
   if (!doc || !doc.submittedAt) return withheld("not_submitted");
   if (!hasSettled(doc)) return withheld("in_window");
 
-  // ⚠️ No timestamps, even though this record is attributed and its author is its subject:
-  // every time-bearing field on a feedback record is identifying by default, and one is added
-  // only when something actually needs it.
+  // ⚠️ No timestamps: every time-bearing field on a feedback record is identifying by default.
   return {
     ...shell,
     available: true,

@@ -1,8 +1,5 @@
 import { useTheme } from "../../hooks/useTheme";
 
-// Sun and moon drawn inline rather than pulled from an icon package: two icons
-// do not justify a dependency, and `currentColor` means they follow the theme
-// without being told about it.
 function SunIcon() {
   return (
     <svg
@@ -45,9 +42,7 @@ export default function ThemeToggle({ className = "" }) {
     <button
       type="button"
       onClick={toggleTheme}
-      // The label says what the button DOES, not what the theme currently is.
-      // A screen reader announcing "dark mode" leaves the user guessing whether
-      // that is the current state or the outcome of pressing it.
+      // What the button does, not what the theme currently is.
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-line bg-raised text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${className}`}

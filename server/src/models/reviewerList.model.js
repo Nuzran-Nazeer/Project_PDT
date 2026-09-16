@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const { LIST_CHANGE_TYPES, LIST_CHANGE_STATUS } = require("../config/constants");
 
-// One person's colleague list for one cycle, saved when their supervisor confirms it, so HR
-// draws from exactly the list somebody checked rather than one rebuilt since.
+// Saved when the supervisor confirms it, so HR draws from the list somebody checked.
 
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -52,8 +51,7 @@ const reviewerListSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Neither carries `index: true`, or a same-named single-field index would win and this unique
-// one would be discarded silently.
+// ⚠️ Never `index: true` on `reviewId`: the names collide and this unique one is silently dropped.
 reviewerListSchema.index({ reviewId: 1 }, { unique: true });
 reviewerListSchema.index({ cycleId: 1 });
 

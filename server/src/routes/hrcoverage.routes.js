@@ -8,14 +8,7 @@ const {
 } = require("../validators/orgstructure.validator");
 const { protect, authorize } = require("../middleware/auth.middleware");
 
-// Head of HR only: the ACs name the Head of HR as the one who assigns coverage, and
-// unlike unit-leads and unit-memberships (HR + Head of HR), this is a structural
-// decision about who answers for a unit -- the same tier as shaping the tree or
-// discontinuing a unit, both also Head of HR only.
-//
-// Reading is wider, and matters here for the same reason it does on unit-leads: this
-// collection decides which HR officer is responsible for which people, so a wide read
-// grant tells anyone holding it who covers whom across the whole company.
+// Assigning coverage is the same tier as shaping the tree: Head of HR only.
 const CAN_WRITE = ["head_of_hr"];
 const CAN_READ = ["hr", "head_of_hr", "leadership"];
 
@@ -34,9 +27,7 @@ router
     controller.listCoverage,
   );
 
-// ⚠️ Declared BEFORE "/:id": both are one path segment after the base, and Express
-// matches routes in registration order, so "/:id" declared first would swallow every
-// request to "/effective/:unitId" with "effective" bound to :id.
+// Declared before "/:id", which would otherwise swallow "/mine".
 router
   .route("/mine")
   .get(protect, authorize("hr", "head_of_hr"), controller.getMyCoverage);

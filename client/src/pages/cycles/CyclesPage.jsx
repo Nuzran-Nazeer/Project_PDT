@@ -11,13 +11,9 @@ import {
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 
-// ⚠️ EVERY RULE HERE IS THE SERVER'S. The one-per-group check, the stage order, the
-// 30-day window and the written reason all live in the service; the buttons below only
-// hide what would be refused. A rule enforced by a hidden button is not enforced.
-//
-// Refusals are shown in the server's own words, which name the rule that stopped you.
+// ⚠️ Every rule here is the server's; the buttons only hide what would be refused.
 
-// ⚠️ Used for LABELS only, never to decide whether a move is allowed.
+// Labels only, never to decide whether a move is allowed.
 const STAGE_LABELS = {
   draft: "Draft",
   open: "Open",
@@ -60,8 +56,6 @@ const blankForm = () => ({
 export default function CyclesPage() {
   const { user, constants } = useAuth();
 
-  // The server enforces exactly this, which is why the page can simply not draw the
-  // controls.
   const canManage = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [cycles, setCycles] = useState([]);
@@ -80,7 +74,6 @@ export default function CyclesPage() {
   const [cancelFor, setCancelFor] = useState("");
   const [cancelReason, setCancelReason] = useState("");
 
-  // Called from a click, never an effect body, so it can be a plain async function.
   const load = async () => {
     try {
       const data = await listCycles();
@@ -93,8 +86,7 @@ export default function CyclesPage() {
     }
   };
 
-  // A promise chain rather than `load()`: the lint rule rejects the second render
-  // pass. `cancelled` stops a slow response writing into a screen that has gone.
+  // A promise chain rather than `load()`: state set in an effect body costs a second render pass.
   useEffect(() => {
     let cancelled = false;
 
@@ -131,9 +123,6 @@ export default function CyclesPage() {
       setForm(blankForm());
       await load();
     } catch (err) {
-      // The server's own words: a second live cycle for the same group and year names
-      // the one that already exists and what stage it is at. Nothing on screen changes
-      // The cycle was never created, so there is nothing to undo.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -165,8 +154,6 @@ export default function CyclesPage() {
       setCancelReason("");
       await load();
     } catch (err) {
-      // Where the 30-day window is felt. The message names how long ago it opened,
-      // which a reworded "could not cancel" would lose.
       setActionError(err.message);
     } finally {
       setBusyId("");
@@ -214,11 +201,9 @@ export default function CyclesPage() {
             New cycle
           </h2>
 
-          {/* Created as a DRAFT, always. Opening it is a separate, deliberate step,
-              because opening is what starts the 30-day cancellation clock. */}
           <p className="mt-2 max-w-prose text-[13px] text-muted">
-            It is created as a draft. Opening it is a separate step, and that is what
-            starts the 30 days in which it can still be cancelled.
+            Created as a draft. Opening it starts the 30 days in which it can be
+            cancelled.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -310,8 +295,7 @@ export default function CyclesPage() {
           <p className="text-sm text-muted">Loading…</p>
         ) : cycles.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
-            No cycle has been created yet. Nothing above a cycle can exist until one
-            does: no review, no feedback, no development plan.
+            No cycle has been created yet.
           </p>
         ) : (
           cycles.map((cycle) => {
@@ -341,15 +325,7 @@ export default function CyclesPage() {
                   </span>
                 </div>
 
-                {/* Who it covers, and it is a fact about the PEOPLE, not a roster
-                    stored on the cycle: everyone whose appraisal group matches and
-                    who belongs to a unit today, worked out on the server when it is
-                    asked for.
-
-                    ⚠️ TODAY'S count on every card, a closed cycle included. The dated
-                    membership records could answer "who was in this group last March",
-                    and no criterion asks for it -- so the line says "today" rather
-                    than showing a historical figure that quietly is not one. */}
+                {/* ⚠️ Today's count on every card, a closed cycle included. */}
                 <p className="mt-2 text-[13px] text-muted">
                   {cycle.peopleCount}{" "}
                   {cycle.peopleCount === 1 ? "person is" : "people are"} in the{" "}
@@ -363,8 +339,6 @@ export default function CyclesPage() {
                   </p>
                 )}
 
-                {/* Shown, not hidden. A cancelled cycle stays in the list with its
-                    reason, because that is the record of a decision somebody made. */}
                 {cycle.status === "cancelled" && (
                   <p className="mt-2 text-[13px] text-muted">
                     Cancelled {formatDate(cycle.cancelledOn)}
@@ -373,11 +347,7 @@ export default function CyclesPage() {
                   </p>
                 )}
 
-                {/* ONE action row, and the first control in it is for everybody who
-                    can open this screen. Viewing who a cycle covers is a read, so
-                    Leadership gets it too -- and a closed or cancelled cycle has no
-                    other control at all, so nesting this row inside `canManage` makes
-                    the whole row vanish and the button with it. */}
+                {/* Not nested inside `canManage`: the first control is for every reader. */}
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link to={`/cycles/${cycle._id}/people`} className={secondaryClass}>
                     View the people
@@ -420,9 +390,6 @@ export default function CyclesPage() {
                     <label className={labelClass} htmlFor={`reason-${cycle._id}`}>
                       Why is this cycle being cancelled?
                     </label>
-                    {/* Required, and required for a reason: a cancellation is a
-                        decision somebody has to be able to defend later. The server
-                        refuses without one, so this field is not a formality. */}
                     <textarea
                       id={`reason-${cycle._id}`}
                       rows={2}

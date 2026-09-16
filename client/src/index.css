@@ -1,26 +1,21 @@
-/* Tailwind v4. There is no tailwind.config.js: everything is configured here, in CSS. */
+/* Tailwind v4: there is no tailwind.config.js. */
 @import "tailwindcss";
 
-/* Repoints `dark:` at a class on <html>. Out of the box v4 follows the operating
- * system and nothing else, which leaves no way to offer a switch. The operating system
- * is deliberately not consulted: the app opens dark for everyone, and the script in
- * index.html adds the class unless the user has switched to light. */
+/* Repoints `dark:` at a class on <html>, which the script in index.html sets. Out of
+ * the box v4 follows the operating system and offers no switch. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Tokens are SEMANTIC, named for the job they do rather than the colour they are.
- * `bg-surface` is right in both themes; `bg-slate-800` is right in one and unreadable
- * in the other, and nothing warns you which. These values are the light theme. */
+/* Semantic tokens: `bg-surface` is right in both themes and `bg-slate-800` is not.
+ * These values are the light theme. */
 @theme {
   --color-brand: oklch(0.5 0.1 258);
   --color-brand-hover: oklch(0.44 0.11 258);
 
-  /* `surface` is the page, `raised` is anything sitting on it */
   --color-surface: oklch(0.985 0.002 258);
   --color-raised: oklch(1 0 0);
 
   --color-line: oklch(0.9 0.006 258);
 
-  /* `ink` is body copy, `muted` is secondary text and labels */
   --color-ink: oklch(0.26 0.012 258);
   --color-muted: oklch(0.52 0.014 258);
 
@@ -28,10 +23,8 @@
   --color-success: oklch(0.55 0.13 155);
 }
 
-/* Only the values change, so every component written against `bg-surface` follows
- * automatically. Written unlayered on purpose: @theme emits its variables into a
- * layer, and unlayered CSS always beats layered CSS. Brand goes lighter in dark mode,
- * because a mid-tone that reads on white lacks contrast against a dark surface. */
+/* Unlayered on purpose: @theme emits into a layer, and unlayered CSS always beats
+ * layered CSS. Brand goes lighter: a mid-tone that reads on white lacks contrast on dark. */
 :root.dark {
   --color-brand: oklch(0.7 0.11 258);
   --color-brand-hover: oklch(0.78 0.1 258);
@@ -48,9 +41,8 @@
   --color-success: oklch(0.72 0.12 155);
 }
 
-/* Sidebar only. A panel that scrolls inside a page that also scrolls puts two bars on
- * screen and the inner one reads as a defect. Deliberately not applied to the page:
- * hiding the bar a reader uses to judge length is a real accessibility loss. */
+/* Sidebar only. Never the page: hiding the bar a reader uses to judge length is an
+ * accessibility loss. */
 @utility no-scrollbar {
   scrollbar-width: none;
 
@@ -59,15 +51,11 @@
   }
 }
 
-/* Inside `@layer base` on purpose. CSS written outside a layer always beats CSS inside
- * one, so an unlayered `h1 { font-size: 56px }` would silently override
- * `class="text-xl"` on every heading in the app. */
+/* Inside `@layer base` on purpose: unlayered CSS would silently beat every utility class. */
 @layer base {
   html {
     font-family: system-ui, "Segoe UI", Roboto, sans-serif;
-    /* Tells the browser which way to paint what we do not style: scrollbars, the date
-     * picker inside <input type="date">, dropdowns, autofill backgrounds. Without it
-     * those stay light on a dark page, and a date picker cannot be restyled. */
+    /* Paints what we do not style (scrollbars, date pickers, autofill) to match the theme. */
     color-scheme: light;
   }
 
@@ -85,8 +73,7 @@
   }
 }
 
-/* Kept unlayered because `animation: none` below has to beat the utility. Honoured
- * only when the visitor has not asked for less motion. */
+/* Unlayered because `animation: none` below has to beat the utility. */
 @keyframes blob-float-1 {
   0%,
   100% {

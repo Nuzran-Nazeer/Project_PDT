@@ -12,19 +12,10 @@ const { membershipOn } = require("./unitmembership.service");
 const { leadOn, listLeads } = require("./unitlead.service");
 const { currentCycleFor } = require("./cycle.service");
 
-// ⚠️ The ONE place that answers who supervises whom, so the features above cannot
-// drift into four definitions of "supervisor".
-//
-// Your supervisor on a date is the lead of the unit you belonged to on that date,
-// resolving upward past a vacancy until it finds one or runs out of tree. Derived
-// every time, never stored: a `supervisorId` would be unanswerable for past dates.
-//
-// Belonging to no unit is a real answer, not a failure: that person has no supervisor
-// and is not appraised. Callers must handle null.
+// ⚠️ The one place that answers who supervises whom. Derived every time, never stored:
+// a `supervisorId` would be unanswerable for past dates. No unit means null, a real answer.
 
-// `skipUserId` stops a person coming back as their own supervisor. A lead belongs to
-// the unit ABOVE the one they lead, so this can only happen at the root, where that
-// rule is exempt.
+// `skipUserId` stops the root's lead coming back as their own supervisor.
 const climbToLead = async (startUnitId, day, skipUserId) => {
   const seen = new Set();
   let cursor = startUnitId;
@@ -32,7 +23,6 @@ const climbToLead = async (startUnitId, day, skipUserId) => {
   while (cursor) {
     const step = String(cursor);
 
-    // A looped tree would otherwise spin here forever.
     if (seen.has(step)) {
       throw new AppError("The unit tree above this unit contains a loop", 409);
     }
@@ -48,11 +38,9 @@ const climbToLead = async (startUnitId, day, skipUserId) => {
       return { user: leadUser, unit };
     }
 
-    // No lead on this date, so the question moves up a level.
     cursor = unit.parentUnitId;
   }
 
-  // Ran out of tree: nobody above this person led anything on that date.
   return null;
 };
 
@@ -62,7 +50,6 @@ const asPerson = (user) =>
 const asUnit = (unit) =>
   unit ? { id: unit._id, name: unit.name, type: unit.type } : null;
 
-// The unit matters: when it is not the person's own, the answer resolved upward.
 const asLead = (found) =>
   found ? { ...asPerson(found.user), leadsUnit: asUnit(found.unit) } : null;
 
@@ -73,7 +60,6 @@ exports.reportingLineOn = async (userId, date) => {
   const day = toDay(date, "on");
   const membership = await membershipOn(userId, day);
 
-  // No unit means no supervisor, and that is the answer rather than an error.
   if (!membership) {
     return {
       employee: asPerson(user),
@@ -89,8 +75,7 @@ exports.reportingLineOn = async (userId, date) => {
     "name type parentUnitId",
   );
 
-  // Units are never deleted, so a membership pointing at a missing one means direct
-  // database surgery. Failing loudly beats answering "no supervisor".
+  // Units are never deleted, so a missing one is database surgery: fail loudly.
   if (!ownUnit) {
     throw new AppError(
       "This person's unit no longer exists, so their reporting line cannot be worked out",
@@ -100,11 +85,7 @@ exports.reportingLineOn = async (userId, date) => {
 
   const supervisor = await climbToLead(ownUnit._id, day, user._id);
 
-  // The lead of the unit ABOVE their own, not "the supervisor's supervisor". The two
-  // differ only when the person's own unit had no lead.
-  //
-  // ⚠️ Not specified by the design; the literal reading was chosen rather than
-  // invented.
+  // The lead of the unit above their own, not "the supervisor's supervisor".
   const skipLevel = ownUnit.parentUnitId
     ? await climbToLead(ownUnit.parentUnitId, day, user._id)
     : null;
@@ -114,7 +95,6 @@ exports.reportingLineOn = async (userId, date) => {
     on: day.toISOString().slice(0, 10),
     unit: asUnit(ownUnit),
     supervisor: asLead(supervisor),
-    // Lets a screen explain a supervisor from a unit the employee has never heard of.
     resolvedUpward: Boolean(
       supervisor && String(supervisor.unit._id) !== String(ownUnit._id),
     ),
@@ -122,12 +102,8 @@ exports.reportingLineOn = async (userId, date) => {
   };
 };
 
-// ⚠️ Must stay the exact mirror of climbToLead: the two answer the same fact from
-// opposite ends, and two different rules would let somebody be supervised by a person
-// whose team they do not appear on.
-//
-// The descent stops at a unit that HAS a lead. `active` is deliberately not filtered:
-// a flag carrying no date would drop people from a historical answer.
+// ⚠️ Must stay the exact mirror of climbToLead, or somebody can be supervised by a person
+// whose team they do not appear on. `active` is not filtered: it carries no date.
 const unitsSupervisedFrom = async (rootUnitId, day) => {
   const collected = [];
   const seen = new Set();
@@ -137,7 +113,6 @@ const unitsSupervisedFrom = async (rootUnitId, day) => {
     const { id, viaVacancy } = queue.shift();
     const step = String(id);
 
-    // A looped tree would otherwise spin here forever.
     if (seen.has(step)) continue;
     seen.add(step);
 
@@ -145,7 +120,6 @@ const unitsSupervisedFrom = async (rootUnitId, day) => {
 
     const children = await OrgUnit.find({ parentUnitId: id }).select("_id");
     for (const child of children) {
-      // A child with its own lead belongs to that lead, so the walk stops there.
       const childLead = await leadOn(child._id, day);
       if (childLead) continue;
       queue.push({ id: child._id, viaVacancy: true });
@@ -155,13 +129,10 @@ const unitsSupervisedFrom = async (rootUnitId, day) => {
   return collected;
 };
 
-// ⚠️ The supervisor's OWN record decides the state as soon as one exists. Readiness falls
-// back to waiting when a late colleague record appears, and a review already written must
-// never read as unstarted.
+// ⚠️ The supervisor's own record decides the state as soon as one exists: a review already
+// written must never read as unstarted when a late colleague record appears.
 const stateFrom = (own, missing, cycle) => {
   if (own && hasSettled(own)) {
-    // ⚠️ The one point the cycle stage changes what a supervisor can do. Normalisation
-    // opens for a whole appraisal group at once, never for one person.
     return cycle?.status === "normalising"
       ? "normalisation_ready"
       : "awaiting_normalisation";
@@ -173,23 +144,13 @@ const stateFrom = (own, missing, cycle) => {
   return missing.selfAssessment || missing.colleagues ? "waiting" : "ready";
 };
 
-/**
- * Whether the supervisor may start writing, what is holding it up if not, and where the
- * review has got to once they have.
- *
- * ⚠️ EVERY assigned colleague has to be in, not the minimum. The supervisor's job at
- * this stage is to summarise what arrived, and a summary written from six of eight
- * cannot have the other two folded in afterwards without rewriting it. The minimum is
- * the failsafe for the deadline path, which does not exist yet.
- *
- * ⚠️ SETTLED, never submitted: a record inside its edit window is still changing.
- */
+// ⚠️ Every assigned colleague has to be in, not the minimum: a summary written from six
+// of eight cannot have the other two folded in afterwards. Settled, never submitted.
 const readinessFrom = (records = [], cycle = null) => {
   const self = records.find((r) => r.reviewerType === "self");
   const peers = records.filter((r) => r.reviewerType === "peer");
 
-  // ⚠️ A pool below the display minimum is never shown at all, so waiting on it would
-  // hold the review open for something that cannot arrive.
+  // A pool below the display minimum is never shown, so nothing waits on it.
   const colleagues =
     peers.length >= PEER_DISPLAY_THRESHOLD
       ? peers.filter((record) => !hasSettled(record)).length
@@ -210,25 +171,18 @@ const readinessFrom = (records = [], cycle = null) => {
   };
 };
 
-// The same question the team list answers, asked about one review. Exported so the form
-// that depends on it cannot grow a second copy of the rule.
 exports.readinessOn = async (reviewId) => {
   const records = await Feedback.find({ reviewId }).select(
     "reviewId reviewerType status submittedAt locksAt",
   );
 
-  // ⚠️ Looked up rather than taken from the caller: the team list and the review form
-  // would otherwise answer this question differently for the same review.
   const review = await Review.findById(reviewId).select("cycleId");
   const cycle = review ? await Cycle.findById(review.cycleId).select("status") : null;
 
   return readinessFrom(records, cycle);
 };
 
-// Somebody who leads nothing gets an empty team, which is a real answer.
-//
-// ⚠️ No coverage check: a reader role can ask about anybody's team, not only the units
-// they cover.
+// ⚠️ No coverage check: a reader role can ask about anybody's team.
 exports.teamOn = async (userId, date) => {
   const user = await User.findById(userId).select("_id name employeeId");
   if (!user) throw new AppError("Employee not found", 404);
@@ -236,8 +190,7 @@ exports.teamOn = async (userId, date) => {
   const day = toDay(date, "on");
   const { items: leadRecords } = await listLeads({ userId, on: day });
 
-  // Keyed by unit so a shared leaderless descendant is collected once. Reached
-  // DIRECTLY beats reached through a vacancy.
+  // Keyed by unit so a shared leaderless descendant is collected once; direct beats via vacancy.
   const byUnit = new Map();
   for (const record of leadRecords) {
     const rootId = record.unitId?._id || record.unitId;
@@ -251,25 +204,20 @@ exports.teamOn = async (userId, date) => {
 
   const unitIds = [...byUnit.values()].map((u) => u.id);
 
-  // Status is deliberately not filtered: a leaver drops out through the dates, and
-  // for a past date they should still appear.
+  // Status is not filtered: a leaver drops out through the dates.
   const memberships = unitIds.length
     ? await UnitMembership.find({ unitId: { $in: unitIds }, ...activeOn(day) })
         .populate("userId", "name employeeId designation parGroup")
         .populate("unitId", "name type")
     : [];
 
-  const members = memberships
-    // The root's lead can also be a member of it, and would otherwise appear on their
-    // own team.
-    .filter((m) => m.userId && String(m.userId._id) !== String(user._id));
+  // The root's lead can also be a member of it.
+  const members = memberships.filter(
+    (m) => m.userId && String(m.userId._id) !== String(user._id),
+  );
 
-  // ⚠️ A supervisor's team spans appraisal groups, because the group comes from each
-  // person's own joining month. The supervisor's own cycle is the wrong answer for
-  // them, so it is looked up per group rather than taken from the signed-in user.
-  //
-  // ⚠️ The LIVE cycle, whatever `day` was asked for: nothing records which cycle was
-  // running on a past date.
+  // ⚠️ A team spans appraisal groups, so the cycle is looked up per group, never taken
+  // from the supervisor. It is the live cycle whatever `day` was asked for.
   const cycleByGroup = new Map();
   for (const group of new Set(members.map((m) => m.userId.parGroup).filter(Boolean))) {
     const cycle = await currentCycleFor(group);
@@ -287,9 +235,6 @@ exports.teamOn = async (userId, date) => {
     );
   }
 
-  // The review is the container every piece of feedback hangs off, and it is keyed on
-  // the cycle plus the person. Without its id here a supervisor's screen has no way to
-  // ask what came in for somebody it is already showing.
   const liveCycleIds = [...cycleByGroup.values()].filter(Boolean).map((c) => c.id);
   const reviews = liveCycleIds.length
     ? await Review.find({
@@ -302,9 +247,7 @@ exports.teamOn = async (userId, date) => {
     reviews.map((r) => [`${r.cycleId}:${r.userId}`, String(r._id)]),
   );
 
-  // ⚠️ ONE query for the whole team rather than one per person, and `reviewerId` stays
-  // unselected. Readiness is arithmetic about records; who wrote them is not part of it
-  // and must not be loaded to find out.
+  // ⚠️ `reviewerId` stays unselected: readiness is arithmetic about records, not authors.
   const records = reviews.length
     ? await Feedback.find({ reviewId: { $in: reviews.map((r) => r._id) } }).select(
         "reviewId reviewerType status submittedAt locksAt",
@@ -320,11 +263,7 @@ exports.teamOn = async (userId, date) => {
 
   const team = members
     .map((m) => {
-      // Null is a real answer: for most of the year a group is between cycles.
       const cycle = cycleByGroup.get(m.userId.parGroup) || null;
-
-      // Null until the cycle opens and reviews are created, which is why the screen
-      // must handle its absence rather than assume one exists.
       const reviewId = cycle
         ? reviewIdByPerson.get(`${cycle.id}:${m.userId._id}`) || null
         : null;
@@ -336,9 +275,7 @@ exports.teamOn = async (userId, date) => {
         parGroup: m.userId.parGroup || null,
         cycle,
         reviewId,
-        // Null for the same reason: with no review there is nothing to be ready for.
         readiness: reviewId ? readinessFrom(byReview.get(reviewId), cycle) : null,
-        // The mirror of `resolvedUpward`.
         viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
       };
     })
@@ -347,7 +284,6 @@ exports.teamOn = async (userId, date) => {
   return {
     supervisor: asPerson(user),
     on: day.toISOString().slice(0, 10),
-    // Not the same as the units their team sits in: the difference is the vacancies.
     leads: leadRecords.map((record) => asUnit(record.unitId)),
     team,
     total: team.length,

@@ -1,13 +1,8 @@
 const AppError = require("../utils/AppError");
 const { MIN_PASSWORD_LENGTH } = require("../config/constants");
 
-// Request-shape validation for the PUBLIC activation endpoint. It is the one place
-// in the system an unauthenticated stranger can post to, so it checks the shape
-// before anything touches the database.
-//
-// It deliberately does NOT check whether the code looks like a 64-character hex
-// string. A malformed code and an unknown code must fail identically, because a shape
-// complaint would tell someone probing the endpoint what a real code looks like.
+// ⚠️ Public endpoint. The code's shape is deliberately not checked: a malformed code and
+// an unknown code must fail identically, or a probe learns what a real one looks like.
 exports.validateActivate = (req, res, next) => {
   const { code, password } = req.body;
   const errors = [];

@@ -14,7 +14,6 @@ const cycleRoutes = require("./cycle.routes");
 const feedbackRoutes = require("./feedback.routes");
 const reviewerListRoutes = require("./reviewerList.routes");
 
-// Health check: reports live DB connection state (consumed by the frontend).
 router.get("/status", (req, res) => {
   const states = ["disconnected", "connected", "connecting", "disconnecting"];
   res.json({
@@ -30,32 +29,16 @@ router.use("/constants", constantsRoutes);
 
 // "org-units", not "units": `unit` is one of three types this collection holds.
 router.use("/org-units", orgUnitRoutes);
-
-// Beside the tree rather than under it: these answer questions about a PERSON as
-// often as about a unit.
 router.use("/unit-memberships", unitMembershipRoutes);
 router.use("/unit-leads", unitLeadRoutes);
 router.use("/hr-coverage", hrCoverageRoutes);
-
-// Beside the tree, not under it: a project spans units on purpose, so it belongs to no
-// single one. Assignments sit beside projects for the reason memberships sit beside
-// units -- they answer "which projects is she on" as often as "who is on this project".
 router.use("/projects", projectRoutes);
 router.use("/project-assignments", projectAssignmentRoutes);
 
-// Read-only and derived from the two collections above. Top level, not
-// /users/:id/supervisor, which would imply a field the data model forbids.
+// Top level, not /users/:id/supervisor: that would imply a field the data model forbids.
 router.use("/supervision", supervisionRoutes);
-
-// Top level: a cycle covers an appraisal GROUP, so it is nobody's sub-resource.
 router.use("/cycles", cycleRoutes);
-
-// Top level, and not under /reviews: the half a reviewer uses is addressed by THEIR
-// assignment, not by the review it belongs to.
 router.use("/feedback", feedbackRoutes);
-
-// Top level, beside feedback: a list belongs to a review, but supervisors and HR reach it
-// through their own screens rather than through the feedback a reviewer writes.
 router.use("/reviewer-lists", reviewerListRoutes);
 
 module.exports = router;

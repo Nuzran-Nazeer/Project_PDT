@@ -1,17 +1,12 @@
 import { Link } from "react-router-dom";
 import Icon from "../common/Icon";
-import { SHOW_PLACEHOLDER_FIGURES, PLACEHOLDER_ROW_STATUS } from "../../dev/placeholderFigures";
+import {
+  SHOW_PLACEHOLDER_FIGURES,
+  PLACEHOLDER_ROW_STATUS,
+} from "../../dev/placeholderFigures";
 
-// One row in an action list: what the screen is, what it is for, where it stands, and
-// a way into it.
-//
-// The row itself is REAL. It is a link to a tab that exists and opens. What is not
-// real is the status on the right, which comes from dev/placeholderFigures.js and
-// disappears entirely when the flag in that file is turned off. The row keeps working
-// without it, which is the point of keeping the two apart.
-// The light values are 700, not 600. At 13px, amber-600 on white is about 3.2:1 and
-// emerald-600 about 3.7:1, both under the 4.5:1 that body text needs. The dark values
-// stay at 400, which is already comfortable on a dark surface.
+// The status on the right comes from dev/placeholderFigures.js and disappears when its
+// flag is off. Light values are 700: at 13px a 600 on white is under 4.5:1 contrast.
 const STATUS_TONES = {
   muted: "text-muted",
   good: "text-emerald-700 dark:text-emerald-400",
@@ -36,8 +31,7 @@ const ICON_TONES = {
   settings: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
 };
 
-// `status` is for a row whose figure is REAL and known to the caller. It beats the
-// placeholder outright, so a true number is never hidden behind an invented one.
+// A caller's `status` beats the placeholder, so a real number is never hidden behind an invented one.
 export default function ActionRow({ tab, status }) {
   const statuses =
     status || (SHOW_PLACEHOLDER_FIGURES ? PLACEHOLDER_ROW_STATUS[tab.id] || [] : []);

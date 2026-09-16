@@ -8,9 +8,7 @@ import CompetencyRatingField from "../../components/forms/CompetencyRatingField"
 import TextAreaField from "../../components/forms/TextAreaField";
 import EditWindowNotice from "../../components/forms/EditWindowNotice";
 
-// Keyed by competencyKey rather than held as the array the server wants: a row is
-// looked up and updated by key on every keystroke, and only turned into the array
-// shape the request body needs when a draft is saved or a submit is attempted.
+// Keyed by competencyKey; turned into the server's array only when saving or submitting.
 const answersFrom = (competencies, existingRatings) => {
   const byKey = Object.fromEntries(
     (existingRatings || []).map((r) => [r.competencyKey, r]),
@@ -27,10 +25,8 @@ const answersFrom = (competencies, existingRatings) => {
   );
 };
 
-// ⚠️ Only rows the reviewer has actually touched go to the server. Sending one for
-// every competency, answered or not, made a draft carry the same "needs a score"
-// error as a submit -- the server validates every row IN the array, not every row
-// in the full set, so an untouched placeholder row is what triggered it.
+// ⚠️ Only answered rows are sent: the server validates every row in the array, so a
+// placeholder row makes a draft fail like a submit.
 const isAnswered = (row) => row.notObserved || row.score !== null;
 
 const ratingsArrayFrom = (answers) =>
@@ -50,11 +46,8 @@ const STATUS_LABEL = {
   locked: "Submitted",
 };
 
-// The competencies come from the REVIEWEE's job family, which is not always the
-// reviewer's own, so they are read off the record and never worked out here.
-//
-// ⚠️ Anonymity runs one way. The reviewer sees who they review; the reviewee never
-// learns who reviewed them. The risk is every screen downstream of this one.
+// The competencies come from the reviewee's job family, read off the record.
+// ⚠️ Anonymity runs one way: the reviewer sees who they review, never the reverse.
 export default function PeerReviewFormPage() {
   const { id } = useParams();
 
@@ -124,9 +117,7 @@ export default function PeerReviewFormPage() {
       setSuccessMessage(savedMessage);
     } catch (err) {
       setFormError(err.message);
-      // ⚠️ The window can close while this page sits open. The server owns that rule,
-      // so its refusal is what flips the screen to the closed record: re-read rather
-      // than deciding here that the form is over.
+      // ⚠️ The window can close while this page sits open; the server's refusal flips the screen.
       if (err.status === 409) {
         getOwed(id)
           .then(applyRecord)
@@ -139,9 +130,7 @@ export default function PeerReviewFormPage() {
 
   const onSaveDraft = () => runSave(saveDraft, payload(), "Draft saved.");
 
-  // ⚠️ Yup reports `ratings[2].evidence`, and that 2 indexes the array SENT, which
-  // holds only the rows already answered. Reading it as a position in the full
-  // competency list puts the message under the wrong question.
+  // ⚠️ Yup's `ratings[2]` indexes the array sent, not the full competency list.
   const errorsByCompetency = (validationError, sent) => {
     const errors = {};
     validationError.inner.forEach((err) => {
@@ -195,9 +184,7 @@ export default function PeerReviewFormPage() {
 
   const editable = record.editable;
 
-  // ⚠️ Closed means no controls, not disabled controls. A greyed-out form reads as a
-  // page that failed to load, and it invites somebody to keep trying; the record they
-  // sent is the honest thing to show instead.
+  // Closed means no controls, not disabled controls.
   const body = (
     <FormShell>
       <FormSection
@@ -255,8 +242,7 @@ export default function PeerReviewFormPage() {
           )}
 
           <div className="mt-1 flex flex-wrap items-center gap-3">
-            {/* Not a submit: a draft is allowed to be incomplete, so it must never
-                reach the schema the submit button is checked against. */}
+            {/* Not a submit: a draft may be incomplete and must never reach the schema. */}
             <button
               type="button"
               disabled={saving}

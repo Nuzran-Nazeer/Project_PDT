@@ -1,13 +1,10 @@
 const { NEVER_SERVED_FIELDS } = require("../config/constants");
 
 // ⚠️ The last of three layers, and the only one that catches a hand-built object.
-// `select: false` stops the field being loaded, the model's toJSON stops it being
-// serialised, and this stops a response that assembled one by hand.
 
 const FORBIDDEN = new Set(NEVER_SERVED_FIELDS);
 
-// Depth is bounded rather than trusted: a cyclic or pathological body must not be able
-// to hang a response inside a safety check.
+// Bounded so a pathological body cannot hang a response inside a safety check.
 const MAX_DEPTH = 8;
 
 const findForbidden = (value, depth = 0) => {
@@ -29,21 +26,16 @@ const findForbidden = (value, depth = 0) => {
   return null;
 };
 
-// Runs before the routes so every JSON response passes through it. Thrown from inside
-// res.json, which controllers call synchronously, so asyncHandler still catches it.
+// Thrown from inside res.json, which controllers call synchronously, so asyncHandler catches it.
 module.exports = (req, res, next) => {
   const send = res.json.bind(res);
 
   res.json = (body) => {
     if (!res.locals.identityRevealed) {
-      // ⚠️ Scan what will actually be SENT, not the object handed in. A Mongoose
-      // document carries the schema's path names as keys in its own bookkeeping, so
-      // walking the live object finds "reviewerId" on a document that never loaded it.
-      // Serialising first also runs every toJSON transform, so this sees the bytes.
+      // ⚠️ Scan the bytes, not the object: a Mongoose document carries every schema path
+      // as a key in its bookkeeping, loaded or not.
       const leak = findForbidden(JSON.parse(JSON.stringify(body ?? null)));
       if (leak) {
-        // A 500 is the correct outcome. A refused response is recoverable; a reviewer
-        // named to their reviewee is not.
         const error = new Error(
           `Response carries "${leak}". Serve feedback through feedback.privacy.js, ` +
             `or mark an authorised identity read with withReviewerIdentity(res, ...).`,

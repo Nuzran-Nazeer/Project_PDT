@@ -7,17 +7,11 @@ import { buildUnitSchema } from "../../schemas/orgUnitSchema";
 import UnitTree from "../../components/org/UnitTree";
 import UnitDetail from "../../components/org/UnitDetail";
 
-// The organisation structure. Head of HR builds it; an HR officer adds sub-units inside the
-// units they cover; HR and Leadership read it. The tree is a navigation rail, not the
-// content: the selected unit is the page.
-//
-// Creating and editing happen here rather than on separate routes, a unit being three
-// fields, and a separate page would hide the tree when you most need to see it.
+// The tree is a navigation rail; the selected unit is the page.
 
 const EMPTY = { name: "", type: "", parentUnitId: "" };
 
-// Every unit beneath this one, so the parent picker can leave them out. A guide rail,
-// not the rule: the server refuses a unit placed inside its own sub-tree.
+// So the parent picker can leave them out. The server refuses a unit inside its own sub-tree.
 const descendantsOf = (units, rootId) => {
   const found = new Set();
 
@@ -39,11 +33,8 @@ export default function OrgTreePage() {
   const navigate = useNavigate();
   const { user, constants } = useAuth();
   const canManage = user?.roles?.includes("head_of_hr");
-  // Wider than shaping the tree: HR places people and appoints leads. Same split the
-  // server makes.
   const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
-  // An officer acts only inside the units they cover. Holding Leadership as well widens
-  // nothing here, so the Head of HR is the only exception.
+  // An officer acts only inside the units they cover.
   const isOfficer = !canManage && Boolean(user?.roles?.includes("hr"));
   const [coveredIds, setCoveredIds] = useState(() => new Set());
 
@@ -51,13 +42,8 @@ export default function OrgTreePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  // What the right-hand side is doing: showing the selected unit, or creating, or
-  // editing it. One value rather than two booleans, because "creating and editing
-  // at once" is not a state that should be representable.
-  //
-  // `forUnit` records which unit was on screen when the form opened. It is what
-  // lets a change of unit close the form by DERIVING the mode below, rather than by
-  // an effect that writes state every time the URL changes.
+  // `forUnit` records which unit was on screen when the form opened, so a change of
+  // unit closes the form by deriving the mode rather than by an effect.
   const [formState, setFormState] = useState({ mode: "idle", forUnit: null });
   const [form, setForm] = useState(EMPTY);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -83,8 +69,7 @@ export default function OrgTreePage() {
     };
   }, []);
 
-  // A failed read leaves the set empty, which offers nothing: erring toward hiding a
-  // control is safe, the server deciding regardless.
+  // A failed read offers nothing; the server decides regardless.
   useEffect(() => {
     if (!isOfficer) return undefined;
     let cancelled = false;
@@ -98,17 +83,10 @@ export default function OrgTreePage() {
     };
   }, [isOfficer]);
 
-  // THE SELECTED UNIT LIVES IN THE URL, not in state. A unit is now a page with
-  // members and a lead on it, so it needs to be linkable and to survive a refresh.
-  // and the tree stays beside it, which a separate route would have cost.
+  // The selected unit lives in the URL, so it is linkable and survives a refresh.
   const selected = units.find((unit) => String(unit._id) === String(id)) || null;
 
-  // Any change of unit closes whatever the form was doing, including arriving by
-  // URL or the back button, which a click handler would miss.
-  //
-  // Derived, not reset in an effect. The mode is already a function of the URL and
-  // of where the form was opened, and an effect writing state on every change of
-  // `id` is a second render pass for something that can simply be worked out.
+  // Any change of unit closes the form, including by URL or the back button. Derived, not an effect.
   const mode = formState.forUnit === (id ?? null) ? formState.mode : "idle";
 
   const hasRoot = units.some((unit) => !unit.parentUnitId);
@@ -118,12 +96,8 @@ export default function OrgTreePage() {
     canManage ||
     (isOfficer && units.some((unit) => unit.active !== false && covers(unit)));
 
-  // Which units may be offered as a parent. When editing, the unit itself and
-  // everything under it are removed.
   const parentOptions = useMemo(() => {
-    // A discontinued unit is never offered as a parent. The server refuses it, and
-    // putting a live unit inside a closed one would bring the closed one back by the
-    // back door: its sub-tree would be operating again while it is marked shut.
+    // A discontinued unit is never offered as a parent: the server refuses it.
     const live = units.filter((unit) => unit.active !== false);
 
     if (isOfficer) return live.filter((unit) => coveredIds.has(String(unit._id)));
@@ -140,8 +114,7 @@ export default function OrgTreePage() {
 
   const startCreate = () => {
     setFormState({ mode: "create", forUnit: id ?? null });
-    // An officer can make nothing but a sub-unit, so the type is fixed rather than offered,
-    // and the unit on screen is the likely parent when they cover it.
+    // An officer can make nothing but a sub-unit, so the type is fixed.
     setForm(
       isOfficer
         ? {
@@ -183,8 +156,7 @@ export default function OrgTreePage() {
     setFormError("");
     setFieldErrors({});
 
-    // Editing the root is the one case where a parent is genuinely optional, so the
-    // requirement is judged against what is being saved, not against the tree.
+    // Editing the root is the one case where a parent is optional.
     const needsParent = mode === "create" ? hasRoot : Boolean(selected?.parentUnitId);
 
     try {
@@ -214,16 +186,10 @@ export default function OrgTreePage() {
           : await updateUnit(selected._id, payload);
 
       await reload();
-      // Navigating rather than selecting: a new unit becomes the page you are on.
-      // The form is closed against the SAVED unit, so it stays closed once the URL
-      // catches up rather than reopening for a moment.
+      // Closed against the saved unit, so it stays closed once the URL catches up.
       setFormState({ mode: "idle", forUnit: String(saved._id) });
       navigate(`/organisation/${saved._id}`);
     } catch (err) {
-      // The server's own words: a second root, a unit inside itself, a company below
-      // the top, a name already used by a sibling. Every one names the rule that
-      // stopped it, and THE TREE IS UNTOUCHED: nothing is applied until the request
-      // comes back, so a refusal changes nothing on screen.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -275,8 +241,6 @@ export default function OrgTreePage() {
       {loading ? (
         <p className="mt-6 text-sm text-muted">Loading the tree…</p>
       ) : units.length === 0 ? (
-        // Empty state, not invented content. The first unit is the company itself,
-        // and until it exists there is no tree and nothing else can be made.
         <div className="mt-6 rounded-xl border border-line bg-raised px-6 py-12 text-center">
           <p className="text-sm font-semibold text-ink">No units yet</p>
           <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
@@ -304,9 +268,7 @@ export default function OrgTreePage() {
             {mode === "idle" ? (
               selected ? (
                 <>
-                  {/* Keyed by the unit so switching unit gives a fresh component
-                      rather than one holding the previous unit's members while its
-                      own request is still in flight. */}
+                  {/* Keyed by the unit so switching gives a fresh component. */}
                   <UnitDetail
                     key={selected._id}
                     unit={selected}
@@ -333,8 +295,6 @@ export default function OrgTreePage() {
                 </p>
               )
             ) : (
-              // Capped rather than filling the panel: three short fields stretched
-              // across a wide column read as a form nobody finished designing.
               <form onSubmit={handleSubmit} className="max-w-md">
                 <p className="text-sm font-semibold text-ink">
                   {mode === "create"
@@ -395,9 +355,7 @@ export default function OrgTreePage() {
                   )}
                 </div>
 
-                {/* Absent entirely when the tree is empty: the first unit is the
-                    company and has nowhere to sit. An empty dropdown would invite
-                    the question and then refuse to answer it. */}
+                {/* Absent when the tree is empty: the first unit has nowhere to sit. */}
                 {(mode === "edit" || hasRoot) && (
                   <div className="mt-4">
                     <label htmlFor="parentUnitId" className={labelClass}>

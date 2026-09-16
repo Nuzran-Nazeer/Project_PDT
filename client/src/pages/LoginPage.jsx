@@ -32,9 +32,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Set by the activation page after it finishes, since activation deliberately
-  // does not sign anyone in. Read once into state so it survives the re-render but
-  // does not come back if the user navigates here again later.
+  // Set by the activation page. Read once into state so it does not come back on a later visit.
   const [notice] = useState(location.state?.notice || "");
 
   const handleChange = (e) => {
@@ -61,13 +59,9 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signIn(form.identifier, form.password);
-      // Back to wherever they were headed before being sent here, or to the
-      // landing resolver at "/" which works out the right dashboard.
       navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (err) {
-      // The server's message, shown as-is. It says the same thing for a wrong
-      // password, an account that does not exist and one that is deactivated.
-      // rewording or splitting it here would leak the difference it hides.
+      // ⚠️ Shown as-is: the server hides which of three things went wrong.
       setFormError(err.message);
       setSubmitting(false);
     }
@@ -78,7 +72,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-surface px-4">
-      {/* Decorative only, and inert to assistive technology. */}
       <div className="blob-float-1 pointer-events-none absolute -top-32 -left-28 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_30%_30%,var(--color-brand),transparent_70%)] opacity-25" />
       <div className="blob-float-2 pointer-events-none absolute -right-32 -bottom-36 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_60%_60%,var(--color-brand),transparent_70%)] opacity-20" />
 
@@ -167,8 +160,6 @@ export default function LoginPage() {
           </div>
 
           {formError && (
-            // `role="alert"` so a screen reader announces it. Without it the
-            // message appears silently and a non-sighted user is left waiting.
             <p
               role="alert"
               className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
@@ -186,11 +177,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* No "forgot password" and no "sign up" link, both deliberately.
-            PDT has no self-registration at all. HR creates every record and the
-            employee activates it with a one-time code, so a sign-up route would
-            be a promise the system cannot keep. The reset link arrives with
-            "Reset a forgotten password"; until then it would go nowhere. */}
+        {/* No "sign up" link: there is no self-registration. */}
         <p className="mt-6 text-center text-[13px] text-muted">
           Accounts are created by HR. Contact them if you cannot sign in.
         </p>

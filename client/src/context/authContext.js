@@ -1,5 +1,4 @@
 import { createContext } from "react";
 
-// The context object alone. A file exporting a component must export nothing else,
-// or Fast Refresh reloads the whole page and ESLint fails the build over it.
+// Kept apart from the provider: a component file exporting anything else breaks Fast Refresh.
 export const AuthContext = createContext(null);

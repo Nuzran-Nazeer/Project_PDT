@@ -1,8 +1,7 @@
 import Icon from "../common/Icon";
 import { formatDate } from "../../utils/dates";
 
-// ⚠️ No progress bar, deliberately. A bar claims a proportion completed and nothing
-// measures that yet, so one at nought would assert that nobody has done anything.
+// ⚠️ No progress bar: nothing measures a proportion completed yet.
 
 const STAGE_LABELS = {
   open: "Open",

@@ -12,15 +12,14 @@ const {
   PEER_CONTINUITY_GAP_MONTHS,
 } = require("../config/constants");
 
-// Who is qualified to review a given person over a given period, derived from the dated
-// unit and project records every time. A stored pool would describe a company that has moved.
+// Derived from the dated records every time: a stored pool describes a company that has moved.
 
 const addMonths = (date, months) => {
   const shifted = new Date(date.getTime());
   const target = shifted.getUTCMonth() + months;
   shifted.setUTCMonth(target);
 
-  // 31 January plus one month rolls into March, which would over-count the stretch.
+  // 31 January plus one month rolls into March.
   if (shifted.getUTCMonth() !== ((target % 12) + 12) % 12) shifted.setUTCDate(0);
   return shifted;
 };
@@ -28,7 +27,7 @@ const addMonths = (date, months) => {
 const spansMonths = (from, to, months) =>
   to.getTime() >= addMonths(from, months).getTime();
 
-// Where two dated periods overlap, or null. An open record runs to `openEnd`.
+// An open record runs to `openEnd`.
 const intersect = (a, b, openEnd) => {
   const from = new Date(Math.max(a.from.getTime(), b.from.getTime()));
   const ends = [a.to, b.to].filter(Boolean).map((d) => d.getTime());
@@ -39,8 +38,8 @@ const intersect = (a, b, openEnd) => {
 
 const unique = (values) => [...new Set(values.map(String))];
 
-// ⚠️ Stretches from DIFFERENT sources join into one relationship. Two months on a project
-// then, within the allowed break, two months in the same unit is four months together.
+// ⚠️ Stretches from different sources join into one relationship: two months on a project
+// then two in the same unit is four months together.
 const joinStretches = (pieces) => {
   const runs = [];
   for (const piece of [...pieces].sort((a, b) => a.from - b.from)) {
@@ -68,8 +67,7 @@ const qualifies = (run, window) => {
   );
 };
 
-// The source a review counts against for the per-source limit: most shared time inside the
-// run, and on a tie the one worked in most recently.
+// The source the per-source limit counts against: most shared time, then most recent.
 const attributeTo = (run) => {
   const bySource = new Map();
   for (const piece of run.pieces) {
@@ -109,8 +107,7 @@ const descendantsOf = async (unitIds) => {
   return [...found];
 };
 
-// ⚠️ Anyone above or below the reviewee in the tree is not a peer. Leads sitting in the
-// parent unit keeps them out of a unit-only pool, but a shared project crosses the tree.
+// ⚠️ Anyone above or below the reviewee is not a peer, and a shared project crosses the tree.
 const outsidePeerRelationship = async (userId, unitIds, inReach) => {
   const above = await ancestorsOf(unitIds);
   const ledByReviewee = await UnitLead.find({ userId, ...inReach }).select("unitId");
@@ -126,13 +123,8 @@ const outsidePeerRelationship = async (userId, unitIds, inReach) => {
   return new Set([...leadsAbove, ...reportsBelow].map((r) => String(r.userId)));
 };
 
-/**
- * Everyone eligible to give peer feedback on `userId` over the period [from, to).
- *
- * Qualifying is ONE CONTINUOUS run of working together of at least four months, at least
- * two of them inside the period. Shared unit and project stretches join into a run across a
- * break of up to a month; separate runs are never added together.
- */
+// Qualifying is one continuous run of at least four months, at least two inside the
+// period, joined across a break of up to a month. Separate runs are never added together.
 const candidatesFor = async (userId, { from, to }) => {
   const start = toDay(from, "from");
   const end = toDay(to, "to");
@@ -144,8 +136,7 @@ const candidatesFor = async (userId, { from, to }) => {
   const window = { from: start, to: end };
   const empty = { revieweeId: String(userId), from: start, to: end, candidates: [] };
 
-  // Far enough back that a run starting before the period, and joined across a break,
-  // is still seen whole.
+  // Far enough back that a run starting before the period is still seen whole.
   const lookback = addMonths(
     start,
     -(PEER_ELIGIBILITY_MONTHS + PEER_CONTINUITY_GAP_MONTHS),
@@ -157,7 +148,6 @@ const candidatesFor = async (userId, { from, to }) => {
     ProjectAssignment.find({ userId, ...inReach }),
   ]);
 
-  // Somebody in no unit has no supervisor and is not appraised.
   if (!myUnits.length) return empty;
 
   const unitIds = unique(myUnits.map((m) => m.unitId));
@@ -205,7 +195,7 @@ const candidatesFor = async (userId, { from, to }) => {
   for (const [personId, pieces] of piecesByPerson) {
     if (excluded.has(personId)) continue;
 
-    // The most recent qualifying run decides, so attribution follows the current relationship.
+    // The most recent qualifying run decides.
     const run = joinStretches(pieces)
       .filter((r) => qualifies(r, window))
       .sort((a, b) => b.to - a.to)[0];
@@ -214,8 +204,7 @@ const candidatesFor = async (userId, { from, to }) => {
 
   if (!qualifying.size) return empty;
 
-  // An invited or deactivated account cannot write a review, so offering one builds a pool
-  // that cannot be filled.
+  // An invited or deactivated account cannot write a review.
   const [people, units, projects] = await Promise.all([
     User.find({ _id: { $in: [...qualifying.keys()] }, status: "active" }).select(
       "name employeeId designation jobFamily",
@@ -248,7 +237,6 @@ const candidatesFor = async (userId, { from, to }) => {
   return { ...empty, candidates };
 };
 
-// The same exclusion, asked on its own: whoever an addition to a list must not be.
 const notPeersOf = async (userId, { from, to }) => {
   const start = toDay(from, "from");
   const end = toDay(to, "to");

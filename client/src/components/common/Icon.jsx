@@ -1,13 +1,5 @@
-// The icon set, drawn inline rather than pulled from a package.
-//
-// WHY NOT AN ICON LIBRARY. Adding one is a dependency, a bundle and a decision about
-// which library, for about twenty small paths. These are stroked outlines on a 24x24
-// grid using `currentColor`, so they take the colour of whatever they sit in and both
-// themes are handled without a second copy.
-//
-// Names come from the tab registry, so an icon and a tab never drift apart. An
-// unknown name renders nothing rather than throwing, because a missing icon must not
-// take a screen down.
+// Inline outlines on a 24x24 grid using `currentColor`, so both themes need one copy.
+// An unknown name renders nothing rather than throwing.
 
 const PATHS = {
   user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
@@ -37,7 +29,8 @@ const PATHS = {
   menu: "M3 6h18 M3 12h18 M3 18h18",
   chevron: "M9 18l6-6-6-6",
   arrowLeft: "M19 12H5 M12 19l-7-7 7-7",
-  target: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12 M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4",
+  target:
+    "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12 M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4",
 };
 
 export default function Icon({ name, className = "h-4 w-4" }) {
@@ -53,8 +46,7 @@ export default function Icon({ name, className = "h-4 w-4" }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
-      // Decorative in every place it is used: each icon sits beside its own label, so
-      // a screen reader announcing it would read the same word twice.
+      // Every icon sits beside its own label.
       aria-hidden="true"
     >
       {path.split(" M").map((segment, i) => (

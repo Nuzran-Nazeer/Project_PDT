@@ -1,11 +1,7 @@
 const mongoose = require("mongoose");
 
-// ⚠️ Where supervision lives. There is no supervisor collection and no `supervisorId`
-// on the User record, because your supervisor on a date is the lead of your unit on
-// that date. That indirection is what makes two supervisor periods in one year fall
-// out on their own.
-//
-// Period convention as every dated collection; see utils/dateRange.js.
+// ⚠️ Where supervision lives: your supervisor on a date is the lead of your unit on that
+// date. There is no `supervisorId` anywhere.
 const unitLeadSchema = new mongoose.Schema(
   {
     unitId: {
@@ -27,14 +23,11 @@ const unitLeadSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Neither field carries `index: true`, for the naming reason on the membership
-// model.
 unitLeadSchema.index({ unitId: 1, from: 1 });
 unitLeadSchema.index({ userId: 1, from: 1 });
 
-// The same backstop the membership model carries, keyed on the UNIT, not the person:
-// one person may lead several units, but a unit with two leads makes "the lead of your
-// unit on that date" ambiguous.
+// One open lead per unit. ⚠️ Never `index: true` on `unitId`: the names collide and the
+// second index is silently dropped.
 unitLeadSchema.index(
   { unitId: 1 },
   { unique: true, partialFilterExpression: { to: null } },

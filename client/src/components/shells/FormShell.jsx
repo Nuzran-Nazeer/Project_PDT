@@ -1,12 +1,9 @@
 import { Link } from "react-router-dom";
 
-// The frame all four review forms share: lettered sections, draft and submit at the end.
-
 export function FormShell({ children }) {
   return <div className="grid gap-5">{children}</div>;
 }
 
-// The walkthrough labels sections A to D and refers to them that way.
 export function FormSection({ letter, title, note, children }) {
   return (
     <section className="rounded-xl border border-line bg-raised p-5">
@@ -22,8 +19,7 @@ export function FormSection({ letter, title, note, children }) {
   );
 }
 
-// ⚠️ Both controls disabled, not silent. A live-looking button that discards what
-// somebody typed is worse than no button.
+// ⚠️ Both controls disabled, not silent: a live-looking button that discards typing is worse than none.
 export function FormActions({ backTo, backLabel }) {
   return (
     <div className="rounded-xl border border-dashed border-line p-5">
@@ -54,9 +50,7 @@ export function FormActions({ backTo, backLabel }) {
       </div>
 
       <p className="mt-3 max-w-prose text-[13px] text-muted">
-        Both controls are disabled: nothing on this form is stored yet. When they work, a
-        draft stays private to you, and a submitted form can still be corrected for{" "}
-        <strong>five hours</strong> before it locks.
+        Not built yet. Nothing on this form is stored.
       </p>
     </div>
   );

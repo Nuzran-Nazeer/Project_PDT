@@ -5,8 +5,7 @@ import { listCycles } from "../../services/cycles";
 import { getCycleLists } from "../../services/reviewerLists";
 import { stateLabel } from "../../utils/reviewerListStates";
 
-// Lists exist from collecting onwards. Later stages stay selectable because a cycle may move
-// on with lists undrawn, and this is where that count is seen.
+// Later stages stay selectable: a cycle may move on with lists undrawn.
 const HAS_LISTS = [
   "collecting",
   "supervisor_review",
@@ -78,9 +77,7 @@ export default function ChooseReviewersPage() {
       ) : !cycles ? (
         <Notice>Loading…</Notice>
       ) : cycles.length === 0 ? (
-        <Notice>
-          No cycle has reached collecting yet, so there are no colleague lists to work on.
-        </Notice>
+        <Notice>No cycle has reached collecting yet.</Notice>
       ) : (
         <>
           <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -115,8 +112,7 @@ export default function ChooseReviewersPage() {
 
               {data.cycle.status !== "collecting" && (
                 <p className="mb-4 text-[13px] text-muted">
-                  This cycle has moved past collecting, so nothing more can be confirmed,
-                  decided or drawn.
+                  Past collecting: nothing more can be confirmed, decided or drawn.
                 </p>
               )}
 

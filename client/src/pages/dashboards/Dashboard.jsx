@@ -16,16 +16,14 @@ import StatTile from "../../components/dashboard/StatTile";
 import ActionRow from "../../components/dashboard/ActionRow";
 import MySupervisorPanel from "../../components/org/MySupervisorPanel";
 
-// One dashboard for everybody; the sections it carries come from
-// dashboardSections.js.
+// One dashboard for everybody; the sections come from dashboardSections.js.
 export default function Dashboard() {
   const { user, isSupervisor, sessionReady } = useAuth();
   const { line, loading: lineLoading, error: lineError } = useReportingLine();
   const { team } = useTeam();
   const { cycle, parGroup: cycleGroup, loading: cycleLoading } = useCurrentCycle();
 
-  // `isSupervisor` is false until the server answers, so drawing early would
-  // rearrange the dashboard under the reader.
+  // `isSupervisor` is false until the server answers.
   if (!sessionReady) {
     return (
       <p className="p-10 text-center text-muted" role="status">
@@ -46,7 +44,6 @@ export default function Dashboard() {
     <>
       <PageHeader
         title={overview.pageTitle}
-        // Not a list of roles: that would put a ladder on screen.
         context={[user?.designation, user?.parGroup && `${user.parGroup} group`]
           .filter(Boolean)
           .join(" · ")}
@@ -102,13 +99,11 @@ export default function Dashboard() {
   );
 }
 
-// A tile is left out rather than shown empty, so somebody with no unit gets fewer
-// tiles rather than a row reading "None".
+// A tile is left out rather than shown empty.
 function realTiles(user, line, lineLoading, team) {
   const unit = lineLoading ? "…" : line?.unit?.name;
 
   return [
-    // Absent rather than nought, which would read as "your team is empty".
     team && {
       value: String(team.total),
       label: team.total === 1 ? "Person you supervise" : "People you supervise",
@@ -142,8 +137,7 @@ function realTiles(user, line, lineLoading, team) {
   ].filter(Boolean);
 }
 
-// ⚠️ Undefined, never an empty array: an empty array is truthy, so returning one
-// silently suppresses the placeholder for every other row.
+// ⚠️ Undefined, never an empty array: an empty array is truthy and suppresses the placeholder.
 function rowStatus(tabId, team) {
   if (tabId !== "my-team" || !team) return undefined;
 
