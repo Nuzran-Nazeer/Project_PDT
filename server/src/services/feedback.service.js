@@ -48,7 +48,7 @@ const owedBy = async (userId) => {
   return {
     items: items.map((doc) => asOwnRecord(doc, competenciesForRecord(doc))),
     total: items.length,
-    outstanding: items.filter((d) => d.status !== "submitted").length,
+    outstanding: items.filter((d) => !d.submittedAt).length,
   };
 };
 
@@ -196,9 +196,9 @@ const assertMayRead = async (review, viewer) => {
   if (!supervises) throw new AppError("Review not found", 404);
 };
 
-// ⚠️ Nothing is released until half the reviewers have settled, never fewer than the
-// minimum, and the rest only once everyone is in: a trickle identifies its authors. A pool
-// below the minimum has no colleague section at all. `submittedCount` counts the settled.
+// ⚠️ Nothing is released until half the reviewers have settled (submitted and past the edit
+// window), never fewer than the minimum, and the rest only once everyone is in: a trickle
+// identifies its authors. A pool below the minimum has no colleague section at all.
 const collectedFor = async (reviewId, viewer) => {
   const review = await Review.findById(reviewId);
   if (!review) throw new AppError("Review not found", 404);
@@ -219,7 +219,7 @@ const collectedFor = async (reviewId, viewer) => {
     reviewId: String(reviewId),
     released: false,
     assignedCount: assigned.length,
-    submittedCount: settled.length,
+    settledCount: settled.length,
     minimum: PEER_DISPLAY_THRESHOLD,
     competencies,
     items: [],
@@ -243,7 +243,7 @@ const collectedFor = async (reviewId, viewer) => {
     reviewId: String(reviewId),
     released: true,
     assignedCount: assigned.length,
-    submittedCount: settled.length,
+    settledCount: settled.length,
     minimum: PEER_DISPLAY_THRESHOLD,
     needed: 0,
     complete,

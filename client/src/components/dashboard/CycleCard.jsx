@@ -14,7 +14,7 @@ const STAGE_LABELS = {
 export default function CycleCard({ cycle, parGroup, loading }) {
   if (loading) {
     return (
-      <div className="rounded-xl border border-dashed border-line p-5">
+      <div className="flex h-full flex-col justify-center rounded-xl border border-dashed border-line p-5">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">
           Appraisal cycle
         </p>
@@ -25,7 +25,7 @@ export default function CycleCard({ cycle, parGroup, loading }) {
 
   if (!cycle) {
     return (
-      <div className="rounded-xl border border-dashed border-line p-5">
+      <div className="flex h-full flex-col justify-center rounded-xl border border-dashed border-line p-5">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">
           Appraisal cycle
         </p>
@@ -39,7 +39,7 @@ export default function CycleCard({ cycle, parGroup, loading }) {
   }
 
   return (
-    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 dark:bg-emerald-500/[0.08]">
+    <div className="flex h-full flex-col justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 dark:bg-emerald-500/[0.08]">
       <div className="flex flex-wrap items-center gap-4">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
           <Icon name="target" className="h-5 w-5" />

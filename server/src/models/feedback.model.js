@@ -103,6 +103,15 @@ const feedbackSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+// ⚠️ `locked` is set when a record is loaded, not by a job: `locksAt` is the truth and the stored
+// status catches up on the next save. Query on `locksAt`, never on `status: "locked"`, and a
+// projection that selects `status` without `locksAt` gets the stale value.
+feedbackSchema.post("init", function () {
+  if (this.status === "submitted" && this.locksAt && this.locksAt <= new Date()) {
+    this.status = "locked";
+  }
+});
+
 // One submission per reviewer, per reviewee, per review.
 feedbackSchema.index(
   { reviewId: 1, revieweeId: 1, reviewerId: 1 },

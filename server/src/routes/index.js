@@ -14,8 +14,18 @@ const cycleRoutes = require("./cycle.routes");
 const feedbackRoutes = require("./feedback.routes");
 const reviewerListRoutes = require("./reviewerList.routes");
 
-router.get("/status", (req, res) => {
+// A cold start is still connecting on its first request; wait for it rather than report it,
+// but no longer than Mongoose buffers a query. `asPromise` returns at once when nothing is connecting.
+const CONNECT_WAIT_MS = 10000;
+
+router.get("/status", async (req, res) => {
   const states = ["disconnected", "connected", "connecting", "disconnecting"];
+  if (mongoose.connection.readyState === 2) {
+    await Promise.race([
+      mongoose.connection.asPromise().catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, CONNECT_WAIT_MS)),
+    ]);
+  }
   res.json({
     server: "running",
     database: states[mongoose.connection.readyState],

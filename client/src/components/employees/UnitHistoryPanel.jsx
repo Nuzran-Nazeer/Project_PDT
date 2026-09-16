@@ -6,7 +6,7 @@ import {
 } from "../../services/memberships";
 import { listUnits } from "../../services/orgUnits";
 import { moveSchema } from "../../schemas/orgStructureSchema";
-import { formatDate, toDateInput, todayInput } from "../../utils/dates";
+import { formatDate, lastDayOf, toDateInput, todayInput } from "../../utils/dates";
 
 const today = todayInput;
 
@@ -248,7 +248,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
                       {record.unitId?.name || "Unknown unit"}
                     </span>
                     <span className="ml-auto text-[13px] text-muted">
-                      {formatDate(record.from)} to {formatDate(record.to)}
+                      {formatDate(record.from)} to {formatDate(lastDayOf(record.to))}
                     </span>
                   </li>
                 ))}

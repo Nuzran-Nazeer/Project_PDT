@@ -117,6 +117,19 @@ exports.currentCycleFor = async (parGroup) => {
   }).sort({ year: -1 });
 };
 
+// The cycle a group was in on a past day, closed ones included. Not for today: a cycle can be
+// live before its start date, which only `currentCycleFor` sees.
+exports.cycleOn = async (parGroup, day) => {
+  if (!parGroup) return null;
+
+  return Cycle.findOne({
+    parGroup,
+    startDate: { $lte: day },
+    endDate: { $gte: day },
+    status: { $nin: ["draft", "cancelled"] },
+  }).sort({ year: -1 });
+};
+
 // Always draft: opening is what starts the cancellation clock.
 exports.createCycle = async ({ parGroup, year, startDate, endDate }) => {
   const start = toDay(startDate, "startDate");

@@ -5,10 +5,6 @@ import { useTeam } from "../../hooks/useTeam";
 import { sectionGroupsFor } from "../../utils/dashboardSections";
 import { GROUP_OVERVIEW, TABS_BY_GROUP } from "../../utils/dashboardTabs";
 import { formatDate } from "../../utils/dates";
-import {
-  SHOW_PLACEHOLDER_FIGURES,
-  PLACEHOLDER_TILES,
-} from "../../dev/placeholderFigures";
 import PageHeader from "../../components/layout/PageHeader";
 import IdentityCard from "../../components/dashboard/IdentityCard";
 import CycleCard from "../../components/dashboard/CycleCard";
@@ -36,18 +32,11 @@ export default function Dashboard() {
   const primary = groups[0] || "employee";
   const overview = GROUP_OVERVIEW[primary];
 
-  const tiles = SHOW_PLACEHOLDER_FIGURES
-    ? PLACEHOLDER_TILES[primary] || PLACEHOLDER_TILES.employee
-    : realTiles(user, line, lineLoading, team);
+  const tiles = tilesFor(user, line, lineLoading, team);
 
   return (
     <>
-      <PageHeader
-        title={overview.pageTitle}
-        context={[user?.designation, user?.parGroup && `${user.parGroup} group`]
-          .filter(Boolean)
-          .join(" · ")}
-      />
+      <PageHeader title={overview.pageTitle} context={user?.designation} />
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
         <IdentityCard
@@ -100,7 +89,7 @@ export default function Dashboard() {
 }
 
 // A tile is left out rather than shown empty.
-function realTiles(user, line, lineLoading, team) {
+function tilesFor(user, line, lineLoading, team) {
   const unit = lineLoading ? "…" : line?.unit?.name;
 
   return [
@@ -122,12 +111,6 @@ function realTiles(user, line, lineLoading, team) {
       icon: "clipboard",
       tone: "violet",
     },
-    user?.parGroup && {
-      value: user.parGroup,
-      label: "Your appraisal group, set by when you joined",
-      icon: "target",
-      tone: "green",
-    },
     user?.joinedDate && {
       value: formatDate(user.joinedDate),
       label: "At Altrium since",
@@ -137,7 +120,6 @@ function realTiles(user, line, lineLoading, team) {
   ].filter(Boolean);
 }
 
-// ⚠️ Undefined, never an empty array: an empty array is truthy and suppresses the placeholder.
 function rowStatus(tabId, team) {
   if (tabId !== "my-team" || !team) return undefined;
 

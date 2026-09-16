@@ -265,8 +265,8 @@ export default function PeerReviewFormPage() {
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A draft stays private to you. A submitted form can still be corrected for{" "}
-            <strong>five hours</strong> before it locks.
+            A submitted form can still be corrected for <strong>five hours</strong> before
+            it locks.
           </p>
         </div>
       )}

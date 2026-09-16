@@ -19,13 +19,13 @@ export default function CollectedFeedback({ collected, personId }) {
             ? "No colleagues have been asked yet."
             : belowMinimum
               ? `Only ${collected.assignedCount} were asked and the minimum is ${collected.minimum}, so nothing is shown.`
-              : `${collected.submittedCount} of ${collected.assignedCount} in. ${collected.needed} more before anything is shown.`}
+              : `${collected.settledCount} of ${collected.assignedCount} in. ${collected.needed} more before anything is shown.`}
         </p>
       </div>
     );
   }
 
-  const outstanding = collected.assignedCount - collected.submittedCount;
+  const outstanding = collected.assignedCount - collected.settledCount;
 
   return (
     <div className="grid gap-3">
@@ -41,7 +41,7 @@ export default function CollectedFeedback({ collected, personId }) {
       <p className="text-[13px] text-muted">
         {collected.complete
           ? `All ${collected.assignedCount} in.`
-          : `${collected.submittedCount} of ${collected.assignedCount} in, ${outstanding} to come.`}
+          : `${collected.settledCount} of ${collected.assignedCount} in, ${outstanding} to come.`}
       </p>
     </div>
   );

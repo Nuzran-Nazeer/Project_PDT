@@ -1,12 +1,7 @@
 import { Link } from "react-router-dom";
 import Icon from "../common/Icon";
-import {
-  SHOW_PLACEHOLDER_FIGURES,
-  PLACEHOLDER_ROW_STATUS,
-} from "../../dev/placeholderFigures";
 
-// The status on the right comes from dev/placeholderFigures.js and disappears when its
-// flag is off. Light values are 700: at 13px a 600 on white is under 4.5:1 contrast.
+// Light values are 700: at 13px a 600 on white is under 4.5:1 contrast.
 const STATUS_TONES = {
   muted: "text-muted",
   good: "text-emerald-700 dark:text-emerald-400",
@@ -31,11 +26,7 @@ const ICON_TONES = {
   settings: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
 };
 
-// A caller's `status` beats the placeholder, so a real number is never hidden behind an invented one.
-export default function ActionRow({ tab, status }) {
-  const statuses =
-    status || (SHOW_PLACEHOLDER_FIGURES ? PLACEHOLDER_ROW_STATUS[tab.id] || [] : []);
-
+export default function ActionRow({ tab, status = [] }) {
   return (
     <Link
       to={tab.path}
@@ -54,17 +45,17 @@ export default function ActionRow({ tab, status }) {
         <span className="block truncate text-[13px] text-muted">{tab.description}</span>
       </span>
 
-      {statuses.length > 0 && (
+      {status.length > 0 && (
         <span className="hidden items-center gap-4 border-l border-line pl-4 md:flex">
-          {statuses.map((status) => (
+          {status.map((item) => (
             <span
-              key={status.text}
+              key={item.text}
               className={`flex items-center gap-1.5 text-[13px] whitespace-nowrap ${
-                STATUS_TONES[status.tone] || STATUS_TONES.muted
+                STATUS_TONES[item.tone] || STATUS_TONES.muted
               }`}
             >
-              <Icon name={status.icon} className="h-3.5 w-3.5" />
-              {status.text}
+              <Icon name={item.icon} className="h-3.5 w-3.5" />
+              {item.text}
             </span>
           ))}
         </span>

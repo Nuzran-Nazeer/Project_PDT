@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { REVIEW_STATUS } = require("../config/constants");
 
 // One per employee per cycle: the container every feedback record hangs off.
-// ⚠️ `snapshot` and `periods` are written by nothing yet. Both must be before any review publishes.
+// ⚠️ `snapshot.rulesInForce` is written at publication, which nothing does yet.
 
 const periodSchema = new mongoose.Schema(
   {
@@ -34,7 +34,7 @@ const reviewSchema = new mongoose.Schema(
 
     status: { type: String, enum: REVIEW_STATUS, default: "pending" },
 
-    // Who the person was when reviewed.
+    // Who the person was when the review was created. Never recomputed.
     snapshot: {
       designation: String,
       level: String,
@@ -54,7 +54,7 @@ const reviewSchema = new mongoose.Schema(
       },
     },
 
-    // From the unit-lead history; nothing is merged across periods.
+    // From the unit-lead history at creation, [from, to); nothing is merged across periods.
     periods: { type: [periodSchema], default: [] },
 
     rawOverall: { type: Number, default: null },

@@ -5,7 +5,7 @@ const { FEEDBACK_EDIT_WINDOW_HOURS } = require("../config/constants");
 
 const HOUR_MS = 60 * 60 * 1000;
 
-// ⚠️ Nothing flips the status to `locked`, so the window is computed from `locksAt`.
+// ⚠️ `locksAt` decides, not the status: a record can be loaded a moment before it locks.
 const isEditable = (doc, now = new Date()) => {
   if (doc.status === "locked") return false;
   if (!doc.submittedAt) return true;

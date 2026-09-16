@@ -4,13 +4,14 @@ const OrgUnit = require("../models/orgunit.model");
 const Review = require("../models/review.model");
 const User = require("../models/user.model");
 const UnitMembership = require("../models/unitmembership.model");
+const UnitLead = require("../models/unitlead.model");
 const AppError = require("../utils/AppError");
 const { hasSettled } = require("./feedback.window");
 const { PEER_DISPLAY_THRESHOLD } = require("../config/constants");
-const { toDay, activeOn } = require("../utils/dateRange");
+const { toDay, activeOn, overlapping } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { leadOn, listLeads } = require("./unitlead.service");
-const { currentCycleFor } = require("./cycle.service");
+const { currentCycleFor, cycleOn } = require("./cycle.service");
 
 // ⚠️ The one place that answers who supervises whom. Derived every time, never stored:
 // a `supervisorId` would be unanswerable for past dates. No unit means null, a real answer.
@@ -100,6 +101,54 @@ exports.reportingLineOn = async (userId, date) => {
     ),
     skipLevel: asLead(skipLevel),
   };
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DAYS_PER_MONTH = 365.25 / 12;
+
+// Who supervised somebody across [from, to), as one period per change of unit or lead. The
+// same [from, to) convention as the history records. Days in no unit are left out.
+exports.supervisorPeriods = async (userId, from, to) => {
+  const inside = (d) => d && d.getTime() > from.getTime() && d.getTime() < to.getTime();
+  const points = new Set([from.getTime()]);
+
+  const memberships = await UnitMembership.find({
+    userId,
+    ...overlapping(from, to),
+  }).select("from to");
+  const leads = await UnitLead.find(overlapping(from, to)).select("from to");
+  for (const record of [...memberships, ...leads]) {
+    for (const d of [record.from, record.to]) if (inside(d)) points.add(d.getTime());
+  }
+
+  const days = [...points].sort((a, b) => a - b).map((ms) => new Date(ms));
+  const periods = [];
+
+  for (let i = 0; i < days.length; i += 1) {
+    const day = days[i];
+    const until = days[i + 1] || to;
+
+    const membership = await membershipOn(userId, day);
+    if (!membership) continue;
+
+    const lead = await climbToLead(membership.unitId, day, userId);
+    const supervisorId = lead ? lead.user._id : null;
+    const last = periods[periods.length - 1];
+
+    const continues =
+      last &&
+      last.to.getTime() === day.getTime() &&
+      String(last.unitId) === String(membership.unitId) &&
+      String(last.supervisorId) === String(supervisorId);
+
+    if (continues) last.to = until;
+    else periods.push({ supervisorId, unitId: membership.unitId, from: day, to: until });
+  }
+
+  return periods.map((p) => ({
+    ...p,
+    months: Math.round(((p.to - p.from) / DAY_MS / DAYS_PER_MONTH) * 10) / 10,
+  }));
 };
 
 // ⚠️ Must stay the exact mirror of climbToLead, or somebody can be supervised by a person
@@ -217,10 +266,11 @@ exports.teamOn = async (userId, date) => {
   );
 
   // ⚠️ A team spans appraisal groups, so the cycle is looked up per group, never taken
-  // from the supervisor. It is the live cycle whatever `day` was asked for.
+  // from the supervisor. A past day gets the cycle that covered it; today gets the live one.
+  const isToday = day.getTime() === toDay(new Date(), "on").getTime();
   const cycleByGroup = new Map();
   for (const group of new Set(members.map((m) => m.userId.parGroup).filter(Boolean))) {
-    const cycle = await currentCycleFor(group);
+    const cycle = isToday ? await currentCycleFor(group) : await cycleOn(group, day);
     cycleByGroup.set(
       group,
       cycle
@@ -235,10 +285,10 @@ exports.teamOn = async (userId, date) => {
     );
   }
 
-  const liveCycleIds = [...cycleByGroup.values()].filter(Boolean).map((c) => c.id);
-  const reviews = liveCycleIds.length
+  const cycleIds = [...cycleByGroup.values()].filter(Boolean).map((c) => c.id);
+  const reviews = cycleIds.length
     ? await Review.find({
-        cycleId: { $in: liveCycleIds },
+        cycleId: { $in: cycleIds },
         userId: { $in: members.map((m) => m.userId._id) },
       }).select("_id cycleId userId")
     : [];
