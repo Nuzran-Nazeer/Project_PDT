@@ -1,7 +1,6 @@
 import { apiFetch, buildQuery } from "./api";
 
-// ⚠️ Nothing here can name who was picked. After the draw the server serves a count only,
-// to HR as well as the supervisor.
+// ⚠️ Nothing here can name who was picked: after the draw the server serves a count only.
 
 export const getTeamLists = () => apiFetch("/reviewer-lists/team");
 

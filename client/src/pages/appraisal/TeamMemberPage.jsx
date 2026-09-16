@@ -8,8 +8,7 @@ import CollectedFeedback from "../../components/forms/CollectedFeedback";
 import ResponseCard from "../../components/forms/ResponseCard";
 import { summariseRatings } from "../../utils/ratingSummary";
 
-// A submitted review is still reachable: the form serves it read-only once its window has
-// closed, and that is where a supervisor goes to re-read what they wrote.
+// A submitted review stays reachable: the form serves it read-only once its window has closed.
 const REVIEW_LINK = {
   ready: "Supervisor review",
   draft: "Continue your review",
@@ -18,14 +17,12 @@ const REVIEW_LINK = {
   normalisation_ready: "View your review",
 };
 
-// One team member: their self-assessment, their feedback, and the way in to the review.
 export default function TeamMemberPage() {
   const { id } = useParams();
   const { team, loading, error } = useTeam();
 
   const person = (team?.team || []).find((member) => member.id === id);
-  // ⚠️ THEIR cycle, off the team record, never the signed-in supervisor's. The group comes
-  // from each person's joining month, so a team spans groups.
+  // ⚠️ Their cycle, off the team record, never the signed-in supervisor's: a team spans groups.
   const cycle = person?.cycle || null;
   const reviewId = person?.reviewId || null;
 
@@ -151,8 +148,7 @@ export default function TeamMemberPage() {
               : `No cycle is running for the ${person.parGroup || "their"} group.`}
           </p>
 
-          {/* ⚠️ Hides the way in, never protects it: the server refuses the form with a
-              409 regardless of what this screen draws. */}
+          {/* Hides the way in, never protects it: the server refuses the form with a 409. */}
           {readiness && readiness.state !== "waiting" ? (
             <Link
               to={`/my-team/${person.id}/review`}

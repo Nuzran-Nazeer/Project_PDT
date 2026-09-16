@@ -5,10 +5,6 @@ import { useTeam } from "../../hooks/useTeam";
 import { sectionGroupsFor } from "../../utils/dashboardSections";
 import { GROUP_OVERVIEW, TABS_BY_GROUP } from "../../utils/dashboardTabs";
 import { formatDate } from "../../utils/dates";
-import {
-  SHOW_PLACEHOLDER_FIGURES,
-  PLACEHOLDER_TILES,
-} from "../../dev/placeholderFigures";
 import PageHeader from "../../components/layout/PageHeader";
 import IdentityCard from "../../components/dashboard/IdentityCard";
 import CycleCard from "../../components/dashboard/CycleCard";
@@ -16,16 +12,14 @@ import StatTile from "../../components/dashboard/StatTile";
 import ActionRow from "../../components/dashboard/ActionRow";
 import MySupervisorPanel from "../../components/org/MySupervisorPanel";
 
-// One dashboard for everybody; the sections it carries come from
-// dashboardSections.js.
+// One dashboard for everybody; the sections come from dashboardSections.js.
 export default function Dashboard() {
   const { user, isSupervisor, sessionReady } = useAuth();
   const { line, loading: lineLoading, error: lineError } = useReportingLine();
   const { team } = useTeam();
   const { cycle, parGroup: cycleGroup, loading: cycleLoading } = useCurrentCycle();
 
-  // `isSupervisor` is false until the server answers, so drawing early would
-  // rearrange the dashboard under the reader.
+  // `isSupervisor` is false until the server answers.
   if (!sessionReady) {
     return (
       <p className="p-10 text-center text-muted" role="status">
@@ -38,19 +32,11 @@ export default function Dashboard() {
   const primary = groups[0] || "employee";
   const overview = GROUP_OVERVIEW[primary];
 
-  const tiles = SHOW_PLACEHOLDER_FIGURES
-    ? PLACEHOLDER_TILES[primary] || PLACEHOLDER_TILES.employee
-    : realTiles(user, line, lineLoading, team);
+  const tiles = tilesFor(user, line, lineLoading, team);
 
   return (
     <>
-      <PageHeader
-        title={overview.pageTitle}
-        // Not a list of roles: that would put a ladder on screen.
-        context={[user?.designation, user?.parGroup && `${user.parGroup} group`]
-          .filter(Boolean)
-          .join(" · ")}
-      />
+      <PageHeader title={overview.pageTitle} context={user?.designation} />
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
         <IdentityCard
@@ -102,13 +88,11 @@ export default function Dashboard() {
   );
 }
 
-// A tile is left out rather than shown empty, so somebody with no unit gets fewer
-// tiles rather than a row reading "None".
-function realTiles(user, line, lineLoading, team) {
+// A tile is left out rather than shown empty.
+function tilesFor(user, line, lineLoading, team) {
   const unit = lineLoading ? "…" : line?.unit?.name;
 
   return [
-    // Absent rather than nought, which would read as "your team is empty".
     team && {
       value: String(team.total),
       label: team.total === 1 ? "Person you supervise" : "People you supervise",
@@ -127,12 +111,6 @@ function realTiles(user, line, lineLoading, team) {
       icon: "clipboard",
       tone: "violet",
     },
-    user?.parGroup && {
-      value: user.parGroup,
-      label: "Your appraisal group, set by when you joined",
-      icon: "target",
-      tone: "green",
-    },
     user?.joinedDate && {
       value: formatDate(user.joinedDate),
       label: "At Altrium since",
@@ -142,8 +120,6 @@ function realTiles(user, line, lineLoading, team) {
   ].filter(Boolean);
 }
 
-// ⚠️ Undefined, never an empty array: an empty array is truthy, so returning one
-// silently suppresses the placeholder for every other row.
 function rowStatus(tabId, team) {
   if (tabId !== "my-team" || !team) return undefined;
 

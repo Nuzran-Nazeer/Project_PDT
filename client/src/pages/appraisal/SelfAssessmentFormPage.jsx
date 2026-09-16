@@ -15,9 +15,7 @@ import CompetencyRatingField from "../../components/forms/CompetencyRatingField"
 import TextAreaField from "../../components/forms/TextAreaField";
 import EditWindowNotice from "../../components/forms/EditWindowNotice";
 
-// Keyed by competencyKey rather than held as the array the server wants: a row is
-// looked up and updated on every keystroke, and turned into the array shape the request
-// needs only when a draft is saved or a submit is attempted.
+// Keyed by competencyKey; turned into the server's array only when saving or submitting.
 const answersFrom = (competencies, existingRatings) => {
   const byKey = Object.fromEntries(
     (existingRatings || []).map((r) => [r.competencyKey, r]),
@@ -34,9 +32,8 @@ const answersFrom = (competencies, existingRatings) => {
   );
 };
 
-// ⚠️ Only rows actually answered are sent. A placeholder row for every competency makes
-// a draft carry the same "needs a score" refusal as a submit, because the server
-// validates every row IN the array rather than every competency on the form.
+// ⚠️ Only answered rows are sent: the server validates every row in the array, so a
+// placeholder row makes a draft fail like a submit.
 const isAnswered = (row) => row.notObserved || row.score !== null;
 
 const ratingsArrayFrom = (answers) =>
@@ -119,9 +116,7 @@ export default function SelfAssessmentFormPage() {
       return true;
     } catch (err) {
       setFormError(err.message);
-      // ⚠️ The window can close while this page sits open. The server owns that rule,
-      // so its refusal is what flips the screen to the closed record: re-read rather
-      // than deciding here that the form is over.
+      // ⚠️ The window can close while this page sits open; the server's refusal flips the screen.
       if (err.status === 409) {
         getSelfAssessment()
           .then(applyRecord)
@@ -135,9 +130,7 @@ export default function SelfAssessmentFormPage() {
 
   const onSaveDraft = () => runSave(saveSelfDraft, payload(), "Draft saved.");
 
-  // ⚠️ Yup reports `ratings[2].evidence`, and that 2 indexes the array SENT, which holds
-  // only answered rows. Reading it as a position in the full competency list puts the
-  // message under the wrong question.
+  // ⚠️ Yup's `ratings[2]` indexes the array sent, not the full competency list.
   const errorsByCompetency = (validationError, sent) => {
     const errors = {};
     validationError.inner.forEach((err) => {
@@ -164,10 +157,7 @@ export default function SelfAssessmentFormPage() {
       return;
     }
 
-    // Submitting ends the sitting, so the SCREEN changes rather than a line of text
-    // appearing under the button: the landing page reports the real state and carries
-    // the edit-window notice with it. A draft deliberately stays put: that work is not
-    // finished, and the confirmation belongs where the person is already looking.
+    // Submitting leaves the form; a draft stays put.
     if (await runSave(submitSelfAssessment, body, "Submitted.")) {
       navigate("/my-self-assessment");
     }
@@ -197,8 +187,6 @@ export default function SelfAssessmentFormPage() {
 
   const cycle = record.cycle;
 
-  // No cycle, or a cycle with no review in it, is a real state rather than an error:
-  // there is nothing to write against, so the form is not drawn at all.
   if (!cycle || !record.reviewId) {
     return (
       <>
@@ -215,8 +203,7 @@ export default function SelfAssessmentFormPage() {
   const editable = record.editable;
   const supervisor = line?.supervisor;
 
-  // ⚠️ Closed means no controls, not disabled controls. A greyed-out form reads as a
-  // page that failed to load and invites somebody to keep trying.
+  // Closed means no controls, not disabled controls.
   const body = (
     <FormShell>
       <FormSection
@@ -242,8 +229,7 @@ export default function SelfAssessmentFormPage() {
         note="Each goal from your last development plan, with what happened to it."
       >
         <p className="rounded-lg border border-dashed border-line p-6 text-center text-sm text-muted">
-          Nothing to show. Development plans are not part of this release, so there are no
-          goals to carry forward yet.
+          Not built yet.
         </p>
       </FormSection>
 
@@ -308,8 +294,7 @@ export default function SelfAssessmentFormPage() {
           )}
 
           <div className="mt-1 flex flex-wrap items-center gap-3">
-            {/* Not a submit: a draft is allowed to be incomplete, so it must never
-                reach the schema the submit button is checked against. */}
+            {/* Not a submit: a draft may be incomplete and must never reach the schema. */}
             <button
               type="button"
               disabled={saving}
@@ -328,8 +313,8 @@ export default function SelfAssessmentFormPage() {
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A draft stays private to you. A submitted assessment can still be corrected
-            for <strong>five hours</strong> before it locks.
+            A submitted assessment can still be corrected for <strong>five hours</strong>{" "}
+            before it locks.
           </p>
         </div>
       )}

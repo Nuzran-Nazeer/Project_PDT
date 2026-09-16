@@ -10,37 +10,28 @@ import {
 } from "../services/token";
 
 export function AuthProvider({ children }) {
-  // `getToken` is passed as the initialiser rather than called: React would otherwise
-  // read storage on every render.
+  // Passed as the initialiser, not called: React would otherwise read storage on every render.
   const [token, setToken] = useState(getToken);
   const [user, setUser] = useState(getStoredUser);
 
-  // Fetched once per session because the endpoint needs a token, so it cannot be
-  // loaded before signing in.
   const [constants, setConstants] = useState(null);
   const [constantsReady, setConstantsReady] = useState(false);
 
-  // `supervisor` is not a role anybody is granted: a person is one because they lead a
-  // unit today, so only the server can answer it. Working it out here would be a
-  // screen deciding what somebody is, which build rule 1 exists to stop.
+  // `supervisor` is derived, so only the server can answer it.
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [leadsUnits, setLeadsUnits] = useState([]);
 
-  // Guards must not decide before the answer arrives, or a supervisor refreshing on
-  // their own screen is bounced off it.
+  // Guards must not decide before the answer arrives.
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // No reset branch: clearing state synchronously inside an effect body causes a
-    // second render pass and the React lint rule rejects it. The reset belongs in
-    // signOut, the only thing that removes a token anyway.
+    // No reset branch: the reset belongs in signOut, and state set in an effect body re-renders.
     if (!token) return;
 
     let cancelled = false;
     fetchConstants()
       .then((data) => !cancelled && setConstants(data))
-      // Deliberately swallowed: a failure here must not block signing in. The landing
-      // redirect falls back to the employee dashboard, which everyone can reach.
+      // Swallowed: a failure here must not block signing in.
       .catch(() => !cancelled && setConstants(null))
       .finally(() => !cancelled && setConstantsReady(true));
 
@@ -49,10 +40,7 @@ export function AuthProvider({ children }) {
     };
   }, [token]);
 
-  // Re-read on every load rather than trusting what login stored. The token is minted
-  // once and never changes, so a role granted this morning is invisible to a session
-  // reading only its own copy, and someone who stopped leading a unit keeps seeing a
-  // team that is no longer theirs.
+  // Re-read on every load: the token never changes, so a role granted today would be invisible.
   useEffect(() => {
     if (!token) return;
 
@@ -65,8 +53,7 @@ export function AuthProvider({ children }) {
         setIsSupervisor(Boolean(data.isSupervisor));
         setLeadsUnits(data.leadsUnits || []);
       })
-      // A rejected token is already handled: the API layer clears storage and raises
-      // the session-expired event. Anything else leaves the stored copy in place.
+      // A rejected token is already handled by the API layer.
       .catch(() => {})
       .finally(() => !cancelled && setSessionReady(true));
 
@@ -83,8 +70,7 @@ export function AuthProvider({ children }) {
     return result.user;
   }, []);
 
-  // A client-side discard: the server is not told, because it keeps no session to end
-  // (build decision B6). The token stays technically valid until it expires.
+  // Client-side only: the server keeps no session to end (B6).
   const signOut = useCallback(() => {
     clearSession();
     setToken(null);
@@ -96,8 +82,7 @@ export function AuthProvider({ children }) {
     setSessionReady(false);
   }, []);
 
-  // The API layer clears storage when a token is rejected; this clears the React state
-  // to match, so the route guard notices. Without it the two disagree until a reload.
+  // Mirrors the API layer clearing storage, so the route guard notices.
   useEffect(() => {
     window.addEventListener(SESSION_EXPIRED, signOut);
     return () => window.removeEventListener(SESSION_EXPIRED, signOut);

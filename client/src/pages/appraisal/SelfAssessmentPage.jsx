@@ -4,11 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { getSelfAssessment } from "../../services/feedback";
 import PageHeader from "../../components/layout/PageHeader";
 
-// The way in to the self-assessment: which cycle, where it has got to, and one action.
-//
-// ⚠️ The state comes off the endpoint, never from the cycle alone. This screen used to
-// say "has not been started" whatever had been written, which is false the moment
-// somebody saves a draft.
+// ⚠️ The state comes off the endpoint, never from the cycle alone: a saved draft is not "not started".
 
 const STATE = {
   not_started: {

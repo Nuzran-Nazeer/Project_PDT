@@ -10,11 +10,7 @@ const {
   CYCLE_CANCEL_WINDOW_DAYS,
 } = require("../config/constants");
 
-// The stage order lives in config/constants.js, being a controlled list.
-
-// One live cycle per group per year, checked here for a readable message and again by
-// a partial unique index. Cancelled cycles deliberately do not count: the reason to
-// cancel is to open a replacement, which counting them would refuse.
+// Cancelled cycles do not count: the reason to cancel is to open a replacement.
 const assertNoLiveCycle = async (parGroup, year, excludeId) => {
   const filter = { parGroup, year, cancelledOn: null };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -43,13 +39,8 @@ exports.getCycleById = async (id) => {
   return cycle;
 };
 
-// ⚠️ NOTHING STORES A ROSTER. A stored list would disagree with the records the first
-// time somebody joins mid-cycle.
-//
-// Two conditions, the second easy to miss: the group must match AND the person must
-// belong to a unit, because someone in no unit is not appraised. Those excluded are
-// still RETURNED with `appraised: false` and a reason, so HR is not left with a count
-// that is short by one and nothing to explain it.
+// ⚠️ Nothing stores a roster. The group must match and the person must belong to a unit;
+// those in no unit are still returned, flagged, so a short count has an explanation.
 const coverageFor = async (parGroup, on = new Date()) => {
   const day = toDay(on, "date");
 
@@ -73,14 +64,12 @@ const coverageFor = async (parGroup, on = new Date()) => {
       ...person,
       unit,
       appraised: Boolean(unit),
-      // Written out rather than inferred from a null unit, so the rule lives once.
       notAppraisedBecause: unit ? null : "Belongs to no unit, so has no supervisor",
     };
   });
 };
 
-// `inScope` narrows the headcount to the people the caller may see, so a card never counts
-// more people than its own people page lists.
+// `inScope` narrows the headcount to the people the caller may see.
 exports.listCycles = async ({ parGroup, year, status } = {}, inScope = () => true) => {
   const filter = {};
   if (parGroup) filter.parGroup = parGroup;
@@ -92,10 +81,7 @@ exports.listCycles = async ({ parGroup, year, status } = {}, inScope = () => tru
     .populate("openedBy cancelledBy", "name employeeId")
     .lean();
 
-  // Per GROUP, not per cycle: a per-cycle query would run the same count five times
-  // for a five-card list.
-  //
-  // ⚠️ TODAY'S count on every card, including a cycle that closed last year.
+  // ⚠️ Today's count on every card, including a cycle that closed last year.
   const groups = [...new Set(items.map((c) => c.parGroup))];
   const counts = new Map();
   for (const group of groups) {
@@ -109,8 +95,6 @@ exports.listCycles = async ({ parGroup, year, status } = {}, inScope = () => tru
   };
 };
 
-// ⚠️ Carries no review status, because there are no reviews yet. The screen says so
-// rather than inventing a state.
 exports.peopleInCycle = async (id) => {
   const cycle = await exports.getCycleById(id);
   const people = await coverageFor(cycle.parGroup);
@@ -123,8 +107,7 @@ exports.peopleInCycle = async (id) => {
   };
 };
 
-// Null is a real answer: for most of the year a group is between cycles, and a draft
-// does not count because it has not opened.
+// Null for most of the year: a group is between cycles, and a draft has not opened.
 exports.currentCycleFor = async (parGroup) => {
   if (!parGroup) return null;
 
@@ -134,8 +117,20 @@ exports.currentCycleFor = async (parGroup) => {
   }).sort({ year: -1 });
 };
 
-// Always draft: opening is what starts the cancellation clock and records who did
-// it.
+// The cycle a group was in on a past day, closed ones included. Not for today: a cycle can be
+// live before its start date, which only `currentCycleFor` sees.
+exports.cycleOn = async (parGroup, day) => {
+  if (!parGroup) return null;
+
+  return Cycle.findOne({
+    parGroup,
+    startDate: { $lte: day },
+    endDate: { $gte: day },
+    status: { $nin: ["draft", "cancelled"] },
+  }).sort({ year: -1 });
+};
+
+// Always draft: opening is what starts the cancellation clock.
 exports.createCycle = async ({ parGroup, year, startDate, endDate }) => {
   const start = toDay(startDate, "startDate");
   const end = toDay(endDate, "endDate");
@@ -152,11 +147,7 @@ exports.createCycle = async ({ parGroup, year, startDate, endDate }) => {
   });
 };
 
-// Forward, one stage at a time.
-//
-// The target is named by the caller rather than left implicit. "Advance" with no target
-// reads fine until somebody double-clicks and skips a stage without noticing; naming
-// the stage they expect means a repeated request is refused instead of obeyed.
+// The caller names the target stage, so a double-click is refused rather than obeyed.
 exports.advanceCycle = async (id, target, userId) => {
   const cycle = await exports.getCycleById(id);
 
@@ -179,9 +170,7 @@ exports.advanceCycle = async (id, target, userId) => {
     );
   }
 
-  // Opening is the one transition that records anything beyond the stage itself, and
-  // both of those recordings are load bearing: `openedOn` starts the cancellation
-  // clock, and without it the 30-day rule has nothing to measure from.
+  // `openedOn` is what the cancellation window measures from.
   if (next === "open") {
     await assertUserExists(userId);
     cycle.openedBy = userId;
@@ -189,8 +178,8 @@ exports.advanceCycle = async (id, target, userId) => {
   }
 
   // Before the stage changes, so a failure leaves the cycle where it was.
-  // ⚠️ Required here, not at the top: review.service requires this file, and a require in
-  // both directions at load time hands one of them an empty exports object.
+  // ⚠️ Required here, not at the top: review.service requires this file, and a circular
+  // require at load time hands one side an empty exports object.
   if (next === "collecting") {
     const { openReviewsForCycle } = require("./review.service");
     await openReviewsForCycle(cycle._id);
@@ -201,8 +190,7 @@ exports.advanceCycle = async (id, target, userId) => {
   return cycle;
 };
 
-// ⚠️ CANCEL IS NOT DELETE. Nothing removes a cycle at any stage: a published one is
-// somebody's appraisal record. This sets a status and records why.
+// ⚠️ Cancel is not delete: a published cycle is somebody's appraisal record.
 exports.cancelCycle = async (id, reason, userId) => {
   const cycle = await exports.getCycleById(id);
 
@@ -215,15 +203,8 @@ exports.cancelCycle = async (id, reason, userId) => {
     throw new AppError("A written reason is required to cancel a cycle", 400);
   }
 
-  // ⚠️ A READING OF AN AMBIGUOUS RULE, flagged rather than assumed. §2.9 says HR may
-  // cancel "an open cycle" within 30 days of it opening. A DRAFT has never opened, so
-  // the window has nothing to measure from and the rule cannot be applied to it
-  // literally -- but refusing outright would leave a mistaken draft in the collection
-  // forever, since nothing deletes. Cancelling a draft is allowed here with no window,
-  // and it is the narrow case: nobody has been told the cycle exists.
-  //
-  // Anything past `open` is refused. By then the cycle is collecting real work, which
-  // is exactly what the 30-day guarantee exists to protect.
+  // A draft has never opened, so it has no window: cancelling one is allowed at any time,
+  // since nothing else can remove a mistaken draft.
   if (cycle.status !== "draft" && cycle.status !== "open") {
     throw new AppError(
       `A cycle can only be cancelled while it is a draft or open. This one is ${cycle.status}.`,
@@ -232,11 +213,8 @@ exports.cancelCycle = async (id, reason, userId) => {
   }
 
   if (cycle.status === "open") {
-    // Checked BEFORE the arithmetic, not after. `new Date(null)` is the epoch, so a
-    // missing opening date would quietly become "opened in 1970" and every cancel
-    // would be refused as far too late. Only reachable if a cycle was opened without
-    // recording when, which the advance path makes impossible -- so failing loudly is
-    // right.
+    // ⚠️ Checked before the arithmetic: `new Date(null)` is 1970, and every cancel would
+    // be refused as far too late.
     if (!cycle.openedOn) {
       throw new AppError(
         "This cycle has no opening date recorded, so its cancellation window cannot be worked out",

@@ -1,16 +1,8 @@
 const mongoose = require("mongoose");
 const { HR_COVERAGE_ROLES } = require("../config/constants");
 
-// Which HR officer is responsible for a unit. Coverage reaches a unit's sub-units too,
-// unless a sub-unit has its own direct record, which takes over entirely for that
-// sub-unit -- see coverageOn() in hrcoverage.service.js, the one place that resolves
-// this. Nothing here stores the resolved answer, only the direct facts it is built
-// from.
-//
-// A unit may hold TWO open records at once, one per role, unlike UnitLead's single
-// slot: a primary and a backup are both real coverage, not a handover in progress.
-//
-// Period convention as every dated collection; see utils/dateRange.js.
+// Direct facts only; coverageOn() in hrcoverage.service.js resolves inheritance. A unit
+// may hold two open records at once, one per role.
 const hrCoverageSchema = new mongoose.Schema(
   {
     unitId: {
@@ -41,15 +33,11 @@ const hrCoverageSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Neither field carries `index: true`, for the naming reason on the membership model.
 hrCoverageSchema.index({ unitId: 1, from: 1 });
 hrCoverageSchema.index({ userId: 1, from: 1 });
 
-// A database backstop for "one primary and one backup at a time", scoped to the
-// UNIT+ROLE pair so a primary and a backup can both be open without tripping it, but
-// two open primaries on the same unit cannot. `partialFilterExpression` applied only
-// where `to` is null reads as "among this unit's OPEN records for this role, exactly
-// one".
+// One open record per unit and role. ⚠️ Never `index: true` on `unitId`: the names collide
+// and the second index is silently dropped.
 hrCoverageSchema.index(
   { unitId: 1, role: 1 },
   { unique: true, partialFilterExpression: { to: null } },

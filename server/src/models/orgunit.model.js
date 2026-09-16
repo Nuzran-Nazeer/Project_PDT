@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const { ORG_UNIT_TYPES } = require("../config/constants");
 
-// The company as a tree, shape only. Who belongs to a unit and who leads it are
-// separate dated collections, because both change over time.
+// Shape only. Who belongs to a unit and who leads it are separate dated collections.
 const orgUnitSchema = new mongoose.Schema(
   {
     name: {
@@ -11,8 +10,7 @@ const orgUnitSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // A label, not a level. See config/constants.js for why nothing checks that a
-    // sub-unit sits under a unit.
+    // A label, not a level.
     type: {
       type: String,
       required: [true, "Type is required"],
@@ -22,8 +20,7 @@ const orgUnitSchema = new mongoose.Schema(
       },
     },
 
-    // null means the root, and exactly one unit may have it. Enforced in the service:
-    // a field-level validator sees only this document.
+    // null means the root. One root only, enforced in the service.
     parentUnitId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "OrgUnit",
@@ -31,14 +28,10 @@ const orgUnitSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Set false by discontinueUnit() and nothing else. Never removed: past appraisals
-    // were run inside it.
+    // Set false by discontinueUnit() and nothing else.
     active: { type: Boolean, default: true },
 
-    // The last day the unit operated, null while live. Without it, "was this unit
-    // live in March" would have no answer.
-    //
-    // ⚠️ Missing from Docs/PDT-DATA-MODEL.md, which still lists four fields here.
+    // The last day the unit operated, null while live.
     discontinuedOn: { type: Date, default: null },
   },
   { timestamps: true },

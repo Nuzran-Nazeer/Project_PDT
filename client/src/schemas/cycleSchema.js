@@ -1,8 +1,6 @@
 import * as yup from "yup";
 
-// `parGroups` comes from GET /api/constants: a list written twice drifts, and the
-// drift is silent, because the dropdown offers a word the model refuses. If that
-// request failed the list check is skipped, as in the unit and employee schemas.
+// If the constants request failed the list check is skipped: the server has the final word.
 export const buildCycleSchema = (constants) => {
   const groups = constants?.parGroups || [];
   const thisYear = new Date().getFullYear();
@@ -17,8 +15,7 @@ export const buildCycleSchema = (constants) => {
         (value) => !value || groups.length === 0 || groups.includes(value),
       ),
 
-    // Wide on purpose. Which years are sensible is not written down anywhere, so this
-    // catches a typo and leaves a deliberately backfilled year alone.
+    // Wide on purpose: a backfilled year is allowed.
     year: yup
       .number()
       .typeError("Year must be a number")
@@ -32,8 +29,6 @@ export const buildCycleSchema = (constants) => {
     endDate: yup
       .string()
       .required("End date is required")
-      // A period ending before it starts covers no days, so the record is true on no
-      // date. The server refuses it too; this only says so first.
       .test(
         "after-start",
         "The end date must be after the start date",

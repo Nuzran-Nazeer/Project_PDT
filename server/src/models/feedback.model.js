@@ -5,17 +5,15 @@ const {
   IDENTIFYING_FIELDS,
 } = require("../config/constants");
 
-// One collection for all six reviewer types, so stripping the reviewer's identity is
-// ONE function rather than six places to remember. (Design decision L1-9)
+// One collection for all six reviewer types, so stripping the reviewer's identity is one
+// function rather than six places to remember.
 
 const ratingSchema = new mongoose.Schema(
   {
-    // ⚠️ The stable key, NEVER the display name and never an array index. Renaming a
-    // competency must leave every stored record meaning what it meant.
+    // ⚠️ The stable key, never the display name and never an array index.
     competencyKey: { type: String, required: [true, "competencyKey is required"] },
 
-    // A real answer, not a blank: a declined competency stores no score and needs no
-    // evidence, which is why both below are nullable.
+    // A declined competency stores no score and no evidence.
     notObserved: { type: Boolean, default: false },
     score: { type: Number, min: 1, max: 5, default: null },
     evidence: { type: String, default: null },
@@ -31,8 +29,7 @@ const drawnFromSchema = new mongoose.Schema(
 
 const feedbackSchema = new mongoose.Schema(
   {
-    // Nullable: a project lead writes at project close, when no cycle may be open. The
-    // record is stored with `projectId` set and adopted when a cycle opens.
+    // Nullable: a project lead writes at project close and the record is adopted later.
     reviewId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Review",
@@ -40,8 +37,7 @@ const feedbackSchema = new mongoose.Schema(
       index: true,
     },
 
-    // ⚠️ THE FIELD THE WHOLE PRODUCT RESTS ON. `select: false` keeps it out of every
-    // query result, so an endpoint cannot leak what it never loaded. Ask for it back
+    // ⚠️ `select: false` so an endpoint cannot leak what it never loaded. Ask for it back
     // only through services/feedback.privacy.js, never with a bare .select().
     reviewerId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -67,8 +63,7 @@ const feedbackSchema = new mongoose.Schema(
       },
     },
 
-    // Which stretch of the cycle this covers, for somebody who changed supervisor
-    // mid-year. Nothing is averaged across periods.
+    // Which stretch of the cycle this covers; nothing is averaged across periods.
     periodIndex: { type: Number, default: 0 },
 
     projectId: {
@@ -77,8 +72,7 @@ const feedbackSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ⚠️ Stored, not derived. Editing a form creates a NEW version, so without this
-    // an edit retroactively changes the questions last year's answers were given to.
+    // ⚠️ Stored, not derived, or a form edit changes the questions past answers were given to.
     formTemplateKey: { type: String, required: [true, "formTemplateKey is required"] },
     formTemplateVersion: {
       type: Number,
@@ -92,19 +86,15 @@ const feedbackSchema = new mongoose.Schema(
       development: { type: String, default: null },
     },
 
-    // ⚠️ The digest of COLLEAGUE feedback that the employee eventually reads, not the
-    // supervisor's own view of them, and HR checks it against the raw comments before
-    // publication. Written by hand on a supervisor record; nothing generates it.
+    // The digest of colleague feedback the employee eventually reads. Written by hand.
     colleagueSummary: { type: String, default: null },
 
     status: { type: String, enum: FEEDBACK_STATUS, default: "assigned" },
 
-    // Assigned when the reviewers are picked, NOT in submission order, so arrival
-    // order carries no information. It is the only handle a consumer ever gets.
+    // ⚠️ Assigned when the reviewers are picked, never in submission order.
     label: { type: String, default: null },
 
-    // ⚠️ IDENTIFYING. The unit or project the reviewer was drawn through: in a project of three
-    // that narrows to a name. Loaded only to count per-source load, and never served.
+    // ⚠️ Identifying: in a project of three the source is a name. Never served.
     drawnFrom: { type: drawnFromSchema, select: false, default: null },
 
     submittedAt: { type: Date, default: null },
@@ -112,6 +102,15 @@ const feedbackSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+// ⚠️ `locked` is set when a record is loaded, not by a job: `locksAt` is the truth and the stored
+// status catches up on the next save. Query on `locksAt`, never on `status: "locked"`, and a
+// projection that selects `status` without `locksAt` gets the stale value.
+feedbackSchema.post("init", function () {
+  if (this.status === "submitted" && this.locksAt && this.locksAt <= new Date()) {
+    this.status = "locked";
+  }
+});
 
 // One submission per reviewer, per reviewee, per review.
 feedbackSchema.index(
@@ -121,9 +120,7 @@ feedbackSchema.index(
 
 feedbackSchema.index({ revieweeId: 1, reviewerType: 1, status: 1 });
 
-// Belt and braces alongside `select: false`, and the same treatment the password
-// field gets: a query that re-selects the reviewer still cannot leak it through a
-// response. Anything needing these fields must build its own object explicitly.
+// A query that re-selects the reviewer still cannot leak it through a response.
 feedbackSchema.set("toJSON", {
   transform: (doc, ret) => {
     for (const field of IDENTIFYING_FIELDS) delete ret[field];

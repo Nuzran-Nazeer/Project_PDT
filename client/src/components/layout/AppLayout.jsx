@@ -7,13 +7,9 @@ import ThemeToggle from "../common/ThemeToggle";
 import Icon from "../common/Icon";
 import Sidebar from "./Sidebar";
 
-// The hamburger collapses the rail on a wide window and opens a drawer below `md`.
-//
-// ⚠️ Nothing about ACCESS is decided here. Which roles reach a screen is set by its
-// route, so a missing sidebar link never means a screen is protected.
+// ⚠️ Nothing about access is decided here: a missing sidebar link never means a screen is protected.
 const WIDE = "(min-width: 768px)";
 
-// Reading storage throws in a private window, so every access is guarded.
 const COLLAPSE_KEY = "pdt.sidebar.collapsed";
 
 function storedCollapsed() {
@@ -32,7 +28,6 @@ export default function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Drawn before the server answers, since everybody holds the employee role.
-  // Waiting would show an empty rail beside a spinner on every first load.
   const groups = sessionReady
     ? sectionGroupsFor(user?.roles, isSupervisor)
     : sectionGroupsFor(user?.roles, false);
@@ -48,8 +43,7 @@ export default function AppLayout() {
       try {
         window.localStorage.setItem(COLLAPSE_KEY, String(next));
       } catch {
-        // A browser refusing to store a preference is not a reason to refuse to
-        // collapse the rail. It just will not be remembered.
+        // Storage throws in a private window; the rail still collapses, unremembered.
       }
       return next;
     });
@@ -86,9 +80,7 @@ export default function AppLayout() {
             </span>
           </NavLink>
 
-          {/* `ml-auto` holds this group against the right edge, and `min-w-0` stops a
-              long name pushing the row past the viewport, which would give the page a
-              horizontal scrollbar rather than a truncated name. */}
+          {/* `min-w-0` stops a long name giving the page a horizontal scrollbar. */}
           <div className="ml-auto flex min-w-0 items-center gap-3">
             <ThemeToggle />
 
@@ -119,8 +111,7 @@ export default function AppLayout() {
         </div>
       </header>
 
-      {/* `min-h` stops the rail ending halfway down a short page: a flex row is only
-          as tall as its tallest child. */}
+      {/* `min-h` stops the rail ending halfway down a short page. */}
       <div className="flex min-h-[calc(100svh-4rem)]">
         <aside
           className={`hidden shrink-0 border-r border-line bg-raised transition-[width] duration-200 md:block ${
@@ -130,27 +121,19 @@ export default function AppLayout() {
           <Sidebar groups={groups} collapsed={collapsed} />
         </aside>
 
-        {/* Right padding mirrors the rail so the free space stays symmetrical and the
-            content does not slide sideways when the rail collapses.
-
-            ⚠️ The breakpoints are arithmetic, not taste: content is capped at 1180, so
-            the balance only fits above 1180 + 2 x rail (1660 open, 1308 collapsed).
-            Applying it at every width squeezed the content to ~1056px on a 1536px
-            window, making the screen look narrower with the sidebar open than shut. */}
+        {/* ⚠️ The breakpoints are arithmetic: content is capped at 1180, so the mirrored
+            padding fits only above 1180 + 2 x rail (1660 open, 1308 collapsed). */}
         <main
           className={`min-w-0 flex-1 transition-[padding] duration-200 ${
             collapsed ? "min-[1308px]:pr-16" : "min-[1660px]:pr-60"
           }`}
         >
-          {/* Capped: without it an action row on a wide monitor stretches to a metre
-              of empty space with an icon at one end and a chevron at the other. */}
           <div className="mx-auto w-full max-w-[1180px] px-6 py-8 sm:px-10">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* Outside the flex row so it overlays the page rather than taking a column. */}
       {!isWide && drawerOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <button
@@ -173,8 +156,7 @@ export default function AppLayout() {
   );
 }
 
-// First and last word, so "Test Officer" reads TO. One word gives one letter rather
-// than two of the same.
+// First and last word; one word gives one letter.
 function initials(name) {
   const words = (name || "").trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "?";

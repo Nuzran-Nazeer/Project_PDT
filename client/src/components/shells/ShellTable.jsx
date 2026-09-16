@@ -1,5 +1,3 @@
-// The card, heading, three columns and status pill every list screen uses.
-// Takes rows already built by the page, so nothing about the appraisal is known here.
 export default function ShellTable({ heading, columns, rows, empty }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-raised">
@@ -44,8 +42,7 @@ export default function ShellTable({ heading, columns, rows, empty }) {
   );
 }
 
-// ⚠️ One tone only: a coloured pill would report a state of real work, and a shell
-// has none.
+// One tone only: a coloured pill would report a state of real work, and a shell has none.
 export function Pill({ children }) {
   return (
     <span className="inline-block rounded-lg border border-line px-2.5 py-1 text-[12px] text-muted">

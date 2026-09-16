@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 
-// One submitted response, as a card that opens it.
 export default function ResponseCard({ to, title, summary }) {
   return (
     <Link

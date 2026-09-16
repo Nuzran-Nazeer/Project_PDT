@@ -1,8 +1,6 @@
 const AppError = require("../utils/AppError");
 
-// Request-SHAPE checks only. Whether an answer is allowed on this form, whether a score
-// needs evidence, and whether the record is still inside its edit window are rules about
-// the record and its competency list, so they live in the service.
+// Request-shape checks only. Rules about other records or state live in the service.
 
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 

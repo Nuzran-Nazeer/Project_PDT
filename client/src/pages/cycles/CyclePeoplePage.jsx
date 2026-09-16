@@ -5,21 +5,8 @@ import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
-// The people one appraisal cycle covers.
-//
-// THE PEOPLE ARE REAL; THEIR REVIEW STATUS DOES NOT EXIST. Reviews, feedback and
-// self-assessments have no model and no collection yet, so there is no state to report
-// and the status column says so in those words. Showing every row as "Not started"
-// would be a claim about their work rather than about the system, and it would read as
-// true. Same decision, and the same wording, as the My team screen.
-//
-// NOBODY IS LISTED HERE BY CHOICE. A cycle covers a GROUP, and a person's group is
-// derived from their joining date, so this list is worked out on the server when it is
-// asked for. There is nothing to add somebody to and nothing to remove them from.
-//
-// ⚠️ WHEN REVIEW STATUS ARRIVES, IT IS NOT A REVIEWER COUNT WITH NAMES. Peer reviewers
-// appear as a number and nothing else: in a small unit a name beside a submission time
-// identifies who wrote what, which is the one thing this system exists to prevent.
+// Nobody is listed here by choice: the roster is derived on the server from each
+// person's group. ⚠️ Peer reviewers appear as a count, never named and never timed.
 
 const STAGE_LABELS = {
   draft: "Draft",
@@ -39,8 +26,6 @@ export default function CyclePeoplePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Same shape as every other detail screen: a promise chain rather than an async
-  // effect body, and `cancelled` so a slow response cannot write into a gone screen.
   useEffect(() => {
     let cancelled = false;
 
@@ -91,22 +76,16 @@ export default function CyclePeoplePage() {
       ) : (
         <>
           <p className="mb-4 text-sm text-muted">
-            {/* The count of people who are ACTUALLY covered, not of rows in the table.
-                Anyone in the group without a unit is listed below but is not appraised,
-                and a headline number that included them would be wrong by exactly the
-                number of rows carrying a warning. */}
+            {/* People actually appraised, not rows: someone in no unit is listed but not counted. */}
             <strong className="text-ink">{data.appraised}</strong>
             {data.appraised === 1 ? " person is " : " people are "}
-            covered by this cycle. Nobody is added by hand: everyone whose appraisal group
-            is <strong className="text-ink">{cycle.parGroup}</strong> is in it, and that
-            group comes from their joining date.
+            covered by this cycle: everyone whose appraisal group is{" "}
+            <strong className="text-ink">{cycle.parGroup}</strong>.
           </p>
 
           {people.length === 0 ? (
             <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
-              Nobody belongs to the {cycle.parGroup} group, so this cycle covers no one.
-              An appraisal group comes from a joining date, so this changes as people are
-              taken on.
+              Nobody belongs to the {cycle.parGroup} group yet.
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-line bg-raised">
@@ -125,10 +104,6 @@ export default function CyclePeoplePage() {
                   {people.map((person) => (
                     <tr key={person._id} className="border-b border-line last:border-0">
                       <td className="px-4 py-3 font-medium text-ink">
-                        {/* Through to the employee record, which is the screen that
-                            already answers every other question about this person.
-                            Rebuilding any of it here would be a second copy to keep
-                            right. */}
                         <Link
                           to={`/employees/${person._id}`}
                           className="transition-colors hover:text-brand"
@@ -143,10 +118,7 @@ export default function CyclePeoplePage() {
                       <td className="px-4 py-3 text-muted">
                         {person.unit?.name || "No unit"}
                         {!person.appraised && (
-                          // Shown rather than hidden. Dropping these rows would leave
-                          // the count short with nothing on screen to explain it, and
-                          // "why is she not in the cycle" is exactly the question HR
-                          // would then have to ask somebody.
+                          // Shown, not dropped: a short count with nothing to explain it is worse.
                           <span className="mt-1 flex items-center gap-1.5 text-[12px] text-amber-700 dark:text-amber-400">
                             <Icon name="flag" className="h-3.5 w-3.5" />
                             {person.notAppraisedBecause}
@@ -161,22 +133,12 @@ export default function CyclePeoplePage() {
             </div>
           )}
 
-          {people.length > 0 && (
-            <p className="mt-4 max-w-prose text-[13px] text-muted">
-              The <strong>This cycle</strong> column will show each person&rsquo;s
-              self-assessment, the feedback collected about them and their supervisor
-              review. None of those exist yet, so there is nothing for it to report.
-            </p>
-          )}
-
           {notAppraised.length > 0 && (
             <p className="mt-3 max-w-prose text-[13px] text-muted">
               {notAppraised.length === 1
                 ? "One person is"
                 : `${notAppraised.length} people are`}{" "}
-              in this group but not appraised, marked above. Somebody who belongs to no
-              unit has no supervisor, and nobody can review them until they are placed in
-              one.
+              in this group but not appraised until placed in a unit, marked above.
             </p>
           )}
         </>

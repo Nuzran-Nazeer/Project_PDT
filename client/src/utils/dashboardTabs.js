@@ -1,15 +1,7 @@
-// ONE REGISTRY, read by three things: the sidebar, the dashboard's action rows, and
-// the router. Adding a screen is a row here, not an edit to three files.
-//
-// `built: false` means the tab exists, is reachable, and its page says plainly that it
-// has not been built.
-//
-// ⚠️ Oversight and admin are deliberately absent. Their definitions, and the three
-// edits needed to add a group, are in PDT-DASHBOARD-TABS-PENDING.md, outside the
-// repository.
+// One registry, read by the sidebar, the dashboard's action rows and the router.
+// ⚠️ Oversight and admin are deliberately absent; see PDT-DASHBOARD-TABS-PENDING.md.
 
-// The employee group has two labels: one when it is all a person has, another when it
-// sits underneath a wider role's group.
+// `secondary` is the label when the group sits underneath a wider role's group.
 export const GROUP_LABELS = {
   employee: { primary: "Menu", secondary: "My own appraisal" },
   supervisor: { primary: "Supervisor", secondary: "Supervisor" },
@@ -17,8 +9,6 @@ export const GROUP_LABELS = {
   leadership: { primary: "Leadership", secondary: "Leadership" },
 };
 
-// The heading above this group's action rows, and the page title when it is the
-// person's widest group.
 export const GROUP_OVERVIEW = {
   employee: {
     pageTitle: "Employee dashboard",
@@ -46,7 +36,6 @@ export const GROUP_OVERVIEW = {
   },
 };
 
-// Belongs to no group: it sits at the top of the first group in the sidebar.
 export const DASHBOARD_TAB = {
   id: "dashboard",
   path: "/dashboard",
@@ -56,15 +45,8 @@ export const DASHBOARD_TAB = {
 };
 
 export const TABS_BY_GROUP = {
-  // Two sub-sections, because running this year's cycle and maintaining the standing
-  // record of who works here are different jobs.
-  //
-  // ⚠️ `ownRoute: true` means the ROUTER ALREADY HAS A ROUTE for this path and must
-  // not generate a second one. Those paths carry finer gates than a group gate can
-  // express, and a generated route would sit BEFORE the hand-written one and quietly
-  // narrow it, locking readers out of screens they may open.
-  // ⚠️ Nothing here widens access. Every People data row is a screen Leadership can
-  // already open; this only draws a link to it.
+  // ⚠️ `ownRoute: true` means the router already has a route for this path with a finer
+  // gate. A generated one would sit before it and quietly narrow it.
   leadership: [
     {
       section: "Company",
@@ -254,9 +236,8 @@ export const TABS_BY_GROUP = {
       title: "My result",
       description: "View and acknowledge a published result",
       built: false,
-      // ⚠️ Summary only: no individual comment, no rating, and no count of how many
-      // people responded. A count alone identifies a reviewer in a small team, so it
-      // is excluded rather than merely hidden.
+      // ⚠️ Summary only: no comment, no rating and no response count. A count alone
+      // identifies a reviewer in a small team.
     },
     {
       id: "my-development-plan",
@@ -314,8 +295,7 @@ export const TABS_BY_GROUP = {
       title: "Team feedback",
       description: "What the people you supervise said about you, anonymised",
       built: false,
-      // Renamed from "Colleague feedback". Upward feedback, not what a supervisor
-      // reads about their team, which lives on the team member screen.
+      // Upward feedback, not what a supervisor reads about their team.
     },
     {
       id: "team-plans",
@@ -329,7 +309,6 @@ export const TABS_BY_GROUP = {
   ],
 };
 
-// Every tab flattened, for the router and for looking one up by its path.
 export const ALL_TABS = Object.values(TABS_BY_GROUP).flat();
 
 export function tabByPath(path) {

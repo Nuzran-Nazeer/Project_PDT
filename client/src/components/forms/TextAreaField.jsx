@@ -1,8 +1,4 @@
-// A labelled written answer. Every form in the appraisal asks for several, and a
-// placeholder is not a label: it disappears the moment somebody types.
-//
-// `readOnly` is not `disabled`. A disabled box is a control somebody cannot use and
-// reads as broken; a closed record has no controls on it at all.
+// `readOnly` is not `disabled`: a closed record has no controls on it at all.
 export default function TextAreaField({
   id,
   label,

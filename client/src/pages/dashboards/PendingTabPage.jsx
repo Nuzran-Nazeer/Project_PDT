@@ -1,12 +1,7 @@
 import { useAuth } from "../../hooks/useAuth";
 import PageHeader from "../../components/layout/PageHeader";
 
-// Every tab with a place in the design and no data behind it. One page serves all of
-// them, from the registry entry the router hands it.
-//
-// ⚠️ "Not built yet", never "Nothing to show". The second is a real answer meaning you
-// have no colleague reviews this cycle, and showing it here says something false about
-// somebody's own appraisal.
+// ⚠️ "Not built yet", never "Nothing to show": the second is a real answer about somebody's appraisal.
 export default function PendingTabPage({ tab }) {
   const { user } = useAuth();
 

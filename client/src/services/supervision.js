@@ -1,14 +1,11 @@
 import { apiFetch, buildQuery } from "./api";
 
-// Read-only: supervision is derived from the unit tree and the dated leadership
-// records, never stored. `on` is optional and means today.
+// Read-only: supervision is derived, never stored. `on` means today when omitted.
 
-// `supervisor` is null for someone in no unit, and for someone whose unit and every
-// unit above it had no lead on the date. Both are real answers, not failures.
+// `supervisor` is null for someone in no unit, or with no lead anywhere above them.
 export const getReportingLine = (userId, on) =>
   apiFetch(`/supervision/${userId}${buildQuery({ on })}`);
 
-// Each person carries `viaVacancy`, true when they are here only because their own
-// unit has no lead and the answer resolved upward to this supervisor.
+// `viaVacancy` is true when the person's own unit has no lead and resolved upward.
 export const getTeam = (userId, on) =>
   apiFetch(`/supervision/team/${userId}${buildQuery({ on })}`);

@@ -16,8 +16,6 @@ exports.getCycle = asyncHandler(async (req, res) => {
   res.json(await service.getCycleById(req.params.id));
 });
 
-// Behind the reader gate, unlike /current: that answers a question about the person
-// asking, this one about everybody else.
 exports.getCyclePeople = asyncHandler(async (req, res) => {
   const [result, inScope] = await Promise.all([
     service.peopleInCycle(req.params.id),
@@ -32,14 +30,7 @@ exports.getCyclePeople = asyncHandler(async (req, res) => {
   });
 });
 
-//
-// IT TAKES NO GROUP. The appraisal group comes off the signed-in person's own record,
-// so there is no version of this call that asks about somebody else's group. That keeps
-// it open to any signed-in user without widening what they can see: a cycle is a period
-// and a stage, but the endpoint that answers "and who else is in it" is a later story
-// and should not be reachable through this one by adding a parameter.
-//
-// Null is a real answer. For most of the year a group is between cycles.
+// ⚠️ Takes no group: it comes off the caller's own record. Never add a parameter.
 exports.getMyCurrentCycle = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id).select("parGroup");
   const cycle = await service.currentCycleFor(user?.parGroup);
@@ -50,8 +41,7 @@ exports.getMyCurrentCycle = asyncHandler(async (req, res) => {
   });
 });
 
-// The user id comes from the TOKEN, never from the body. Who opened a cycle and who
-// cancelled it are audit facts, and an audit fact a client can name is not one.
+// The user id comes from the token, never the body: who opened or cancelled is an audit fact.
 exports.advanceCycle = asyncHandler(async (req, res) => {
   res.json(await service.advanceCycle(req.params.id, req.body.status, req.user.id));
 });

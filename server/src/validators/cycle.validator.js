@@ -1,13 +1,7 @@
 const AppError = require("../utils/AppError");
 const { PAR_GROUPS, CYCLE_STAGES } = require("../config/constants");
 
-// Request-shape checks for cycles: is the group one of the three, is the year a year,
-// are the dates dates, is a reason present when one is required.
-//
-// Whether the dates make SENSE against the rest of the collection -- one live cycle per
-// group per year, a move that skips a stage, a cancellation outside its window -- are
-// rules about other records and about state, so they stay in the service. Same split as
-// the dated collections.
+// Request-shape checks only. Rules about other records or state live in the service.
 
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 
@@ -46,9 +40,7 @@ exports.validateCreateCycle = (req, res, next) => {
   const errors = [];
   checkOneOf(req.body.parGroup, PAR_GROUPS, "parGroup", errors);
 
-  // A bare integer check rather than a range. Which years are sensible is a judgement
-  // nobody has written down, and inventing a window here would refuse a backfilled
-  // 2024 cycle for no stated reason.
+  // No year range: inventing one would refuse a backfilled cycle for no stated reason.
   const year = Number(req.body.year);
   if (!req.body.year) errors.push("year is required");
   else if (!Number.isInteger(year)) errors.push("year must be a whole number");
@@ -61,8 +53,7 @@ exports.validateCreateCycle = (req, res, next) => {
 exports.validateAdvanceCycle = (req, res, next) => {
   const errors = [];
   checkId(req.params.id, "id", errors);
-  // `cancelled` is deliberately not in this list. It is not a stage a cycle advances
-  // to; it has its own route, because it needs a reason and a window check.
+  // `cancelled` is not a stage a cycle advances to; it has its own route.
   checkOneOf(req.body.status, CYCLE_STAGES, "status", errors);
   finish(errors, next);
 };
@@ -71,8 +62,6 @@ exports.validateCancelCycle = (req, res, next) => {
   const errors = [];
   checkId(req.params.id, "id", errors);
 
-  // The reason is the criterion, so it is checked here as well as in the service:
-  // whitespace is not a reason, and neither is a single character.
   const reason = String(req.body.reason || "").trim();
   if (!reason) errors.push("reason is required");
   else if (reason.length < 5) errors.push("reason must say something");

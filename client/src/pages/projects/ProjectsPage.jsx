@@ -7,22 +7,15 @@ import { listUsers } from "../../services/users";
 import { formatDate, lastDayOf, todayInput } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 
-// Projects are where cross-unit work becomes visible. The org tree says who somebody
-// reports to; this says who they work WITH, which the tree cannot show.
-//
-// ⚠️ EVERY RULE HERE IS THE SERVER'S. Whether a name is already taken, whether the lead
-// is active, and -- for an HR officer -- whether they cover the lead on the start date
-// are all decided in the service. The button below is drawn for anyone who could
-// plausibly use it, and a refusal arrives in the server's own words naming the person
-// and the date. A rule enforced by a hidden button is not enforced.
+// ⚠️ Every rule here is the server's. The button is drawn for anyone who could plausibly
+// use it, and a coverage refusal arrives in the response.
 
 const blankForm = () => ({ name: "", leadId: "", startDate: todayInput() });
 
 export default function ProjectsPage() {
   const { user } = useAuth();
 
-  // The coarse half of the server's gate. The fine half is per person and per date, so
-  // it cannot be mirrored here -- see the note above.
+  // The coarse half of the server's gate; the fine half is per person and per date.
   const canManage = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [projects, setProjects] = useState([]);
@@ -39,9 +32,6 @@ export default function ProjectsPage() {
   const [leads, setLeads] = useState([]);
   const [leadError, setLeadError] = useState("");
 
-  // A promise chain rather than an async effect body: the lint rule rejects the second
-  // render pass, and `cancelled` stops a slow response writing into a screen that has
-  // gone.
   useEffect(() => {
     let cancelled = false;
 
@@ -55,8 +45,7 @@ export default function ProjectsPage() {
     };
   }, [reloadKey]);
 
-  // Anyone active may lead a project: unlike a unit lead there is no rule tying them to
-  // a place in the tree, because a project sits outside it.
+  // Anyone active may lead a project: nothing ties them to a place in the tree.
   useEffect(() => {
     if (!showCreate) return undefined;
 
@@ -112,8 +101,6 @@ export default function ProjectsPage() {
       setShowCreate(false);
       setReloadKey((key) => key + 1);
     } catch (err) {
-      // The server's own words: a name already running, a lead who is not active, or
-      // coverage refusing this officer for this person on this date.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -153,8 +140,6 @@ export default function ProjectsPage() {
             New project
           </h2>
 
-          {/* Creating a project also puts its lead on the team from day one, so the
-              person running the work does not have to be assigned separately. */}
           <p className="mt-2 max-w-prose text-[13px] text-muted">
             The lead is put on the project from its start date, so there is no need to
             assign them as well.
@@ -268,9 +253,7 @@ export default function ProjectsPage() {
                 <span className="text-ink">{project.leadId?.name || "Unknown"}</span>
                 {" · started "}
                 {formatDate(project.startDate)}
-                {/* ⚠️ `endDate` is the first day NOT covered, so the last day it ran is
-                    the day before. Showing the stored value would report a project as
-                    running one day longer than it did. */}
+                {/* ⚠️ `endDate` is the first day not covered. */}
                 {project.endDate &&
                   ` · ran until ${formatDate(lastDayOf(project.endDate))}`}
               </p>

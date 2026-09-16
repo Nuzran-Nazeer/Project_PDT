@@ -62,8 +62,7 @@ const assertCollecting = (cycle) => {
   );
 };
 
-// Nobody works on their own list, whatever roles they hold. The same refusal as a review that
-// does not exist, so nobody can map the organisation by probing ids.
+// Nobody works on their own list, whatever roles they hold.
 const assertNotOwn = (review, actor) => {
   if (same(review.userId, actor.id)) throw new AppError("Review not found", 404);
 };
@@ -73,8 +72,7 @@ const supervises = async (actor, userId) => {
   return team.some((p) => same(p.id, userId));
 };
 
-// The person's supervisor today, or HR within their coverage. Outside both, the same 404
-// as a review that does not exist.
+// The person's supervisor today, or HR within their coverage.
 const assertMayRead = async (review, actor) => {
   assertNotOwn(review, actor);
   if (await supervises(actor, review.userId)) return;
@@ -251,8 +249,6 @@ const pickBalanced = (eligible, n) =>
     .sort((a, b) => a.load - b.load)
     .slice(0, n);
 
-// Reading
-
 const listFor = async (reviewId, actor) => {
   const { review, cycle } = await loadReview(reviewId);
   await assertMayRead(review, actor);
@@ -334,8 +330,7 @@ const listFor = async (reviewId, actor) => {
       ? { count: list.drawnCount, shortfallAcknowledged: list.shortfallAcknowledged }
       : null,
     canConfirm,
-    // Only HR is told why: a supervisor's refusals are the generic kind that must not
-    // confirm a review exists.
+    // Only HR is told why.
     whyNot: isHr(actor) ? (confirmRefusal ?? decideRefusal ?? null) : null,
     canDecide: canDecide && state === "awaiting_hr",
     canDraw: canDecide && state === "ready_to_draw",
@@ -456,9 +451,7 @@ const listsForCycle = async (cycleId, actor) => {
 
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// People a list's confirmer could request to add, found by name. Supervisors cannot read the
-// employee list, so this serves name and designation only, and only people the addition
-// would accept.
+// Supervisors cannot read the employee list, so this serves name and designation only.
 const addableFor = async (reviewId, actor, query) => {
   const { review, cycle } = await loadReview(reviewId);
   await assertMayConfirm(review, actor);
@@ -500,8 +493,6 @@ const addableFor = async (reviewId, actor, query) => {
 
   return { items };
 };
-
-// Writing
 
 const assertChangesValid = async (changes, { review, cycle, onList }) => {
   const errors = [];

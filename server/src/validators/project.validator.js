@@ -1,17 +1,6 @@
 const AppError = require("../utils/AppError");
 
-// Request-shape checks for projects and their assignments: are the references shaped
-// like references, is a date present where one is required, is a name more than
-// whitespace.
-//
-// Whether the dates make SENSE -- an assignment starting before its project, a team
-// lead backdated across somebody else's term, a closing date that would strand an
-// assignment -- are rules about the OTHER records, so they stay in the services. Same
-// split as everywhere else. Coverage is not checked here either: it depends on which
-// employee and which date, which only the service knows how to resolve.
-//
-// Both shapes share this file because they are one job recorded in two collections,
-// and two copies of `checkId` drift.
+// Request-shape checks only. Rules about other records or state live in the service.
 
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 
@@ -44,8 +33,6 @@ const finish = (errors, next) => {
   next();
 };
 
-// Projects
-
 exports.validateCreateProject = (req, res, next) => {
   const errors = [];
   checkName(req.body.name, errors);
@@ -54,9 +41,7 @@ exports.validateCreateProject = (req, res, next) => {
   finish(errors, next);
 };
 
-// The last day the project operated. Required and with no default, for the reason
-// discontinuing a unit has none: closing is a dated decision somebody made, and
-// stamping today onto it invents the fact being recorded.
+// No default: stamping today onto a closing would invent the fact being recorded.
 exports.validateCloseProject = (req, res, next) => {
   const errors = [];
   checkId(req.params.id, "id", errors);
@@ -77,15 +62,8 @@ exports.validateProjectQuery = (req, res, next) => {
   finish(errors, next);
 };
 
-// ⚠️ EXACTLY THREE ACCEPTED SHAPES, and anything else is refused rather than read as
-// the nearest one:
-//   nothing          today
-//   on               a single day
-//   from AND to      a period
-//
-// Half a period, and `on` mixed with either half, are both ambiguous: they name two
-// different questions in one request, and answering the one that happens to win would
-// answer a question nobody asked.
+// ⚠️ Exactly three shapes: nothing (today), `on` (a day), `from` and `to` (a period).
+// Half a period, or `on` mixed with either half, is refused rather than guessed.
 exports.validateTeamQuery = (req, res, next) => {
   const errors = [];
   checkId(req.params.id, "id", errors);
@@ -104,14 +82,11 @@ exports.validateTeamQuery = (req, res, next) => {
   finish(errors, next);
 };
 
-// Assignments
-
 exports.validateCreateAssignment = (req, res, next) => {
   const errors = [];
   checkId(req.body.projectId, "projectId", errors);
   checkId(req.body.userId, "userId", errors);
   checkDate(req.body.from, "from", errors);
-  // Optional: present only when recording a stint whose end is already known.
   checkDate(req.body.to, "to", errors, { required: false });
   finish(errors, next);
 };

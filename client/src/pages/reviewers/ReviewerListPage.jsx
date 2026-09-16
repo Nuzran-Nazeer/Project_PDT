@@ -11,8 +11,7 @@ import {
 import { stateLabel } from "../../utils/reviewerListStates";
 import { formatDate } from "../../utils/dates";
 
-// ⚠️ Every rule here is the server's: who may confirm, decide or draw, who can be added,
-// and the limits. The buttons only follow the `can…` flags it sends.
+// ⚠️ Every rule here is the server's. The buttons only follow the `can…` flags it sends.
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
@@ -49,8 +48,7 @@ export default function ReviewerListPage() {
 
   const [notice, setNotice] = useState("");
 
-  // Called from a click, never an effect body. Confirming and drawing reshape the page under
-  // the button, so the outcome is shown at the top and the page is scrolled to it.
+  // Confirming and drawing reshape the page under the button, so the outcome is shown at the top.
   const run = async (action, describe, { scroll = true } = {}) => {
     setBusy(true);
     setActionError("");

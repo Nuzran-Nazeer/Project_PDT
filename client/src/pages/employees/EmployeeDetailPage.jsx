@@ -7,12 +7,6 @@ import InvitePanel from "../../components/employees/InvitePanel";
 import UnitHistoryPanel from "../../components/employees/UnitHistoryPanel";
 import { formatDate, todayInput } from "../../utils/dates";
 
-// One employee record, including the parts nobody types.
-//
-// The derived values are shown deliberately rather than hidden. Somebody will ask
-// why they cannot edit a username or an appraisal group, and a screen that displays
-// them beside the fields that ARE editable answers that without a conversation.
-
 function Row({ label, value, note }) {
   return (
     <div className="border-b border-line py-3 last:border-0 sm:flex sm:gap-6">
@@ -30,9 +24,7 @@ export default function EmployeeDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canManage = user?.roles?.includes("hr");
-  // Placing and moving people is HR and Head of HR, matching the server. Written
-  // out rather than reusing `canManage` above, which is about editing the record
-  // itself: the two happen to overlap today and are not the same permission.
+  // Not `canManage`: the two overlap today and are not the same permission.
   const canAssign = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [person, setPerson] = useState(null);
@@ -40,14 +32,10 @@ export default function EmployeeDetailPage() {
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [working, setWorking] = useState(false);
-  // Prefilled with today and editable, because HR processes a leaver AFTER they have
-  // gone. A fortnight of phantom service can flip whether someone was eligible to
-  // review a colleague, so the date has to be HR's to set.
+  // Editable because HR processes a leaver after they have gone.
   const [lastWorkingDay, setLastWorkingDay] = useState(todayInput);
   const [warnings, setWarnings] = useState([]);
 
-  // No setLoading(true) in the effect body: the lint rule rejects the second render
-  // pass, and the initial state is already `true`.
   useEffect(() => {
     getUser(id)
       .then(setPerson)
@@ -55,8 +43,7 @@ export default function EmployeeDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // An issued invite writes an expiry onto the record, and the panel's own summary
-  // reads it. Refetching keeps the two from disagreeing after a re-issue.
+  // An issued invite writes an expiry onto the record, which the panel reads.
   const reload = () =>
     getUser(id)
       .then(setPerson)
@@ -68,9 +55,7 @@ export default function EmployeeDetailPage() {
     try {
       const updated = await deactivateUser(id, lastWorkingDay);
       setPerson(updated);
-      // Units left with no lead. Shown, never blocking: a person leaving is a fact
-      // that has already happened, and the reporting line resolves upward past a
-      // vacant post anyway, so the unit degrades to reporting one level higher.
+      // Shown, never blocking.
       setWarnings(updated.warnings || []);
       setConfirming(false);
     } catch (err) {
@@ -137,9 +122,7 @@ export default function EmployeeDetailPage() {
         </p>
       )}
 
-      {/* Not an error: the deactivation succeeded. Neutral tokens rather than danger
-          ones, because there is no warning colour and `danger` reads as "this
-          failed". */}
+      {/* Not an error: the deactivation succeeded. */}
       {warnings.length > 0 && (
         <div className="mt-6 rounded-xl border border-line bg-raised px-4 py-3">
           <p className="text-[13px] font-semibold text-ink">
@@ -153,8 +136,7 @@ export default function EmployeeDetailPage() {
             ))}
           </ul>
           <p className="mt-2 text-[13px] text-muted">
-            Nobody is left unsupervised: where a unit has no lead, the reporting line
-            resolves upward to the unit above it.
+            Where a unit has no lead, its people report to the unit above.
           </p>
         </div>
       )}
@@ -183,20 +165,13 @@ export default function EmployeeDetailPage() {
         <Row label="Roles" value={(person.roles || []).join(", ")} />
       </dl>
 
-      {/* Below the record rather than inside it: a unit is not a field on this
-          person. It is a dated record that outlives the move, which is the whole
-          reason the collection exists. */}
-      {/* Keyed on the status as well as the id: deactivating closes the person's
-          membership, so the panel has to re-read rather than keep showing them as a
-          current member of a unit they have just left. */}
+      {/* Keyed on the status too: deactivating closes the membership, so the panel re-reads. */}
       <UnitHistoryPanel
         key={`${person._id}-${person.status}`}
         person={person}
         canAssign={canAssign}
       />
 
-      {/* Only an account awaiting activation can be invited. An active one already
-          has a password, and a deactivated one belongs to somebody who has left. */}
       {canManage && person.status === "invited" && (
         <InvitePanel person={person} onIssued={reload} />
       )}

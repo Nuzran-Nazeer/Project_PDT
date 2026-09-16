@@ -3,11 +3,7 @@ import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 
-// One person's normalisation step: the supervisor starts it, the system runs it, the
-// supervisor checks it.
-//
-// ⚠️ Designed and deliberately NOT built. Calibration earns its cost above roughly 100
-// employees and Altrium has 45.
+// ⚠️ Designed and deliberately not built: calibration earns its cost above roughly 100 employees.
 export default function NormalisationShell() {
   const { id } = useParams();
   const { team } = useTeam();
@@ -76,8 +72,7 @@ function Empty({ children }) {
   );
 }
 
-// ⚠️ Both controls disabled, not silent. A live-looking button that discards what
-// somebody typed is worse than no button.
+// Disabled, not silent: a live-looking button that discards typing is worse than none.
 function Dead({ children }) {
   return (
     <button

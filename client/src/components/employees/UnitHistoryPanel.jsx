@@ -6,10 +6,8 @@ import {
 } from "../../services/memberships";
 import { listUnits } from "../../services/orgUnits";
 import { moveSchema } from "../../schemas/orgStructureSchema";
-import { formatDate, toDateInput, todayInput } from "../../utils/dates";
+import { formatDate, lastDayOf, toDateInput, todayInput } from "../../utils/dates";
 
-
-// Local calendar date, not UTC. See the note on todayInput.
 const today = todayInput;
 
 export default function UnitHistoryPanel({ person, canAssign }) {
@@ -27,9 +25,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // No setLoading(true) in the effect body: the lint rule rejects the second render
-  // pass. Mounted with a `key` of the person's id, so a different employee gives a
-  // fresh component with `loading` already true.
+  // No setLoading(true) in the effect body: mounted with a `key` of the person's id instead.
   useEffect(() => {
     let cancelled = false;
 
@@ -48,12 +44,10 @@ export default function UnitHistoryPanel({ person, canAssign }) {
     };
   }, [userId, reloadKey]);
 
-  // At most one is open: the server refuses any membership overlapping another.
   const current = records.find((record) => !record.to) || null;
   const past = records.filter((record) => record.to);
 
-  // Discontinued and current units are both left out: the server refuses either, and
-  // offering them invites the mistake.
+  // Discontinued and current units are left out: the server refuses either.
   const destinations = units.filter(
     (unit) =>
       unit.active !== false && String(unit._id) !== String(current?.unitId?._id || ""),
@@ -61,8 +55,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
 
   const startMove = () => {
     setMoving(true);
-    // A first placement defaults to the joining date, not today, which would quietly
-    // lose the months before it.
+    // A first placement defaults to the joining date, not today.
     setForm({
       unitId: "",
       from: current ? today() : toDateInput(person.joinedDate) || today(),
@@ -97,8 +90,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
 
     setSaving(true);
     try {
-      // A move must close and open in ONE call, or a half-success leaves someone in
-      // no unit or in two.
+      // ⚠️ A move must close and open in one call, or a half-success leaves someone in no unit.
       if (current) {
         await transferMembership(payload);
       } else {
@@ -107,7 +99,6 @@ export default function UnitHistoryPanel({ person, canAssign }) {
       setMoving(false);
       setReloadKey((key) => key + 1);
     } catch (err) {
-      // The server's own words, never reworded.
       setFormError(err.message);
     } finally {
       setSaving(false);
@@ -152,10 +143,8 @@ export default function UnitHistoryPanel({ person, canAssign }) {
               <span className="text-muted"> · since {formatDate(current.from)}</span>
             </p>
           ) : (
-            // A real state, not a gap: someone in no unit is not appraised.
             <p className="mt-3 text-sm text-muted">
-              Not in a unit. Nobody supervises this person and they are not appraised
-              until they are placed in one.
+              Not in a unit. They are not appraised until placed in one.
             </p>
           )}
 
@@ -259,7 +248,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
                       {record.unitId?.name || "Unknown unit"}
                     </span>
                     <span className="ml-auto text-[13px] text-muted">
-                      {formatDate(record.from)} to {formatDate(record.to)}
+                      {formatDate(record.from)} to {formatDate(lastDayOf(record.to))}
                     </span>
                   </li>
                 ))}

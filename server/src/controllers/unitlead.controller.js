@@ -2,8 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/unitlead.service");
 const { assertCoversUnit } = require("../services/coverageAuth.service");
 
-// Appointing or ending a lead decides who supervises a unit's people, so the officer must
-// cover the unit being led. Checked here: the seed scripts call the service with no actor.
+// ⚠️ Coverage is checked here, not in the service: the seed scripts call it with no actor.
 
 exports.appointLead = asyncHandler(async (req, res) => {
   await assertCoversUnit(req.user, req.body.unitId, new Date(), "appoint its lead");

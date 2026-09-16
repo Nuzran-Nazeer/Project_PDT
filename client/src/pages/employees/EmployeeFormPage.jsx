@@ -8,22 +8,13 @@ import {
 } from "../../schemas/employeeSchema";
 import { addMonths, toDateInput } from "../../utils/dates";
 
-// One page for creating and editing, the two being the same form minus four fields.
-//
-// ⚠️ Editing offers less on purpose: the server refuses to change the employee ID,
-// username, joined date and appraisal group.
-//
-// ⚠️ There is NO PASSWORD FIELD, deliberately. The person sets their own from the
-// invite link, so HR never knows it.
+// ⚠️ No password field, deliberately: the person sets their own from the invite link.
+// Editing omits the four fields the server refuses to change.
 
-// HR types the number and the client assembles the rest. The prefix is hardcoded, but
-// the assembled value is still checked against the pattern the server sends.
 const EMPLOYEE_ID_PREFIX = "ALT-";
 const EMPLOYEE_ID_DIGITS = 4;
 
-// Probation runs 6 to 9 months PER PERSON, so this is a shortcut rather than a derived
-// value: one number would contradict the range. The date field stays editable.
-//
+// A shortcut, not a derived value: probation runs 6 to 9 months per person.
 // ⚠️ The one client-side copy of a company rule. It belongs in the server constants.
 const PROBATION_OPTIONS = [
   { value: "", label: "None" },
@@ -31,10 +22,7 @@ const PROBATION_OPTIONS = [
   { value: "9", label: "9 months" },
 ];
 
-// Which option a record's existing dates correspond to. Derived from the dates rather
-// than remembered in state, because a remembered choice and a loaded date disagree the
-// moment you open an existing record: the dropdown would say None while a date sat
-// filled in below it.
+// Derived from the dates, not remembered: a loaded record has a date and no remembered choice.
 const presetFor = ({ joinedDate, probationEndDate }) => {
   if (!probationEndDate) return "";
   if (probationEndDate === addMonths(joinedDate, 6)) return "6";
@@ -87,15 +75,12 @@ export default function EmployeeFormPage() {
       .finally(() => setLoading(false));
   }, [id, isEdit]);
 
-  // What the server will actually receive. Padded, so typing 241 produces ALT-0241
-  // rather than a value the pattern rejects for a reason nobody can see.
+  // Padded, so typing 241 produces ALT-0241.
   const employeeId = form.employeeIdDigits
     ? EMPLOYEE_ID_PREFIX + form.employeeIdDigits.padStart(EMPLOYEE_ID_DIGITS, "0")
     : "";
 
-  // The constants payload pairs each designation with its family, so the family can
-  // be shown the moment a designation is picked. It is display only: the server
-  // derives it and ignores anything a client sends.
+  // Display only: the server derives it and ignores anything a client sends.
   const jobFamily = useMemo(() => {
     const match = (constants?.designations || []).find(
       (entry) => entry.name === form.designation,
@@ -108,8 +93,7 @@ export default function EmployeeFormPage() {
     setFormError("");
   };
 
-  // Digits only, and a pasted ALT-0241 loses its prefix rather than becoming
-  // ALT-ALT-0241. Pasting the whole ID is the obvious thing to do.
+  // Digits only, so a pasted ALT-0241 does not become ALT-ALT-0241.
   const handleIdChange = (e) => {
     const digits = e.target.value
       .replace(/^\s*alt-?/i, "")
@@ -127,8 +111,7 @@ export default function EmployeeFormPage() {
     }));
   };
 
-  // Changing the joined date has to move a probation date that was derived FROM it, or
-  // the two silently disagree and the wrong one is saved.
+  // A probation date derived from the joined date moves with it.
   const handleJoinedDateChange = (e) => {
     const joinedDate = e.target.value;
     setForm((f) => {
@@ -136,8 +119,7 @@ export default function EmployeeFormPage() {
       return {
         ...f,
         joinedDate,
-        // A date typed by hand is left alone. One that came from an option follows the
-        // joined date, or the two silently disagree and the wrong one is saved.
+        // A date typed by hand is left alone.
         probationEndDate:
           preset === "6" || preset === "9"
             ? addMonths(joinedDate, Number(preset))
@@ -179,9 +161,7 @@ export default function EmployeeFormPage() {
       return;
     }
 
-    // Only what the server accepts for this operation. Sending an immutable field
-    // back on an edit is refused outright, so the edit payload is built from
-    // scratch rather than by spreading the loaded record.
+    // ⚠️ Built from scratch, never by spreading the record: an immutable field on an edit is refused.
     const payload = isEdit
       ? {
           name: form.name,
@@ -210,8 +190,6 @@ export default function EmployeeFormPage() {
       const saved = isEdit ? await updateUser(id, payload) : await createUser(payload);
       navigate(`/employees/${saved._id}`, { replace: true });
     } catch (err) {
-      // The server's message: duplicate email, duplicate employee ID, an immutable
-      // field, a designation it does not recognise. All of them are worth reading.
       setFormError(err.message);
       setSubmitting(false);
     }
@@ -399,8 +377,7 @@ export default function EmployeeFormPage() {
                 {option.label}
               </option>
             ))}
-            {/* Not selectable: it is what the dropdown reports when the date below
-                matches neither option, which is how an extended probation reads. */}
+            {/* What the dropdown reports when the date matches neither option. */}
             <option value="custom" disabled>
               Custom date
             </option>
@@ -474,10 +451,7 @@ export default function EmployeeFormPage() {
               </label>
             ))}
           </div>
-          {/* `supervisor` is absent because it cannot be granted: you are a
-              supervisor because you lead a unit on a given date, which is read from
-              the org history. Offering it here would build a form whose value the
-              server refuses. */}
+          {/* `supervisor` is absent because it cannot be granted. */}
           <p className="mt-2 text-[13px] text-muted">
             Supervisor is not listed. It is worked out from who leads a unit, not granted
             here.

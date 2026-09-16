@@ -1,11 +1,6 @@
 import { Link } from "react-router-dom";
 import Icon from "../common/Icon";
 
-// The top of every screen inside the app frame: a title, a line of context under it,
-// and a way back to the dashboard on any screen that is not the dashboard.
-//
-// It exists so the thirty screens the design calls for all open the same way. Written
-// per page, the fourth one drifts and nobody notices until they are side by side.
 export default function PageHeader({ title, context, backTo }) {
   return (
     <header className="mb-8">

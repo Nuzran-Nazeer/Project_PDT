@@ -1,14 +1,8 @@
 const mongoose = require("mongoose");
 const { REVIEW_STATUS } = require("../config/constants");
 
-// One per employee per cycle: the container every feedback record hangs off. It is what
-// ties a piece of feedback to a period, which is why nothing can be assigned without it.
-
-// ⚠️ SHAPE COMPLETE, POPULATION DELIBERATELY NOT. `snapshot` and `periods` are defined
-// here and written by nothing yet. They are transcribed rather than left out because a
-// half-transcribed schema is how a required field gets forgotten, and because
-// `snapshot.rulesInForce` is the one the design specifically warns will be dropped as
-// unnecessary. Both MUST be populated before any review publishes.
+// One per employee per cycle: the container every feedback record hangs off.
+// ⚠️ `snapshot.rulesInForce` is written at publication, which nothing does yet.
 
 const periodSchema = new mongoose.Schema(
   {
@@ -17,8 +11,7 @@ const periodSchema = new mongoose.Schema(
     from: Date,
     to: Date,
 
-    // ⚠️ Informational only. It existed to weight two supervisors' ratings by duration
-    // and that weighting was withdrawn. Nothing may calculate with it.
+    // ⚠️ Informational only; the duration weighting was withdrawn. Nothing may calculate with it.
     months: Number,
   },
   { _id: false },
@@ -41,8 +34,7 @@ const reviewSchema = new mongoose.Schema(
 
     status: { type: String, enum: REVIEW_STATUS, default: "pending" },
 
-    // Freezes who the person was when reviewed, so a historical review stays readable
-    // after they move unit or change title.
+    // Who the person was when the review was created. Never recomputed.
     snapshot: {
       designation: String,
       level: String,
@@ -52,10 +44,7 @@ const reviewSchema = new mongoose.Schema(
       projectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
       parGroup: String,
 
-      // ⚠️ The one field here that is NOT derivable from anything else. A constants
-      // file has no memory and only ever reports today's numbers, so without this the
-      // system cannot tell "handled correctly under the rules of the day" from "broke
-      // the rules". HR-visible only, never shown to the employee.
+      // ⚠️ Not derivable: the constants file only ever reports today's numbers. HR-visible only.
       rulesInForce: {
         peerCount: Number,
         peerDisplayThreshold: Number,
@@ -65,8 +54,7 @@ const reviewSchema = new mongoose.Schema(
       },
     },
 
-    // Computed when the cycle opens, from the unit-lead history. What makes a
-    // multi-supervisor review work: nothing is merged across periods.
+    // From the unit-lead history at creation, [from, to); nothing is merged across periods.
     periods: { type: [periodSchema], default: [] },
 
     rawOverall: { type: Number, default: null },
@@ -77,8 +65,7 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// One review per employee per cycle. Neither field carries `index: true`, or this
-// compound index would collide with a single-field one and be discarded silently.
+// One review per employee per cycle.
 reviewSchema.index({ cycleId: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Review", reviewSchema);

@@ -9,23 +9,16 @@ const {
   overlapping,
 } = require("../utils/dateRange");
 
-// Placing people in units, with dates. Nothing is ever overwritten: a move closes one
-// record and opens another, which is why this collection exists instead of a `unitId`
-// field on the user.
-//
 // ⚠️ A write that bypasses this file bypasses every rule below. The seed script must
 // call these functions, never UnitMembership.create().
 
-// Checked before anything is written: a membership pointing at a unit that never
-// existed is silently wrong data, and the appraisal built on it looks normal.
 const assertUserExists = async (userId) => {
   const user = await User.findById(userId).select("_id name status");
   if (!user) throw new AppError("Employee not found", 404);
   return user;
 };
 
-// Also refuses a DISCONTINUED unit as a destination. Only the write paths call it, so
-// closing a membership inside one still works, or a mistake could never be unwound.
+// Only the write paths call this, so closing a membership inside a discontinued unit still works.
 const assertUnitExists = async (unitId) => {
   const unit = await OrgUnit.findById(unitId).select("_id name active");
   if (!unit) throw new AppError("Unit not found", 404);
@@ -38,9 +31,7 @@ const assertUnitExists = async (unitId) => {
   return unit;
 };
 
-// ⚠️ Refuses ANY overlap, open or closed. "Which unit was she in on 12 March" has to
-// have one answer; two overlapping closed records would make every rule downstream
-// depend on which one the database returned first.
+// ⚠️ Refuses any overlap, open or closed: "which unit on 12 March" must have one answer.
 const assertNoOverlap = async (userId, from, to, excludeId) => {
   const filter = { userId, ...overlapping(from, to) };
   if (excludeId) filter._id = { $ne: excludeId };
@@ -60,14 +51,12 @@ const assertNoOverlap = async (userId, from, to, excludeId) => {
   );
 };
 
-// One read shape only; `on` answers "which unit was she in then".
 exports.listMemberships = async ({ userId, unitId, on } = {}) => {
   const filter = {};
   if (userId) filter.userId = userId;
   if (unitId) filter.unitId = unitId;
   if (on) Object.assign(filter, activeOn(toDay(on, "on")));
 
-  // Newest first: the current record should not sit under ten years of stints.
   const items = await UnitMembership.find(filter)
     .sort({ from: -1 })
     .populate("userId", "name employeeId")
@@ -82,10 +71,7 @@ exports.getMembershipById = async (id) => {
   return membership;
 };
 
-// THE query the rest of the system depends on. Null is a real answer, not a missing
-// one: someone with no unit has no supervisor and is not appraised.
-//
-// Safe to call with an already-normalised Date: toDay is idempotent.
+// Null is a real answer: someone with no unit has no supervisor and is not appraised.
 exports.membershipOn = async (userId, date) =>
   UnitMembership.findOne({ userId, ...activeOn(toDay(date, "date")) });
 
@@ -93,8 +79,6 @@ exports.unitIdOn = async (userId, date) => {
   const membership = await exports.membershipOn(userId, date);
   return membership ? membership.unitId : null;
 };
-
-// Writing
 
 // `to` is optional, for backfilling a stint that was already over.
 exports.createMembership = async ({ userId, unitId, from, to }) => {
@@ -110,10 +94,8 @@ exports.createMembership = async ({ userId, unitId, from, to }) => {
   return UnitMembership.create({ userId, unitId, from: start, to: end });
 };
 
-// ⚠️ ONE call, because two can half-succeed and leave a person in no unit or in two.
-//
-// The two records share the date exactly, which under [from, to) means no gap and no
-// overlap: 31 March resolves to the old unit, 1 April to the new one.
+// ⚠️ One call, because two can half-succeed and leave a person in no unit or in two.
+// Both records share the date exactly, which under [from, to) means no gap and no overlap.
 exports.transferMembership = async ({ userId, unitId, from }) => {
   await assertUserExists(userId);
   const unit = await assertUnitExists(unitId);
@@ -132,7 +114,6 @@ exports.transferMembership = async ({ userId, unitId, from }) => {
     throw new AppError(`This person is already in ${unit.name}`, 409);
   }
 
-  // A move on or before the current stint's start leaves a record covering no days.
   if (moveDate.getTime() <= open.from.getTime()) {
     throw new AppError(
       `The move date must be after ${open.from
@@ -148,8 +129,6 @@ exports.transferMembership = async ({ userId, unitId, from }) => {
   return UnitMembership.create({ userId, unitId, from: moveDate, to: null });
 };
 
-// Ending without opening another. They then belong to no unit and are not appraised,
-// which is a state the design allows for.
 exports.closeMembership = async (id, to) => {
   const membership = await exports.getMembershipById(id);
   if (membership.to) {

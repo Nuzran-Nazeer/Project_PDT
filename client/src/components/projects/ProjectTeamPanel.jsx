@@ -15,27 +15,13 @@ import {
 } from "../../schemas/projectSchema";
 import { dayAfter, formatDate, lastDayOf, todayInput } from "../../utils/dates";
 
-// The team of one project, in two modes.
-//
-// TODAY answers "who is on this now" and is the only mode that can be written to.
-// A PERIOD answers "who was on this between two dates", which is the question the
-// design asks and the one the org tree cannot answer at all.
-//
-// ⚠️ THE TWO MODES COME BACK IN DIFFERENT SHAPES, and the server refuses them mixed.
-// Today carries one `teamLead` and a flag on each member; a period carries a
-// `teamLeadHistory`, because more than one person can have led during it. So the panel
-// branches on what it ASKED for rather than sniffing what came back.
-//
-// ⚠️ ONE ROW PER PERSON IN BOTH MODES. Changing the team lead splits an assignment into
-// two adjacent records, so a period can match the same employee twice. The server
-// already groups them; every period it returns is shown under the one person.
+// ⚠️ Today mode carries `teamLead` and a flag per member; period mode carries
+// `teamLeadHistory`. The panel branches on what it asked for, never on what came back.
 
 const today = todayInput;
 
-// Actions need an assignment id, and the team read is keyed by PERSON, so it does not
-// carry one. The assignment records do, and on any single date a person holds at most
-// one on a project -- the server refuses overlaps -- so matching them by user id is
-// unambiguous. Read only in today mode, which is the only mode with buttons.
+// On a single date a person holds at most one assignment on a project, so matching by
+// user id is unambiguous. Read only in today mode.
 const assignmentsByUser = (items) => {
   const map = new Map();
   for (const item of items) {
@@ -51,18 +37,14 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
 
   const [mode, setMode] = useState("today");
 
-  // The period actually being shown, set only when the search is submitted. Typing a
-  // date should not fire a request on every keystroke.
+  // Set only when the search is submitted, not on every keystroke.
   const [appliedPeriod, setAppliedPeriod] = useState(null);
   const [periodForm, setPeriodForm] = useState({ from: "", lastDay: "" });
   const [periodFieldErrors, setPeriodFieldErrors] = useState({});
 
   const [team, setTeam] = useState(null);
-  // Which mode the loaded `team` answers. The two modes come back in different shapes,
-  // so rendering one against the other -- for the frame between switching and the new
-  // response arriving -- would briefly report the wrong thing. Comparing this against
-  // `mode` is also what stands in for a `loading` flag, which cannot be set from an
-  // effect body without the lint rule rejecting the second render pass.
+  // ⚠️ Which mode the loaded `team` answers: the shapes differ, and this doubles as the
+  // loading flag, which cannot be set from an effect body.
   const [teamMode, setTeamMode] = useState(null);
   const [rows, setRows] = useState(new Map());
   const [error, setError] = useState("");
@@ -77,8 +59,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
   const [candidates, setCandidates] = useState([]);
   const [candidateError, setCandidateError] = useState("");
 
-  // One row action open at a time: { id, kind: "close" | "lead" }. Both ask for a
-  // single date, so they share one field.
+  // { id, kind: "close" | "lead" }. Both ask for one date, so they share a field.
   const [rowAction, setRowAction] = useState(null);
   const [rowDate, setRowDate] = useState("");
   const [rowFieldError, setRowFieldError] = useState("");
@@ -88,15 +69,12 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
   const periodMode = mode === "period";
 
   useEffect(() => {
-    // A period nobody has chosen yet has nothing to ask about. Nothing is set here:
-    // the render derives that state from `appliedPeriod` instead.
     if (periodMode && !appliedPeriod) return undefined;
 
     let cancelled = false;
 
     const params = periodMode
-      ? // ⚠️ The API's `to` is EXCLUSIVE. HR typed an inclusive last day, so it is
-        // converted here. Without this a one-day search would cover no days at all.
+      ? // ⚠️ The API's `to` is exclusive; HR typed an inclusive last day.
         { from: appliedPeriod.from, to: dayAfter(appliedPeriod.lastDay) }
       : { on: today() };
 
@@ -119,9 +97,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
     };
   }, [projectId, periodMode, appliedPeriod, reloadKey, teamReloadKey]);
 
-  // Anyone active may be assigned. An HR officer will still be refused for somebody
-  // they do not cover, and that refusal comes from the server naming the person and the
-  // date -- it cannot be worked out here.
+  // Anyone active may be offered; coverage is refused by the server, not worked out here.
   useEffect(() => {
     if (!assigning) return undefined;
 
@@ -162,7 +138,6 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
     }
 
     // Cleared so a new period does not show the previous one's answer while it loads.
-    // An event handler, not an effect body, so setting state here is fine.
     setTeamMode(null);
     setAppliedPeriod({ from: periodForm.from, lastDay: periodForm.lastDay });
   };
@@ -196,8 +171,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
       from: assignForm.from,
     };
 
-    // Left blank means ongoing, so the field is omitted rather than sent empty. When it
-    // is given it is an inclusive last working day and becomes the exclusive `to`.
+    // Blank means ongoing; given, an inclusive last day becomes the exclusive `to`.
     if (assignForm.lastDay) payload.to = dayAfter(assignForm.lastDay);
 
     setAssignSaving(true);
@@ -206,9 +180,6 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
       setAssigning(false);
       refresh();
     } catch (err) {
-      // The server's own words: a closed project, a date before the project started,
-      // an overlap with this person's existing stint, or coverage refusing this
-      // officer for this person on this date.
       setAssignError(err.message);
     } finally {
       setAssignSaving(false);
@@ -246,7 +217,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
         // Inclusive last working day in, exclusive `to` out.
         await closeAssignment(rowAction.id, dayAfter(rowDate));
       } else {
-        // A start, so it goes as typed. The server owns every rule about it.
+        // A start goes as typed.
         await markTeamLead(rowAction.id, rowDate);
       }
       setRowAction(null);
@@ -272,14 +243,11 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
       active ? "bg-brand/10 text-brand" : "text-muted hover:text-brand"
     }`;
 
-  // Nothing has been asked for yet, so there is nothing to load or to show.
   const awaitingPeriod = periodMode && !appliedPeriod;
-  // The loaded answer belongs to the mode currently on screen.
   const ready = Boolean(team) && teamMode === mode;
 
   const members = ready ? team.members || [] : [];
-  // Writes only ever apply to the project as it stands now, so they are absent from a
-  // historical view and from a project that has closed.
+  // Writes apply only to the project as it stands now.
   const canWrite = canManage && !closed && !periodMode;
 
   return (
@@ -312,10 +280,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
           onSubmit={showPeriod}
           className="mt-4 rounded-xl border border-line bg-surface p-4"
         >
-          <p className="text-[13px] text-muted">
-            Everyone whose assignment overlapped the period, and whoever led the team
-            during it. Both dates are included, so the same day twice is a one-day search.
-          </p>
+          <p className="text-[13px] text-muted">Both dates are included.</p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -372,8 +337,6 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
         </p>
       )}
 
-      {/* The current team lead, named once at the top. Over a period there can be more
-          than one, so that becomes a list further down instead. */}
       {!periodMode && ready && (
         <p className="mt-4 text-[13px] text-muted">
           {team.teamLead ? (
@@ -463,9 +426,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
           </div>
 
           <p className="mt-3 text-[13px] text-muted">
-            Leave the last working day blank for ongoing work. The same day as the start
-            is a one-day assignment. Somebody can be on several projects at once, but not
-            twice on this one over the same dates.
+            Leave the last working day blank for ongoing work.
           </p>
 
           {candidateError && (
@@ -525,9 +486,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
                     <span className="text-[13px] text-muted">{member.employeeId}</span>
                   )}
 
-                  {/* In today's view one flag describes the whole row. Over a period it
-                      would have to summarise several stretches, so it sits on each
-                      period instead. */}
+                  {/* Over a period the flag sits on each stretch instead. */}
                   {!periodMode && member.isTeamLead && (
                     <span className="rounded-lg border border-brand/40 px-2 py-0.5 text-[12px] text-brand">
                       Team lead
@@ -536,11 +495,8 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
 
                   {canWrite && assignment && (
                     <span className="ml-auto flex flex-wrap gap-2">
-                      {/* ⚠️ An assignment that has ended cannot become team lead: the
-                          server refuses every one carrying a `to`, so offering the
-                          button would only ever produce a refusal. A stint that is
-                          already over is matched here whenever its end date is still in
-                          the future, which is exactly when it looks live on screen. */}
+                      {/* ⚠️ The server refuses team lead on any assignment carrying a `to`,
+                          and one ending in the future still looks live on screen. */}
                       {!member.isTeamLead && !assignment.to && (
                         <button
                           type="button"
@@ -563,15 +519,12 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
                   )}
                 </div>
 
-                {/* Every period the person matched. More than one means the team lead
-                    changed hands partway through, which splits the record rather than
-                    overwriting it. */}
+                {/* More than one period means the team lead changed hands partway through. */}
                 <ul className="mt-1.5 space-y-0.5">
                   {member.periods.map((period, index) => (
                     <li key={`${member.id}-${index}`} className="text-[13px] text-muted">
                       {formatDate(period.from)}
-                      {/* ⚠️ `to` is the first day NOT covered, so the last day worked is
-                          the day before. */}
+                      {/* ⚠️ `to` is the first day not covered. */}
                       {period.to ? ` to ${formatDate(lastDayOf(period.to))}` : " onwards"}
                       {period.isTeamLead && (
                         <span className="text-brand"> · team lead</span>
@@ -643,8 +596,6 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
         </ul>
       )}
 
-      {/* Over a period the role can have changed hands, so it is a list rather than one
-          name. Each entry is the stretch that person led for. */}
       {periodMode && ready && (
         <div className="mt-6">
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">

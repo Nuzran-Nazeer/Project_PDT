@@ -7,12 +7,7 @@ const {
   readScopeFor,
 } = require("../services/coverageAuth.service");
 
-// Response shape (build decision B3): a single resource plain, a collection as
-// { items, total }. The HTTP status carries the verdict, never the body.
-
-// ⚠️ Scope is checked HERE, not in user.service: the seed scripts call the service with no
-// actor, and a service check that passed without one would be open to any route that
-// forgot to supply it.
+// ⚠️ Coverage is checked here, not in user.service: the seed scripts call it with no actor.
 const mayChange = (req, action) =>
   assertMayActOnEmployee(req.user, req.params.id, new Date(), action, {
     allowUnplaced: true,
@@ -42,9 +37,7 @@ exports.updateUser = asyncHandler(async (req, res) => {
   res.json(await userService.updateUser(req.params.id, req.body));
 });
 
-// ⚠️ The record is SPREAD, not nested under a `user` key, because the client does
-// `setPerson(await deactivateUser(id))` and reads `.name` off the result. Nesting is
-// tidier and breaks it.
+// ⚠️ Spread, not nested under `user`: the client reads `.name` straight off the result.
 exports.deleteUser = asyncHandler(async (req, res) => {
   await mayChange(req, "record this person as a leaver");
   const { user, warnings } = await userService.deactivateUser(
@@ -54,8 +47,7 @@ exports.deleteUser = asyncHandler(async (req, res) => {
   res.json({ ...user.toJSON(), warnings });
 });
 
-// ⚠️ This response is the only place the code is ever readable: the database keeps a
-// hash, so re-issuing is the only way back if HR loses it.
+// ⚠️ The only place the code is ever readable: the database keeps a hash.
 exports.createInvite = asyncHandler(async (req, res) => {
   await mayChange(req, "issue this person an invite");
   res.status(201).json(await inviteService.createInvite(req.params.id));

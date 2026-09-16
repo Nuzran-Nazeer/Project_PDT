@@ -3,12 +3,8 @@ import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
 import { byRunningCycle } from "../../utils/teamOrder";
 
-// ⚠️ Normalisation compares one supervisor's ratings ACROSS their people, so it belongs to
-// the team rather than to any one of them. A per-person screen can show a result, never
-// produce one.
-
-// ⚠️ Opens per appraisal group, and a team spans groups, so the gate is each person's own
-// cycle reaching its normalising stage. Two rows can differ with identical reviews.
+// ⚠️ Opens per appraisal group, and a team spans groups, so the gate is each person's
+// own cycle reaching its normalising stage. Two rows can differ with identical reviews.
 const ROW_STATE = {
   normalisation_ready: { label: "Ready", open: true },
   awaiting_normalisation: { label: "Waiting for their cycle to reach normalising" },

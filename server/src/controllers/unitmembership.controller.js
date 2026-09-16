@@ -6,12 +6,8 @@ const {
   readScopeFor,
 } = require("../services/coverageAuth.service");
 
-// Thin HTTP layer. Response shape per build decision B3: a single record plain, a
-// collection as { items, total }.
-//
-// ⚠️ Scope is checked here rather than in the service, which the seed scripts call with no
-// actor. A move needs the officer to cover the PERSON, never the destination: it hands
-// them to the receiving unit's officer.
+// ⚠️ Coverage is checked here, not in the service: the seed scripts call it with no actor.
+// A move needs the officer to cover the person, never the destination.
 
 const mayChange = (req, userId, action) =>
   assertMayActOnEmployee(req.user, userId, new Date(), action, { allowUnplaced: true });
@@ -22,8 +18,7 @@ exports.createMembership = asyncHandler(async (req, res) => {
   res.status(201).json(membership);
 });
 
-// A move is two writes -- one record closed, one opened -- so 201 is the honest
-// status: something was created, and the response is the new membership.
+// 201: a move creates the new membership, which is the response.
 exports.transferMembership = asyncHandler(async (req, res) => {
   await mayChange(req, req.body.userId, "move this person to another unit");
   const membership = await service.transferMembership(req.body);
@@ -36,8 +31,7 @@ exports.closeMembership = asyncHandler(async (req, res) => {
   res.json(await service.closeMembership(req.params.id, req.body.to));
 });
 
-// A unit's roster stays readable to every reader: it is the org structure, and HR needs it
-// to appoint leads. One person's history, or the whole collection, is scoped.
+// A unit's roster is readable to every reader; one person's history is scoped.
 exports.listMemberships = asyncHandler(async (req, res) => {
   const { userId, unitId, on } = req.query;
   if (userId) await assertMayReadEmployee(req.user, userId);

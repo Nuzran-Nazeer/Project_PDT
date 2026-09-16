@@ -4,15 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { listUsers } from "../../services/users";
 import StatusBadge from "../../components/employees/StatusBadge";
 
-// The roster. Read by HR, Head of HR and Leadership; written only by HR, which is
-// what the server enforces. The buttons below only decide what is worth showing.
-//
-// It lives at /employees rather than /hr/employees because three roles reach it and
-// naming the route after one of them would be wrong the moment the other two arrive.
-
-// Left blank, the server hides deactivated people. That is the useful default: a
-// roster is a list of the people who work here, and someone who has left is a
-// deliberate search rather than background noise.
+// Left blank, the server hides deactivated people.
 const STATUS_FILTERS = [
   { value: "", label: "Currently employed" },
   { value: "active", label: "Active only" },
@@ -23,7 +15,6 @@ const STATUS_FILTERS = [
 export default function EmployeeListPage() {
   const { user } = useAuth();
   const canManage = user?.roles?.includes("hr");
-  // Matches the server's filter: the Head of HR and Leadership read the whole roster.
   const scoped =
     canManage && !user.roles.some((role) => ["head_of_hr", "leadership"].includes(role));
 
@@ -33,9 +24,7 @@ export default function EmployeeListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // The spinner is turned on by whatever CAUSED the reload (the first render, or the
-  // status handler below), never inside the effect: a synchronous state write in an
-  // effect body costs a second render pass and the lint rule rejects it.
+  // The spinner is turned on by whatever caused the reload, never inside the effect.
   useEffect(() => {
     let cancelled = false;
 
@@ -55,9 +44,7 @@ export default function EmployeeListPage() {
     setError("");
   };
 
-  // Filtered here rather than on the server: the whole roster is one request and a
-  // few dozen rows, so a round trip per keystroke would buy nothing. Status is the
-  // server's job because it decides which records are returned at all.
+  // Filtered here: the whole roster is one request and a few dozen rows.
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return items;

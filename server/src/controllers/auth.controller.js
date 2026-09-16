@@ -7,15 +7,13 @@ exports.login = asyncHandler(async (req, res) => {
   res.json({ token, user });
 });
 
-// PUBLIC: the invite code is the credential for this one request. Returns NO TOKEN on
-// purpose, so `login` stays the single place a session is minted.
+// Public. Returns no token on purpose: `login` is the one place a session is minted.
 exports.activate = asyncHandler(async (req, res) => {
   const user = await inviteService.activateAccount(req.body);
   res.json(user);
 });
 
-// Re-read rather than taken from the token, so a role granted today takes effect
-// without signing out.
+// Re-read, so a role granted today takes effect without signing out.
 exports.me = asyncHandler(async (req, res) => {
   res.json(await authService.currentSession(req.user.id));
 });

@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run lint && npm run format:check && node -e \"require('./src/app')\"",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "lint": "eslint .",

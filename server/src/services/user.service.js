@@ -5,16 +5,10 @@ const HrCoverage = require("../models/hrcoverage.model");
 const AppError = require("../utils/AppError");
 const { toDay, dayAfter, assertOrderedRange } = require("../utils/dateRange");
 
-// Business logic for users. Knows nothing about Express (no req/res here).
-
-// Fields nobody may change after the record exists.
-//   joinedDate  decides parGroup, and an appraisal group must never move
-//   parGroup    same reason, one step further on
-//   employeeId  the username is generated from its digits
-//   username    generated, never typed
+// joinedDate decides parGroup and an appraisal group must never move; the username is
+// generated from the employeeId.
 const IMMUTABLE_FIELDS = ["joinedDate", "parGroup", "employeeId", "username"];
 
-// Fields HR may set when creating a record.
 const CREATABLE_FIELDS = [
   "employeeId",
   "name",
@@ -28,7 +22,6 @@ const CREATABLE_FIELDS = [
   "probationEndDate",
 ];
 
-// Fields HR may change afterwards. Deliberately narrower than CREATABLE_FIELDS.
 const UPDATABLE_FIELDS = [
   "name",
   "email",
@@ -54,8 +47,7 @@ exports.createUser = async (data) => {
   });
   if (existing) throw new AppError("Email or employee ID already in use", 409);
 
-  // HR creates the record; the employee sets their own password through an invite. An
-  // initial password from HR still works, and makes the account usable at once.
+  // No password means the employee sets one through an invite.
   if (!fields.password) fields.status = "invited";
   else fields.status = "active";
 
@@ -66,7 +58,6 @@ exports.listUsers = async (query = {}) => {
   const { status, role, jobFamily, location } = query;
 
   const filter = {};
-  // Deactivated people are hidden unless asked for by name.
   filter.status = status || { $ne: "inactive" };
   if (role) filter.roles = role;
   if (jobFamily) filter.jobFamily = jobFamily;
@@ -82,11 +73,8 @@ exports.getUserById = async (id) => {
   return user;
 };
 
-// Load, assign, save. NEVER findByIdAndUpdate.
-//
-// findByIdAndUpdate does not fire `save` hooks, so a password passed through it
-// would be written to the database as plaintext, silently and with no error.
-// This bug has already been caught once on this project.
+// ⚠️ Load, assign, save. Never findByIdAndUpdate: it skips the save hooks, so a password
+// would be written as plaintext with no error.
 exports.updateUser = async (id, data) => {
   const user = await User.findById(id);
   if (!user) throw new AppError("User not found", 404);
@@ -108,18 +96,8 @@ exports.updateUser = async (id, data) => {
   return user;
 };
 
-// Soft delete: the record stays because it is someone's appraisal history, and the
-// account stops working. It also CLOSES the dated records that depend on the person,
-// because an open dated record means "this is still true today", and leaving a leaver
-// open makes the reporting line assert something false on a screen.
-//
-// This cascades where discontinuing a unit REFUSES, which is not an inconsistency:
-// closing a unit is a decision that can be made to happen in the right order, while a
-// person leaving is a fact that already happened.
-//
-// `lastWorkingDay` defaults to today but is editable, because HR processes leavers
-// after they have gone: peer eligibility is four continuous months, so a fortnight of
-// phantom service can flip whether someone was eligible to review a colleague.
+// Soft delete. Closes the person's open dated records too: an open record means "still
+// true today". `lastWorkingDay` is editable because HR processes leavers after they have gone.
 exports.deactivateUser = async (id, lastWorkingDay) => {
   const user = await User.findById(id);
   if (!user) throw new AppError("User not found", 404);
@@ -135,8 +113,7 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
     await membership.save();
   }
 
-  // A loop, not a findOne: one person leading several units at once is ordinary in a
-  // company this size.
+  // One person can lead several units at once.
   const terms = await UnitLead.find({ userId: user._id, to: null }).populate(
     "unitId",
     "name",
@@ -147,24 +124,17 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
     term.to = closesOn;
     await term.save();
 
-    // A unit holds at most one lead, so closing a term always leaves it vacant. This
-    // WARNS rather than refusing, which is safe because the reporting line resolves
-    // upward: the unit degrades to reporting one level higher.
     warnings.push(
       `${(term.unitId && term.unitId.name) || "A unit"} now has no lead. Its people report to the unit above until someone is appointed.`,
     );
   }
 
-  // Same closing, for any HR coverage this person holds. A loop for the same reason:
-  // one person can cover several units, and a unit can have both a primary and a
-  // backup, so a leaving HR officer can hold more than one open record.
   const coverageRecords = await HrCoverage.find({ userId: user._id, to: null }).populate(
     "unitId",
     "name",
   );
 
-  // ⚠️ EVERY date is checked before the first save, so a leaver covering four units
-  // cannot end up with two closed and two still open because the third date was bad.
+  // ⚠️ Every date is checked before the first save, so a bad one cannot leave half closed.
   for (const record of coverageRecords) {
     assertOrderedRange(record.from, closesOn);
   }
@@ -173,11 +143,8 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
     record.to = closesOn;
     await record.save();
 
-    // ⚠️ What the unit falls back to depends on what is LEFT. Any direct record still
-    // open on it blocks inheritance, so a unit keeping its backup is not "covered from
-    // the unit above" -- saying so would describe the opposite of what coverageOn()
-    // does. Records belonging to this leaver are excluded: the ones not yet closed in
-    // this same loop are on their way out too, and are nobody's remaining cover.
+    // ⚠️ Any direct record still open blocks inheritance, so the wording depends on what
+    // is left. This leaver's own records are excluded: the unclosed ones are going too.
     const remaining = await HrCoverage.findOne({
       unitId: record.unitId?._id || record.unitId,
       userId: { $ne: user._id },
@@ -196,9 +163,6 @@ exports.deactivateUser = async (id, lastWorkingDay) => {
   user.status = "inactive";
   await user.save();
 
-  // Reactivating is an ordinary status edit through updateUser and deliberately does
-  // NOT reopen the membership closed above: someone who comes back returns with no
-  // unit. Reopening would claim continuous membership across a gap that really
-  // happened, and guess at a unit that may since have been reorganised.
+  // Reactivating (a status edit through updateUser) never reopens the membership closed here.
   return { user, warnings };
 };
