@@ -2,10 +2,10 @@ import { useState } from "react";
 import { createInvite } from "../../services/invite";
 import { formatDate } from "../../utils/dates";
 
-// ⚠️ The code is shown once and is not recoverable: the database keeps a hash. Re-issuing
+// ⚠️ The link is shown once and is not recoverable: the database keeps a hash. Re-issuing
 // replaces it, which is also how an invite is cancelled.
 
-// Clipboard access can fail; the code stays selectable on screen either way.
+// Clipboard access can fail; the link stays selectable on screen either way.
 const copy = async (text, onDone) => {
   try {
     await navigator.clipboard.writeText(text);
@@ -58,7 +58,7 @@ export default function InvitePanel({ person, onIssued }) {
     }
   };
 
-  const buttonLabel = outstanding ? "Generate a new code" : "Generate invite code";
+  const buttonLabel = outstanding ? "Generate a new link" : "Generate invite link";
 
   return (
     <div className="mt-8 rounded-xl border border-line bg-raised p-5">
@@ -68,8 +68,8 @@ export default function InvitePanel({ person, onIssued }) {
         <>
           <p className="mt-1 text-[13px] text-muted">
             {outstanding
-              ? `A code was issued and works until ${formatDate(person.inviteExpiresAt)}. It cannot be shown again. Generating a new one replaces it, and the old code stops working.`
-              : "Creates a one-time code and an email for you to send. The system sends nothing itself."}
+              ? `A link was issued and works until ${formatDate(person.inviteExpiresAt)}. It cannot be shown again. Generating a new one replaces it, and the old link stops working.`
+              : "Creates a one-time link and an email for you to send. The system sends nothing itself."}
           </p>
 
           <button
@@ -105,12 +105,12 @@ export default function InvitePanel({ person, onIssued }) {
           <div className="mt-4">
             <div className="flex items-center gap-3">
               <p className="text-[13px] font-semibold text-ink">
-                Code · expires {formatDate(issued.expiresAt)}
+                Invite link · expires {formatDate(issued.expiresAt)}
               </p>
-              <CopyButton value={issued.code} label="Copy code" />
+              <CopyButton value={issued.link} label="Copy link" />
             </div>
             <p className="mt-1.5 rounded-lg border border-line bg-surface px-3 py-2.5 font-mono text-[12px] break-all text-ink">
-              {issued.code}
+              {issued.link}
             </p>
           </div>
 

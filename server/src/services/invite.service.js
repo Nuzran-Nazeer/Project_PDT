@@ -4,10 +4,11 @@ const { generateInviteCode, hashInviteCode } = require("../utils/inviteCode");
 
 // Generating and redeeming live in one file so the hashing and the lookup cannot drift apart.
 
+const linkFor = (code) =>
+  `${process.env.CLIENT_URL || "http://localhost:5173"}/activate?code=${code}`;
+
 // The system sends no email: HR sends this from their own mailbox.
-const emailBodyFor = (user, code, expiresAt) => {
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-  const link = `${clientUrl}/activate?code=${code}`;
+const emailBodyFor = (user, link, expiresAt) => {
   const expiry = expiresAt.toDateString();
 
   return [
@@ -41,7 +42,8 @@ exports.createInvite = async (userId) => {
   user.inviteExpiresAt = expiresAt;
   await user.save();
 
-  return { code, expiresAt, emailBody: emailBodyFor(user, code, expiresAt) };
+  const link = linkFor(code);
+  return { code, link, expiresAt, emailBody: emailBodyFor(user, link, expiresAt) };
 };
 
 exports.activateAccount = async ({ code, password }) => {
