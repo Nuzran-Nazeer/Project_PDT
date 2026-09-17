@@ -10,8 +10,10 @@ const {
   competenciesFor,
   FEEDBACK_EDIT_WINDOW_HOURS,
   PEER_DISPLAY_THRESHOLD,
+  hasColleagueSection,
 } = require("../config/constants");
 const { isEditable, hasSettled, lockTimeFor } = require("./feedback.window");
+const { pendingSendBack } = require("./summaryCheck.state");
 
 const asOwnRecord = (doc, competencies) => ({
   id: String(doc._id),
@@ -226,7 +228,7 @@ const collectedFor = async (reviewId, viewer) => {
     total: 0,
   };
 
-  if (assigned.length < PEER_DISPLAY_THRESHOLD) {
+  if (!hasColleagueSection(assigned.length)) {
     return { ...held, reason: "below_minimum", needed: 0 };
   }
 
@@ -392,7 +394,7 @@ const assertUnpublished = (review) => {
 };
 
 const supervisorRecordFor = async (reviewId, viewer) => {
-  const review = await Review.findById(reviewId);
+  const review = await Review.findById(reviewId).populate("checks.officerId", "name");
   if (!review) throw new AppError("Review not found", 404);
 
   await assertSupervises(review, viewer);
@@ -441,6 +443,21 @@ const applyColleagueSummary = (doc, payload) => {
   }
 };
 
+// HR's send-back, until the supervisor answers it with a resubmission. The reason is
+// the supervisor's to read; the employee never sees that one happened.
+const sentBackNotice = (review, doc) => {
+  const check = pendingSendBack(review, doc);
+  return check
+    ? {
+        officer: check.officerId?.name
+          ? { id: String(check.officerId._id), name: check.officerId.name }
+          : { id: String(check.officerId), name: null },
+        at: check.at,
+        reason: check.reason,
+      }
+    : null;
+};
+
 const asSupervisorRecord = ({ review, reviewee, doc, readiness }) => ({
   reviewId: String(review._id),
   reviewee: {
@@ -457,6 +474,7 @@ const asSupervisorRecord = ({ review, reviewee, doc, readiness }) => ({
   submittedAt: doc ? doc.submittedAt : null,
   locksAt: doc ? doc.locksAt : null,
   publishedAt: review.publishedAt,
+  sentBack: sentBackNotice(review, doc),
   editable: !isPublished(review) && (!doc || isEditable(doc)),
   readiness,
   competencies: competenciesFor(reviewee.jobFamily),

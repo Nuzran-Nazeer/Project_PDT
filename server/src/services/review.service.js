@@ -11,16 +11,15 @@ const { toDay, dayAfter, overlapping } = require("../utils/dateRange");
 const { peopleInCycle } = require("./cycle.service");
 const { membershipOn } = require("./unitmembership.service");
 const { supervisorPeriods, reportingLineOn } = require("./supervision.service");
-const { hasSettled } = require("./feedback.window");
+const { normalisationReadiness } = require("./summaryCheck.state");
 const {
   PEER_REVIEWS_TARGET,
   PEER_DISPLAY_THRESHOLD,
   PEER_ELIGIBILITY_MONTHS,
   FEEDBACK_EDIT_WINDOW_HOURS,
+  PUBLISHED_STATES,
+  hasColleagueSection,
 } = require("../config/constants");
-
-// Once published a review is somebody's record; none of these may be published again.
-const PUBLISHED_STATES = ["published", "acknowledged", "under_appeal"];
 
 // crypto rather than Math.random: a predictable shuffle decides whose appraisal somebody joins.
 const shuffled = (items) => {
@@ -113,79 +112,105 @@ const publishOne = (review, now) => {
   };
 };
 
-// Why this review cannot publish yet, or null. Named by the supervisor expected to write it
-// today, which is a reporting-line fact, never the record's author.
-const outstandingFor = async (review, day) => {
-  const doc = await Feedback.findOne({
-    reviewId: review._id,
-    reviewerType: "supervisor",
-  }).select("status submittedAt locksAt");
+// The supervisor record and whether there is a colleague section, for every review at once:
+// two queries for a cycle rather than two per review.
+const normalisationInputsFor = async (reviews) => {
+  const ids = reviews.map((r) => r._id);
 
-  if (doc && hasSettled(doc)) return null;
+  const docs = await Feedback.find({ reviewId: { $in: ids }, reviewerType: "supervisor" })
+    .select("reviewId status submittedAt locksAt")
+    .sort({ submittedAt: -1 });
+  const docByReview = new Map();
+  for (const doc of docs) {
+    const key = String(doc.reviewId);
+    if (!docByReview.has(key)) docByReview.set(key, doc);
+  }
 
+  const peers = await Feedback.aggregate([
+    { $match: { reviewId: { $in: ids }, reviewerType: "peer" } },
+    { $group: { _id: "$reviewId", count: { $sum: 1 } } },
+  ]);
+  const peerCount = new Map(peers.map((p) => [String(p._id), p.count]));
+
+  return (review) => ({
+    review,
+    supervisorDoc: docByReview.get(String(review._id)) || null,
+    colleagueSection: hasColleagueSection(peerCount.get(String(review._id)) || 0),
+  });
+};
+
+// What a review left behind is waiting on. Named by the supervisor expected to write it today,
+// which is a reporting-line fact, never the record's author.
+const waitingItemFor = async (review, readiness, day) => {
   const line = await reportingLineOn(review.userId, day);
   return {
     reviewId: String(review._id),
     employee: line.employee,
     supervisor: line.supervisor,
-    reason: doc?.submittedAt
-      ? `submitted less than ${FEEDBACK_EDIT_WINDOW_HOURS} hours ago`
-      : "not submitted",
+    missing: readiness.missing,
+    reason: readiness.reason,
   };
 };
 
 const describe = (item) =>
   `${item.employee.name} (supervisor: ${item.supervisor ? item.supervisor.name : "nobody appointed"}), ${item.reason}`;
 
-const refuseOutstanding = (outstanding) => {
-  const error = new AppError(
-    `Publishing is refused: ${outstanding.length} supervisor ${
-      outstanding.length === 1 ? "review is" : "reviews are"
-    } outstanding. ${outstanding.map(describe).join("; ")}.`,
-    409,
-  );
-  error.details = { outstanding };
-  return error;
+const liveReviewsIn = (cycleId) =>
+  Review.find({ cycleId, status: { $nin: [...PUBLISHED_STATES, "withdrawn"] } });
+
+// Runs as the cycle moves into normalising. Nothing is written: a review is in normalisation
+// when it is ready and its cycle has moved, and the rest wait, named with what is missing.
+const carryIntoNormalisation = async (cycleId) => {
+  const today = toDay(new Date(), "date");
+  const reviews = await liveReviewsIn(cycleId);
+  const inputsFor = await normalisationInputsFor(reviews);
+
+  let carried = 0;
+  const waiting = [];
+  for (const review of reviews) {
+    const readiness = normalisationReadiness(inputsFor(review));
+    if (readiness.ready) carried += 1;
+    else waiting.push(await waitingItemFor(review, readiness, today));
+  }
+  return { carried, waiting };
 };
 
-// Runs as the cycle moves into published, before the stage changes: a refusal leaves it where
-// it was. A review without a settled supervisor review is withdrawn when its person is in no
-// unit today, since nobody can write it, and refuses the whole cycle otherwise.
+// Runs as the cycle moves into published, before the stage changes. Every review that has
+// entered normalisation is published; one whose person is in no unit today and whose supervisor
+// review never came is withdrawn, since nobody can write it; the rest wait, named.
 const publishCycle = async (cycleId) => {
   const now = new Date();
   const today = toDay(now, "date");
-  const reviews = await Review.find({
-    cycleId,
-    status: { $nin: [...PUBLISHED_STATES, "withdrawn"] },
-  });
+  const reviews = await liveReviewsIn(cycleId);
+  const inputsFor = await normalisationInputsFor(reviews);
 
-  const toWithdraw = [];
-  const toPublish = [];
-  const outstanding = [];
+  let published = 0;
+  let withdrawn = 0;
+  const waiting = [];
 
   for (const review of reviews) {
-    const problem = await outstandingFor(review, today);
-    if (!problem) toPublish.push(review);
-    else if (!(await membershipOn(review.userId, today))) toWithdraw.push(review);
-    else outstanding.push(problem);
+    const readiness = normalisationReadiness(inputsFor(review));
+    if (readiness.ready) {
+      publishOne(review, now);
+      await review.save();
+      published += 1;
+    } else if (
+      readiness.missing === "supervisor_review" &&
+      !(await membershipOn(review.userId, today))
+    ) {
+      review.status = "withdrawn";
+      review.withdrawnAt = now;
+      await review.save();
+      withdrawn += 1;
+    } else {
+      waiting.push(await waitingItemFor(review, readiness, today));
+    }
   }
 
-  if (outstanding.length) throw refuseOutstanding(outstanding);
-
-  for (const review of toWithdraw) {
-    review.status = "withdrawn";
-    review.withdrawnAt = now;
-    await review.save();
-  }
-  for (const review of toPublish) {
-    publishOne(review, now);
-    await review.save();
-  }
-
-  return { published: toPublish.length, withdrawn: toWithdraw.length };
+  return { published, withdrawn, waiting };
 };
 
-// One review left out of its cycle's publish, once its supervisor review is in.
+// One review left waiting by its cycle's publish, once it has caught up.
 const publishReview = async (reviewId) => {
   const review = await Review.findById(reviewId);
   if (!review) throw new AppError("Review not found", 404);
@@ -203,8 +228,14 @@ const publishReview = async (reviewId) => {
   }
 
   const now = new Date();
-  const problem = await outstandingFor(review, toDay(now, "date"));
-  if (problem) throw refuseOutstanding([problem]);
+  const inputsFor = await normalisationInputsFor([review]);
+  const readiness = normalisationReadiness(inputsFor(review));
+  if (!readiness.ready) {
+    const item = await waitingItemFor(review, readiness, toDay(now, "date"));
+    const error = new AppError(`This review is still waiting: ${describe(item)}.`, 409);
+    error.details = { waiting: [item] };
+    throw error;
+  }
 
   publishOne(review, now);
   await review.save();
@@ -215,6 +246,9 @@ module.exports = {
   openReviewsForCycle,
   getReviewById,
   shuffled,
+  normalisationInputsFor,
+  waitingItemFor,
+  carryIntoNormalisation,
   publishCycle,
   publishReview,
   PUBLISHED_STATES,

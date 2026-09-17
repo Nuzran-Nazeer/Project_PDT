@@ -127,7 +127,12 @@ exports.coveredUnitIds = async (actor, on = new Date()) => {
 
 // A predicate built once per request: resolving coverage per person repeats the tree walk.
 // `asHr` ignores Leadership, for lists that carry review state rather than a roster.
-exports.readScopeFor = async (actor, { on = new Date(), asHr = false } = {}) => {
+// `includeUnplaced` is the roster rule (somebody in no unit is shown so they can be found);
+// a list of reviews passes false, matching the per-person check, which refuses them.
+exports.readScopeFor = async (
+  actor,
+  { on = new Date(), asHr = false, includeUnplaced = true } = {},
+) => {
   if (holds(actor, UNRESTRICTED_ROLE)) return () => true;
   if (!asHr && ROSTER_READERS.some((role) => holds(actor, role))) return () => true;
   if (!holds(actor, SCOPED_ROLE)) return (userId) => same(userId, actor?.id);
@@ -143,6 +148,7 @@ exports.readScopeFor = async (actor, { on = new Date(), asHr = false } = {}) => 
   return (userId) => {
     if (same(userId, actor.id)) return true;
     const unitId = unitOf.get(String(userId));
-    return !unitId || covered.has(unitId);
+    if (!unitId) return includeUnplaced;
+    return covered.has(unitId);
   };
 };

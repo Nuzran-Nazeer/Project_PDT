@@ -7,7 +7,8 @@ const UnitMembership = require("../models/unitmembership.model");
 const UnitLead = require("../models/unitlead.model");
 const AppError = require("../utils/AppError");
 const { hasSettled } = require("./feedback.window");
-const { PEER_DISPLAY_THRESHOLD } = require("../config/constants");
+const { pendingSendBack } = require("./summaryCheck.state");
+const { hasColleagueSection } = require("../config/constants");
 const { toDay, activeOn, overlapping } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { leadOn, listLeads } = require("./unitlead.service");
@@ -200,10 +201,9 @@ const readinessFrom = (records = [], cycle = null) => {
   const peers = records.filter((r) => r.reviewerType === "peer");
 
   // A pool below the display minimum is never shown, so nothing waits on it.
-  const colleagues =
-    peers.length >= PEER_DISPLAY_THRESHOLD
-      ? peers.filter((record) => !hasSettled(record)).length
-      : 0;
+  const colleagues = hasColleagueSection(peers.length)
+    ? peers.filter((record) => !hasSettled(record)).length
+    : 0;
 
   const missing = {
     selfAssessment: !(self && hasSettled(self)),
@@ -290,12 +290,13 @@ exports.teamOn = async (userId, date) => {
     ? await Review.find({
         cycleId: { $in: cycleIds },
         userId: { $in: members.map((m) => m.userId._id) },
-      }).select("_id cycleId userId")
+      }).select("_id cycleId userId checks")
     : [];
 
   const reviewIdByPerson = new Map(
     reviews.map((r) => [`${r.cycleId}:${r.userId}`, String(r._id)]),
   );
+  const reviewById = new Map(reviews.map((r) => [String(r._id), r]));
 
   // ⚠️ `reviewerId` stays unselected: readiness is arithmetic about records, not authors.
   const records = reviews.length
@@ -317,6 +318,9 @@ exports.teamOn = async (userId, date) => {
       const reviewId = cycle
         ? reviewIdByPerson.get(`${cycle.id}:${m.userId._id}`) || null
         : null;
+      const own = (byReview.get(reviewId) || []).find(
+        (r) => r.reviewerType === "supervisor",
+      );
 
       return {
         ...asPerson(m.userId),
@@ -326,6 +330,7 @@ exports.teamOn = async (userId, date) => {
         cycle,
         reviewId,
         readiness: reviewId ? readinessFrom(byReview.get(reviewId), cycle) : null,
+        sentBack: Boolean(reviewId && pendingSendBack(reviewById.get(reviewId), own)),
         viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
       };
     })
