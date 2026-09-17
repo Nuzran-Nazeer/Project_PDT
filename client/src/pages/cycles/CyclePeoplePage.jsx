@@ -172,9 +172,11 @@ export default function CyclePeoplePage() {
                       </td>
                       <td className="px-4 py-3 text-muted">
                         <ReviewState review={person.review} />
+                        {/* Not while waiting: the row already says what it needs first. */}
                         {canPublishOne &&
                           person.review &&
-                          !isPublished(person.review) && (
+                          !isPublished(person.review) &&
+                          !person.review.waiting && (
                             <button
                               type="button"
                               disabled={busyId === person._id}
@@ -222,6 +224,26 @@ function ReviewState({ review }) {
     <span className={tone}>
       {REVIEW_LABELS[review.status] || review.status}
       {date && <span className="text-muted"> · {formatDate(date)}</span>}
+      {review.waiting && <Waiting on={review.waiting} />}
+    </span>
+  );
+}
+
+// Left behind by a cycle that moved on. Derived on the server on every read, so it clears
+// itself the moment the review catches up.
+function Waiting({ on }) {
+  const what =
+    on.on === "summary_check"
+      ? "the summary check"
+      : on.supervisor
+        ? on.supervisor.name
+        : "a supervisor, and none is appointed";
+
+  return (
+    <span className="mt-1 flex items-center gap-1.5 text-[12px] text-amber-700 dark:text-amber-400">
+      <Icon name="clock" className="h-3.5 w-3.5" />
+      Waiting on {what}
+      <span className="text-muted">· {on.reason}</span>
     </span>
   );
 }

@@ -163,7 +163,7 @@ export const TABS_BY_GROUP = {
       icon: "check",
       title: "Summaries to check",
       description: "Compare each summary against the raw comments before publication",
-      built: false,
+      built: true,
     },
     {
       section: "Running the cycle",

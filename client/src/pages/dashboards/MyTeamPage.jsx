@@ -144,6 +144,18 @@ function ReadinessCell({ person }) {
 
   if (!readiness) return <span className="text-muted">No review yet</span>;
 
+  // HR has sent the colleague summary back; the reason is on the reopened form.
+  if (person.sentBack) {
+    return (
+      <span className="font-medium text-amber-700 dark:text-amber-400">
+        Sent back by HR
+        <span className="mt-1 block text-[12px] font-normal text-muted">
+          the summary needs another look
+        </span>
+      </span>
+    );
+  }
+
   const step = REVIEW_STATE[readiness.state];
   if (step) {
     return (

@@ -11,6 +11,21 @@ export const formatDate = (value) => {
   });
 };
 
+export const formatDateTime = (value) => {
+  if (!value) return "Not set";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+
+  return date.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
 // ⚠️ Sliced from the ISO string, never rebuilt from local date parts: UTC midnight reads
 // as the previous evening in a timezone behind it.
 export const toDateInput = (value) => (value ? String(value).slice(0, 10) : "");

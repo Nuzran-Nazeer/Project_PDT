@@ -369,6 +369,25 @@ export default function SupervisorReviewFormPage() {
         <span className="text-ink">{STATUS_LABEL[record.status] || record.status}</span>
       </p>
 
+      {record.sentBack && (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-[13px]"
+        >
+          <p className="font-semibold text-ink">
+            Sent back by {record.sentBack.officer?.name || "HR"} on{" "}
+            {formatDate(record.sentBack.at)}.
+          </p>
+          <p className="mt-1 max-w-prose whitespace-pre-wrap text-ink">
+            {record.sentBack.reason}
+          </p>
+          <p className="mt-2 max-w-prose text-muted">
+            Your whole review is open again. Revise the colleague summary, then submit it
+            for a fresh check.
+          </p>
+        </div>
+      )}
+
       {record.publishedAt ? (
         <div
           role="status"

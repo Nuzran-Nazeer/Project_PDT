@@ -148,13 +148,22 @@ export default function TeamMemberPage() {
               : `No cycle is running for the ${person.parGroup || "their"} group.`}
           </p>
 
+          {person.sentBack && (
+            <p className="mt-3 max-w-prose text-[13px] font-medium text-amber-700 dark:text-amber-400">
+              HR has sent your colleague summary back. The reason is at the top of the
+              form.
+            </p>
+          )}
+
           {/* Hides the way in, never protects it: the server refuses the form with a 409. */}
           {readiness && readiness.state !== "waiting" ? (
             <Link
               to={`/my-team/${person.id}/review`}
               className="mt-4 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
-              {REVIEW_LINK[readiness.state] || "Supervisor review"}
+              {person.sentBack
+                ? "Revise your review"
+                : REVIEW_LINK[readiness.state] || "Supervisor review"}
             </Link>
           ) : (
             <p className="mt-4 rounded-lg border border-dashed border-line p-4 text-[13px] text-muted">

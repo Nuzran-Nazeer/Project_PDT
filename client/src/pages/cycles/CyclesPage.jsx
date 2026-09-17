@@ -70,9 +70,8 @@ export default function CyclesPage() {
 
   const [busyId, setBusyId] = useState("");
   const [actionError, setActionError] = useState("");
-  // The refusal's list of outstanding supervisor reviews, shown under the message.
-  const [outstanding, setOutstanding] = useState([]);
-  const [published, setPublished] = useState(null);
+  // What the move into normalising or published did, with every review it left waiting.
+  const [outcome, setOutcome] = useState(null);
 
   const [publishFor, setPublishFor] = useState("");
 
@@ -140,18 +139,19 @@ export default function CyclesPage() {
 
     setBusyId(cycle._id);
     setActionError("");
-    setOutstanding([]);
-    setPublished(null);
+    setOutcome(null);
     try {
       const result = await advanceCycle(cycle._id, target);
+      if (result?.normalisation) {
+        setOutcome({ cycle, kind: "normalisation", ...result.normalisation });
+      }
       if (result?.publication) {
-        setPublished({ cycle, ...result.publication });
+        setOutcome({ cycle, kind: "publication", ...result.publication });
         setPublishFor("");
       }
       await load();
     } catch (err) {
       setActionError(err.message);
-      setOutstanding(err.details?.outstanding || []);
     } finally {
       setBusyId("");
     }
@@ -202,43 +202,8 @@ export default function CyclesPage() {
       )}
 
       {loadError && <Alert>{loadError}</Alert>}
-      {actionError && (
-        <Alert>
-          {outstanding.length > 0 ? (
-            <>
-              Publishing is refused: {outstanding.length} supervisor{" "}
-              {outstanding.length === 1 ? "review is" : "reviews are"} outstanding.
-              <ul className="mt-2 grid gap-1">
-                {outstanding.map((item) => (
-                  <li key={item.reviewId}>
-                    <span className="font-medium">{item.employee?.name}</span>
-                    {" · "}
-                    {item.supervisor
-                      ? `supervisor ${item.supervisor.name}`
-                      : "no supervisor appointed"}
-                    {" · "}
-                    {item.reason}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            actionError
-          )}
-        </Alert>
-      )}
-      {published && (
-        <p
-          role="status"
-          className="mt-4 rounded-lg border border-success/40 bg-success/10 px-3 py-2.5 text-[13px] text-success"
-        >
-          {published.cycle.parGroup} group · {published.cycle.year} is published:{" "}
-          {published.published} {published.published === 1 ? "result" : "results"} sent
-          {published.withdrawn > 0 &&
-            `, ${published.withdrawn} withdrawn for having no unit and no supervisor review`}
-          .
-        </p>
-      )}
+      {actionError && <Alert>{actionError}</Alert>}
+      {outcome && <MoveOutcome outcome={outcome} />}
 
       {showCreate && (
         <form
@@ -411,8 +376,7 @@ export default function CyclesPage() {
                               onClick={() => {
                                 setPublishFor(cycle._id);
                                 setActionError("");
-                                setOutstanding([]);
-                                setPublished(null);
+                                setOutcome(null);
                               }}
                               className={secondaryClass}
                             >
@@ -456,9 +420,10 @@ export default function CyclesPage() {
                       Publish every result in this cycle?
                     </p>
                     <p className="mt-2 max-w-prose text-[13px] text-muted">
-                      Everyone in the {cycle.parGroup} group receives their result at the
-                      same time, and it cannot be taken back. It is refused while any
-                      supervisor review is still outstanding.
+                      Everyone in the {cycle.parGroup} group whose review is ready
+                      receives their result at the same time, and it cannot be taken back.
+                      A review that is not ready is left waiting, named, and can be
+                      published on its own once it catches up.
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-3">
@@ -525,6 +490,57 @@ export default function CyclesPage() {
         )}
       </div>
     </>
+  );
+}
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+// One notice for both moves: counts first, then every review left waiting, named.
+function MoveOutcome({ outcome }) {
+  const { cycle, kind, waiting = [] } = outcome;
+  const title = `${cycle.parGroup} group · ${cycle.year}`;
+
+  const counts =
+    kind === "publication"
+      ? [
+          `${plural(outcome.published, "result", "results")} sent`,
+          outcome.withdrawn > 0 &&
+            `${outcome.withdrawn} withdrawn for having no unit and no supervisor review`,
+          waiting.length > 0 && `${waiting.length} left waiting`,
+        ]
+      : [
+          `${plural(outcome.carried, "review", "reviews")} carried into normalisation`,
+          waiting.length > 0 && `${waiting.length} left waiting`,
+        ];
+
+  return (
+    <div
+      role="status"
+      className="mt-4 rounded-lg border border-success/40 bg-success/10 px-3 py-2.5 text-[13px] text-success"
+    >
+      <p>
+        {title} {kind === "publication" ? "is published" : "is normalising"}:{" "}
+        {counts.filter(Boolean).join(", ")}.
+      </p>
+
+      {waiting.length > 0 && (
+        <ul className="mt-2 grid gap-1 text-ink">
+          {waiting.map((item) => (
+            <li key={item.reviewId}>
+              <span className="font-medium">{item.employee?.name}</span>
+              {" · "}
+              {item.supervisor
+                ? `supervisor ${item.supervisor.name}`
+                : "no supervisor appointed"}
+              {" · "}
+              {item.missing === "summary_check" ? "summary check" : "supervisor review"}
+              {": "}
+              {item.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
