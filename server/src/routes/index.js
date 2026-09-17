@@ -12,6 +12,7 @@ const projectAssignmentRoutes = require("./projectassignment.routes");
 const supervisionRoutes = require("./supervision.routes");
 const cycleRoutes = require("./cycle.routes");
 const feedbackRoutes = require("./feedback.routes");
+const reviewRoutes = require("./review.routes");
 const reviewerListRoutes = require("./reviewerList.routes");
 
 // A cold start is still connecting on its first request; wait for it rather than report it,
@@ -48,6 +49,7 @@ router.use("/project-assignments", projectAssignmentRoutes);
 // Top level, not /users/:id/supervisor: that would imply a field the data model forbids.
 router.use("/supervision", supervisionRoutes);
 router.use("/cycles", cycleRoutes);
+router.use("/reviews", reviewRoutes);
 router.use("/feedback", feedbackRoutes);
 router.use("/reviewer-lists", reviewerListRoutes);
 
