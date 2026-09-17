@@ -1,4 +1,5 @@
 const Cycle = require("../models/cycle.model");
+const Review = require("../models/review.model");
 const User = require("../models/user.model");
 const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
@@ -99,11 +100,31 @@ exports.peopleInCycle = async (id) => {
   const cycle = await exports.getCycleById(id);
   const people = await coverageFor(cycle.parGroup);
 
+  const reviews = await Review.find({ cycleId: cycle._id })
+    .select("userId status publishedAt withdrawnAt")
+    .lean();
+  const reviewFor = new Map(reviews.map((r) => [String(r.userId), r]));
+
+  const items = people.map((person) => {
+    const review = reviewFor.get(String(person._id));
+    return {
+      ...person,
+      review: review
+        ? {
+            id: String(review._id),
+            status: review.status,
+            publishedAt: review.publishedAt,
+            withdrawnAt: review.withdrawnAt,
+          }
+        : null,
+    };
+  });
+
   return {
     cycle,
-    items: people,
-    total: people.length,
-    appraised: people.filter((p) => p.appraised).length,
+    items,
+    total: items.length,
+    appraised: items.filter((p) => p.appraised).length,
   };
 };
 
@@ -180,14 +201,19 @@ exports.advanceCycle = async (id, target, userId) => {
   // Before the stage changes, so a failure leaves the cycle where it was.
   // ⚠️ Required here, not at the top: review.service requires this file, and a circular
   // require at load time hands one side an empty exports object.
+  let publication = null;
   if (next === "collecting") {
     const { openReviewsForCycle } = require("./review.service");
     await openReviewsForCycle(cycle._id);
   }
+  if (next === "published") {
+    const { publishCycle } = require("./review.service");
+    publication = await publishCycle(cycle._id);
+  }
 
   cycle.status = next;
   await cycle.save();
-  return cycle;
+  return publication ? { ...cycle.toJSON(), publication } : cycle;
 };
 
 // ⚠️ Cancel is not delete: a published cycle is somebody's appraisal record.

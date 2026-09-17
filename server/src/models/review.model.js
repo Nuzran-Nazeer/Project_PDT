@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const { REVIEW_STATUS } = require("../config/constants");
 
 // One per employee per cycle: the container every feedback record hangs off.
-// ⚠️ `snapshot.rulesInForce` is written at publication, which nothing does yet.
 
 const periodSchema = new mongoose.Schema(
   {
@@ -44,7 +43,8 @@ const reviewSchema = new mongoose.Schema(
       projectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
       parGroup: String,
 
-      // ⚠️ Not derivable: the constants file only ever reports today's numbers. HR-visible only.
+      // ⚠️ Written at publication and never recomputed: the constants file only ever reports
+      // today's numbers. HR-visible only.
       rulesInForce: {
         peerCount: Number,
         peerDisplayThreshold: Number,
@@ -60,6 +60,7 @@ const reviewSchema = new mongoose.Schema(
     rawOverall: { type: Number, default: null },
     normalisedOverall: { type: Number, default: null },
     publishedAt: { type: Date, default: null },
+    withdrawnAt: { type: Date, default: null },
     acknowledgedAt: { type: Date, default: null },
   },
   { timestamps: true },

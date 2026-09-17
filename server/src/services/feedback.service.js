@@ -381,6 +381,16 @@ const notReadyError = (readiness) => {
   return new AppError(`This review cannot be started yet: ${missing.join(", ")}`, 409);
 };
 
+const isPublished = (review) => Boolean(review.publishedAt);
+
+const assertUnpublished = (review) => {
+  if (!isPublished(review)) return;
+  throw new AppError(
+    "This review has been published, so the supervisor's review can no longer be changed",
+    409,
+  );
+};
+
 const supervisorRecordFor = async (reviewId, viewer) => {
   const review = await Review.findById(reviewId);
   if (!review) throw new AppError("Review not found", 404);
@@ -446,7 +456,8 @@ const asSupervisorRecord = ({ review, reviewee, doc, readiness }) => ({
   colleagueSummary: doc ? doc.colleagueSummary : null,
   submittedAt: doc ? doc.submittedAt : null,
   locksAt: doc ? doc.locksAt : null,
-  editable: !doc || isEditable(doc),
+  publishedAt: review.publishedAt,
+  editable: !isPublished(review) && (!doc || isEditable(doc)),
   readiness,
   competencies: competenciesFor(reviewee.jobFamily),
 });
@@ -456,6 +467,7 @@ const supervisorReviewFor = async (reviewId, viewer) =>
 
 const saveSupervisorDraft = async (reviewId, viewer, payload) => {
   const found = await openSupervisorRecord(reviewId, viewer);
+  assertUnpublished(found.review);
   assertOpen(found.doc);
 
   applyAnswers(found.doc, payload);
@@ -469,6 +481,7 @@ const saveSupervisorDraft = async (reviewId, viewer, payload) => {
 
 const submitSupervisorReview = async (reviewId, viewer, payload) => {
   const found = await openSupervisorRecord(reviewId, viewer);
+  assertUnpublished(found.review);
 
   applyAndSubmit(found.doc, payload);
   applyColleagueSummary(found.doc, payload);
