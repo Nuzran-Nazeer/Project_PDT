@@ -17,10 +17,8 @@ const {
   PEER_DISPLAY_THRESHOLD,
   PEER_ELIGIBILITY_MONTHS,
   FEEDBACK_EDIT_WINDOW_HOURS,
+  PUBLISHED_STATES,
 } = require("../config/constants");
-
-// Once published a review is somebody's record; none of these may be published again.
-const PUBLISHED_STATES = ["published", "acknowledged", "under_appeal"];
 
 // crypto rather than Math.random: a predictable shuffle decides whose appraisal somebody joins.
 const shuffled = (items) => {

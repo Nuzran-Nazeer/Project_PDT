@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { REVIEW_STATUS } = require("../config/constants");
+const { REVIEW_STATUS, SUMMARY_CHECK_ACTIONS } = require("../config/constants");
 
 // One per employee per cycle: the container every feedback record hangs off.
 
@@ -12,6 +12,18 @@ const periodSchema = new mongoose.Schema(
 
     // ⚠️ Informational only; the duration weighting was withdrawn. Nothing may calculate with it.
     months: Number,
+  },
+  { _id: false },
+);
+
+// HR's check of the supervisor's colleague summary. Appended, never edited: a clearance counts
+// only while it is later than the supervisor record's current submission.
+const summaryCheckSchema = new mongoose.Schema(
+  {
+    action: { type: String, enum: SUMMARY_CHECK_ACTIONS, required: true },
+    officerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    reason: { type: String, default: null },
+    at: { type: Date, required: true },
   },
   { _id: false },
 );
@@ -56,6 +68,10 @@ const reviewSchema = new mongoose.Schema(
 
     // From the unit-lead history at creation, [from, to); nothing is merged across periods.
     periods: { type: [periodSchema], default: [] },
+
+    // ⚠️ For HR and the supervisor's send-back notice only. The employee never learns that a
+    // check happened, that a summary went back, or why.
+    checks: { type: [summaryCheckSchema], default: [] },
 
     rawOverall: { type: Number, default: null },
     normalisedOverall: { type: Number, default: null },

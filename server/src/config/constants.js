@@ -157,6 +157,9 @@ const REVIEW_STATUS = [
   "under_appeal",
 ];
 
+// Once published a review is somebody's record; none of these may be published again.
+const PUBLISHED_STATES = ["published", "acknowledged", "under_appeal"];
+
 // Reviews received and reviews written in a year are one number: every review has an author.
 const PEER_REVIEWS_TARGET = 8;
 
@@ -175,6 +178,10 @@ const LIST_CHANGE_STATUS = ["pending", "approved", "refused"];
 // ⚠️ How many settled responses may be read, not how many are asked (the small-pool figure).
 const PEER_DISPLAY_THRESHOLD = 3;
 
+// ⚠️ The one test for whether a review has a colleague section at all. Below it there is
+// nothing to read, nothing to summarise and nothing to check.
+const hasColleagueSection = (assignedCount) => assignedCount >= PEER_DISPLAY_THRESHOLD;
+
 // ⚠️ Four continuous months, not four added up across separate stints.
 const PEER_ELIGIBILITY_MONTHS = 4;
 
@@ -185,6 +192,9 @@ const PEER_ELIGIBILITY_MONTHS_IN_CYCLE = 2;
 const PEER_CONTINUITY_GAP_MONTHS = 1;
 
 const FEEDBACK_STATUS = ["assigned", "draft", "submitted", "locked"];
+
+// What HR may record against a colleague summary. A send-back carries a reason; a clearance does not.
+const SUMMARY_CHECK_ACTIONS = ["cleared", "sent_back"];
 
 // The author may still edit for this long after submitting; `locksAt` is `submittedAt` plus this.
 const FEEDBACK_EDIT_WINDOW_HOURS = 5;
@@ -376,7 +386,9 @@ module.exports = {
   REVIEWER_TYPES,
   CONFIDENTIAL_REVIEWER_TYPES,
   FEEDBACK_STATUS,
+  SUMMARY_CHECK_ACTIONS,
   REVIEW_STATUS,
+  PUBLISHED_STATES,
   PEER_REVIEWS_TARGET,
   PEER_REVIEWS_MINIMUM,
   PEER_REVIEWS_SMALL_POOL,
@@ -385,6 +397,7 @@ module.exports = {
   LIST_CHANGE_TYPES,
   LIST_CHANGE_STATUS,
   PEER_DISPLAY_THRESHOLD,
+  hasColleagueSection,
   PEER_ELIGIBILITY_MONTHS,
   PEER_ELIGIBILITY_MONTHS_IN_CYCLE,
   PEER_CONTINUITY_GAP_MONTHS,
