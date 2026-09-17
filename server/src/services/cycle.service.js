@@ -4,6 +4,7 @@ const User = require("../models/user.model");
 const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
 const { toDay, assertOrderedRange, activeOn } = require("../utils/dateRange");
+const { isWaiting, normalisationReadiness } = require("./summaryCheck.state");
 const {
   CYCLE_STAGES,
   CYCLE_CANCELLED,
@@ -96,14 +97,36 @@ exports.listCycles = async ({ parGroup, year, status } = {}, inScope = () => tru
   };
 };
 
+// A review its cycle has moved on without, and what it waits on: derived here on every read,
+// so it clears itself the moment the review catches up.
+const waitingFor = async (cycle, reviews) => {
+  const { normalisationInputsFor, waitingItemFor } = require("./review.service");
+  const today = toDay(new Date(), "date");
+  const inputsFor = await normalisationInputsFor(reviews);
+
+  const waiting = new Map();
+  for (const review of reviews) {
+    const inputs = inputsFor(review);
+    if (!isWaiting({ ...inputs, cycle })) continue;
+    const item = await waitingItemFor(review, normalisationReadiness(inputs), today);
+    waiting.set(String(review._id), {
+      on: item.missing,
+      supervisor: item.supervisor,
+      reason: item.reason,
+    });
+  }
+  return waiting;
+};
+
 exports.peopleInCycle = async (id) => {
   const cycle = await exports.getCycleById(id);
   const people = await coverageFor(cycle.parGroup);
 
-  const reviews = await Review.find({ cycleId: cycle._id })
-    .select("userId status publishedAt withdrawnAt")
-    .lean();
+  const reviews = await Review.find({ cycleId: cycle._id }).select(
+    "userId status publishedAt withdrawnAt checks",
+  );
   const reviewFor = new Map(reviews.map((r) => [String(r.userId), r]));
+  const waiting = await waitingFor(cycle, reviews);
 
   const items = people.map((person) => {
     const review = reviewFor.get(String(person._id));
@@ -115,6 +138,7 @@ exports.peopleInCycle = async (id) => {
             status: review.status,
             publishedAt: review.publishedAt,
             withdrawnAt: review.withdrawnAt,
+            waiting: waiting.get(String(review._id)) || null,
           }
         : null,
     };
@@ -201,19 +225,23 @@ exports.advanceCycle = async (id, target, userId) => {
   // Before the stage changes, so a failure leaves the cycle where it was.
   // ⚠️ Required here, not at the top: review.service requires this file, and a circular
   // require at load time hands one side an empty exports object.
-  let publication = null;
+  const outcome = {};
   if (next === "collecting") {
     const { openReviewsForCycle } = require("./review.service");
     await openReviewsForCycle(cycle._id);
   }
+  if (next === "normalising") {
+    const { carryIntoNormalisation } = require("./review.service");
+    outcome.normalisation = await carryIntoNormalisation(cycle._id);
+  }
   if (next === "published") {
     const { publishCycle } = require("./review.service");
-    publication = await publishCycle(cycle._id);
+    outcome.publication = await publishCycle(cycle._id);
   }
 
   cycle.status = next;
   await cycle.save();
-  return publication ? { ...cycle.toJSON(), publication } : cycle;
+  return { ...cycle.toJSON(), ...outcome };
 };
 
 // ⚠️ Cancel is not delete: a published cycle is somebody's appraisal record.

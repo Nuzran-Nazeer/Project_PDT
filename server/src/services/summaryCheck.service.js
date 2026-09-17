@@ -83,7 +83,10 @@ const assertMayCheck = async (review, viewer, line) => {
   if (isSupervisorToday(line, viewer)) throw ownSummaryError();
 };
 
+// ⚠️ Published or withdrawn first: past that door the check history no longer matters.
 const stateOf = ({ review, cycle, doc, colleagueSection }) => {
+  if ([...PUBLISHED_STATES, "withdrawn"].includes(review.status))
+    return "in_normalisation";
   if (pendingSendBack(review, doc)) return "sent_back";
   if (!doc?.submittedAt) return "not_submitted";
   if (!hasSettled(doc)) return "in_window";

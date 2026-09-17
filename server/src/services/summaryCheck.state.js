@@ -1,4 +1,8 @@
-const { CYCLE_STAGES, PUBLISHED_STATES } = require("../config/constants");
+const {
+  CYCLE_STAGES,
+  PUBLISHED_STATES,
+  FEEDBACK_EDIT_WINDOW_HOURS,
+} = require("../config/constants");
 const { hasSettled } = require("./feedback.window");
 
 // ⚠️ The one home of "is this summary cleared" and "has this review entered normalisation".
@@ -36,14 +40,56 @@ const pendingSendBack = (review, supervisorDoc) => {
 const stageAtOrPast = (cycle, stage) =>
   CYCLE_STAGES.indexOf(cycle?.status) >= CYCLE_STAGES.indexOf(stage);
 
+// What a review still needs before normalisation can work from it, or null when it is ready:
+// the supervisor's review settled, and the summary cleared where there is a colleague section.
+// ⚠️ A sent-back review reads as waiting on the check, not the supervisor, although its
+// record is a draft: what is being waited on is the outcome of the check.
+const normalisationReadiness = ({ review, supervisorDoc, colleagueSection }) => {
+  if (pendingSendBack(review, supervisorDoc)) {
+    return {
+      ready: false,
+      missing: "summary_check",
+      reason: "the summary was sent back",
+    };
+  }
+  if (!supervisorDoc?.submittedAt) {
+    return { ready: false, missing: "supervisor_review", reason: "not submitted" };
+  }
+  if (!hasSettled(supervisorDoc)) {
+    return {
+      ready: false,
+      missing: "supervisor_review",
+      reason: `submitted less than ${FEEDBACK_EDIT_WINDOW_HOURS} hours ago`,
+    };
+  }
+  if (colleagueSection && !isCleared(review, supervisorDoc)) {
+    return {
+      ready: false,
+      missing: "summary_check",
+      reason: "the summary is not yet checked",
+    };
+  }
+  return { ready: true, missing: null, reason: null };
+};
+
 // ⚠️ The door normalisation works behind: once a review is through it, nothing it was
-// computed from may reopen. Settled and cleared, or settled with no colleague section, with
-// the cycle at normalising or later.
+// computed from may reopen. Ready, with the cycle at normalising or later.
 const hasEnteredNormalisation = ({ review, cycle, supervisorDoc, colleagueSection }) => {
   if ([...PUBLISHED_STATES, "withdrawn"].includes(review.status)) return true;
   if (!stageAtOrPast(cycle, "normalising")) return false;
-  if (!supervisorDoc || !hasSettled(supervisorDoc)) return false;
-  return !colleagueSection || isCleared(review, supervisorDoc);
+  return normalisationReadiness({ review, supervisorDoc, colleagueSection }).ready;
 };
 
-module.exports = { lastCheck, isCleared, pendingSendBack, hasEnteredNormalisation };
+// Left behind by a cycle that has moved on, and not yet caught up. Derived, never stored.
+const isWaiting = ({ review, cycle, supervisorDoc, colleagueSection }) =>
+  stageAtOrPast(cycle, "normalising") &&
+  !hasEnteredNormalisation({ review, cycle, supervisorDoc, colleagueSection });
+
+module.exports = {
+  lastCheck,
+  isCleared,
+  pendingSendBack,
+  normalisationReadiness,
+  hasEnteredNormalisation,
+  isWaiting,
+};
