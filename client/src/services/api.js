@@ -27,6 +27,7 @@ export async function apiFetch(path, options = {}) {
     // ⚠️ The server's own message, never reworded: login hides which of three things went wrong.
     const error = new Error(data?.error || `Request failed: ${res.status}`);
     error.status = res.status;
+    error.details = data?.details || null;
     throw error;
   }
   return data;

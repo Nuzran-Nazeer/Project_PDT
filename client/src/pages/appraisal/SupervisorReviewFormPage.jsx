@@ -12,6 +12,7 @@ import { FormShell, FormSection } from "../../components/shells/FormShell";
 import CompetencyRatingField from "../../components/forms/CompetencyRatingField";
 import TextAreaField from "../../components/forms/TextAreaField";
 import EditWindowNotice from "../../components/forms/EditWindowNotice";
+import { formatDate } from "../../utils/dates";
 
 // Keyed by competencyKey; turned into the server's array only when saving or submitting.
 const answersFrom = (competencies, existingRatings) => {
@@ -368,14 +369,29 @@ export default function SupervisorReviewFormPage() {
         <span className="text-ink">{STATUS_LABEL[record.status] || record.status}</span>
       </p>
 
-      {record.submittedAt && (
-        <div className="mb-6">
-          <EditWindowNotice
-            submittedAt={record.submittedAt}
-            locksAt={record.locksAt}
-            editable={editable}
-          />
+      {record.publishedAt ? (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-line bg-raised p-4 text-[13px]"
+        >
+          <p className="font-semibold text-ink">
+            Published {formatDate(record.publishedAt)}.
+          </p>
+          <p className="mt-1 max-w-prose text-muted">
+            This is now part of {person ? `${person.name}'s` : "the employee's"} record
+            and cannot be changed. What you wrote is below, as it was published.
+          </p>
         </div>
+      ) : (
+        record.submittedAt && (
+          <div className="mb-6">
+            <EditWindowNotice
+              submittedAt={record.submittedAt}
+              locksAt={record.locksAt}
+              editable={editable}
+            />
+          </div>
+        )
       )}
 
       {editable ? (

@@ -70,6 +70,11 @@ export default function CyclesPage() {
 
   const [busyId, setBusyId] = useState("");
   const [actionError, setActionError] = useState("");
+  // The refusal's list of outstanding supervisor reviews, shown under the message.
+  const [outstanding, setOutstanding] = useState([]);
+  const [published, setPublished] = useState(null);
+
+  const [publishFor, setPublishFor] = useState("");
 
   const [cancelFor, setCancelFor] = useState("");
   const [cancelReason, setCancelReason] = useState("");
@@ -135,11 +140,18 @@ export default function CyclesPage() {
 
     setBusyId(cycle._id);
     setActionError("");
+    setOutstanding([]);
+    setPublished(null);
     try {
-      await advanceCycle(cycle._id, target);
+      const result = await advanceCycle(cycle._id, target);
+      if (result?.publication) {
+        setPublished({ cycle, ...result.publication });
+        setPublishFor("");
+      }
       await load();
     } catch (err) {
       setActionError(err.message);
+      setOutstanding(err.details?.outstanding || []);
     } finally {
       setBusyId("");
     }
@@ -190,7 +202,43 @@ export default function CyclesPage() {
       )}
 
       {loadError && <Alert>{loadError}</Alert>}
-      {actionError && <Alert>{actionError}</Alert>}
+      {actionError && (
+        <Alert>
+          {outstanding.length > 0 ? (
+            <>
+              Publishing is refused: {outstanding.length} supervisor{" "}
+              {outstanding.length === 1 ? "review is" : "reviews are"} outstanding.
+              <ul className="mt-2 grid gap-1">
+                {outstanding.map((item) => (
+                  <li key={item.reviewId}>
+                    <span className="font-medium">{item.employee?.name}</span>
+                    {" · "}
+                    {item.supervisor
+                      ? `supervisor ${item.supervisor.name}`
+                      : "no supervisor appointed"}
+                    {" · "}
+                    {item.reason}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            actionError
+          )}
+        </Alert>
+      )}
+      {published && (
+        <p
+          role="status"
+          className="mt-4 rounded-lg border border-success/40 bg-success/10 px-3 py-2.5 text-[13px] text-success"
+        >
+          {published.cycle.parGroup} group · {published.cycle.year} is published:{" "}
+          {published.published} {published.published === 1 ? "result" : "results"} sent
+          {published.withdrawn > 0 &&
+            `, ${published.withdrawn} withdrawn for having no unit and no supervisor review`}
+          .
+        </p>
+      )}
 
       {showCreate && (
         <form
@@ -355,18 +403,34 @@ export default function CyclesPage() {
 
                   {canManage && (
                     <>
-                      {target && (
-                        <button
-                          type="button"
-                          disabled={busyId === cycle._id}
-                          onClick={() => move(cycle)}
-                          className={secondaryClass}
-                        >
-                          {cycle.status === "draft"
-                            ? "Open this cycle"
-                            : `Move to ${STAGE_LABELS[target].toLowerCase()}`}
-                        </button>
-                      )}
+                      {target === "published"
+                        ? publishFor !== cycle._id && (
+                            <button
+                              type="button"
+                              disabled={busyId === cycle._id}
+                              onClick={() => {
+                                setPublishFor(cycle._id);
+                                setActionError("");
+                                setOutstanding([]);
+                                setPublished(null);
+                              }}
+                              className={secondaryClass}
+                            >
+                              Publish the results
+                            </button>
+                          )
+                        : target && (
+                            <button
+                              type="button"
+                              disabled={busyId === cycle._id}
+                              onClick={() => move(cycle)}
+                              className={secondaryClass}
+                            >
+                              {cycle.status === "draft"
+                                ? "Open this cycle"
+                                : `Move to ${STAGE_LABELS[target].toLowerCase()}`}
+                            </button>
+                          )}
 
                       {cancellable && cancelFor !== cycle._id && (
                         <button
@@ -384,6 +448,38 @@ export default function CyclesPage() {
                     </>
                   )}
                 </div>
+
+                {/* Its own step: publishing cannot be undone, and one click is how a stage move works. */}
+                {publishFor === cycle._id && (
+                  <div className="mt-4 rounded-lg border border-line p-4">
+                    <p className="text-sm text-ink">
+                      Publish every result in this cycle?
+                    </p>
+                    <p className="mt-2 max-w-prose text-[13px] text-muted">
+                      Everyone in the {cycle.parGroup} group receives their result at the
+                      same time, and it cannot be taken back. It is refused while any
+                      supervisor review is still outstanding.
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        disabled={busyId === cycle._id}
+                        onClick={() => move(cycle)}
+                        className={primaryClass}
+                      >
+                        {busyId === cycle._id ? "Publishing…" : "Publish"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPublishFor("")}
+                        className={secondaryClass}
+                      >
+                        Not yet
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {cancelFor === cycle._id && (
                   <div className="mt-4 rounded-lg border border-line p-4">

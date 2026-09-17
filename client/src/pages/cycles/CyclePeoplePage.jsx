@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import { getCyclePeople } from "../../services/cycles";
+import { publishReview } from "../../services/reviews";
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
@@ -19,12 +21,31 @@ const STAGE_LABELS = {
   cancelled: "Cancelled",
 };
 
+// Labels only. A review sits at pending until it is published or withdrawn.
+const REVIEW_LABELS = {
+  pending: "In progress",
+  in_progress: "In progress",
+  awaiting_supervisor: "Awaiting supervisor",
+  normalising: "Normalising",
+  published: "Published",
+  acknowledged: "Published",
+  under_appeal: "Published",
+  withdrawn: "Withdrawn",
+};
+
+const isPublished = (review) => Boolean(review?.publishedAt);
+
 export default function CyclePeoplePage() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const canManage = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [busyId, setBusyId] = useState("");
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -39,9 +60,24 @@ export default function CyclePeoplePage() {
     };
   }, [id]);
 
+  const publishOne = async (person) => {
+    setBusyId(person._id);
+    setActionError("");
+    try {
+      await publishReview(person.review.id);
+      setData(await getCyclePeople(id));
+    } catch (err) {
+      setActionError(`${person.name}: ${err.message}`);
+    } finally {
+      setBusyId("");
+    }
+  };
+
   const cycle = data?.cycle;
   const people = data?.items || [];
   const notAppraised = people.filter((p) => !p.appraised);
+  // Only once the cycle has published: the server refuses it earlier anyway.
+  const canPublishOne = canManage && cycle?.status === "published";
 
   return (
     <>
@@ -75,6 +111,15 @@ export default function CyclePeoplePage() {
         </p>
       ) : (
         <>
+          {actionError && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
+            >
+              {actionError}
+            </p>
+          )}
+
           <p className="mb-4 text-sm text-muted">
             {/* People actually appraised, not rows: someone in no unit is listed but not counted. */}
             <strong className="text-ink">{data.appraised}</strong>
@@ -125,7 +170,23 @@ export default function CyclePeoplePage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted">Not built yet</td>
+                      <td className="px-4 py-3 text-muted">
+                        <ReviewState review={person.review} />
+                        {canPublishOne &&
+                          person.review &&
+                          !isPublished(person.review) && (
+                            <button
+                              type="button"
+                              disabled={busyId === person._id}
+                              onClick={() => publishOne(person)}
+                              className="mt-1.5 block cursor-pointer text-[12px] font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {busyId === person._id
+                                ? "Publishing…"
+                                : "Publish on its own"}
+                            </button>
+                          )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -144,6 +205,24 @@ export default function CyclePeoplePage() {
         </>
       )}
     </>
+  );
+}
+
+function ReviewState({ review }) {
+  if (!review) return <span>No review</span>;
+
+  const date = review.publishedAt || review.withdrawnAt;
+  const tone = review.publishedAt
+    ? "text-emerald-700 dark:text-emerald-400"
+    : review.withdrawnAt
+      ? "text-amber-700 dark:text-amber-400"
+      : "";
+
+  return (
+    <span className={tone}>
+      {REVIEW_LABELS[review.status] || review.status}
+      {date && <span className="text-muted"> · {formatDate(date)}</span>}
+    </span>
   );
 }
 
