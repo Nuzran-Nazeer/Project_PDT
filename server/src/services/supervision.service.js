@@ -104,6 +104,40 @@ exports.reportingLineOn = async (userId, date) => {
   };
 };
 
+// Everyone above somebody on a date, nearest first: their supervisor, then that unit's lead,
+// and so on to the top. Each level is the lead of the unit, which the data model places in the
+// parent unit, so the walk is up the tree rather than person to person.
+exports.chainAboveOn = async (userId, date) => {
+  const day = toDay(date, "on");
+  const membership = await membershipOn(userId, day);
+  if (!membership) return [];
+
+  const above = [];
+  const seen = new Set();
+  let cursor = membership.unitId;
+
+  while (cursor) {
+    const step = String(cursor);
+    if (seen.has(step)) {
+      throw new AppError("The unit tree above this unit contains a loop", 409);
+    }
+    seen.add(step);
+
+    const unit = await OrgUnit.findById(step).select("parentUnitId");
+    if (!unit) break;
+
+    const record = await leadOn(step, day);
+    const leadId = record?.userId?._id;
+    if (leadId && String(leadId) !== String(userId) && !above.includes(String(leadId))) {
+      above.push(String(leadId));
+    }
+
+    cursor = unit.parentUnitId;
+  }
+
+  return above;
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAYS_PER_MONTH = 365.25 / 12;
 

@@ -4,6 +4,7 @@ const {
   validateFeedbackId,
   validateReviewId,
   validateAnswers,
+  validateReveal,
 } = require("../validators/feedback.validator");
 const { protect } = require("../middleware/auth.middleware");
 
@@ -49,6 +50,13 @@ router
 router
   .route("/supervisor/:reviewId/submit")
   .put(protect, validateReviewId, validateAnswers, controller.submitSupervisorReview);
+
+// ⚠️ Addressed by the random label, not by the record's id: the id is never served for
+// confidential feedback, so this route only reaches what the officer was already shown.
+// POST, not GET: a reveal carries a written reason and is not a repeatable read.
+router
+  .route("/collected/:reviewId/:label/reveal")
+  .post(protect, validateReveal, controller.revealAuthor);
 
 // No DELETE: submitted feedback is part of somebody's appraisal record.
 

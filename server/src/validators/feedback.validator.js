@@ -81,3 +81,19 @@ exports.validateAnswers = (req, res, next) => {
 
   finish(errors, next);
 };
+
+// A reason is required before an identity is shown, so an empty string is a bad request,
+// not a reveal with a blank reason.
+exports.validateReveal = (req, res, next) => {
+  const errors = [];
+  checkId(req.params.reviewId, "reviewId", errors);
+
+  if (!req.params.label) errors.push("label is required");
+
+  const { reason } = req.body || {};
+  if (typeof reason !== "string" || !reason.trim()) {
+    errors.push("A written reason is required before an identity can be revealed");
+  }
+
+  finish(errors, next);
+};
