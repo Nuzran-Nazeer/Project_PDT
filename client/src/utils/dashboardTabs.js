@@ -235,7 +235,7 @@ export const TABS_BY_GROUP = {
       icon: "file",
       title: "My result",
       description: "View and acknowledge a published result",
-      built: false,
+      built: true,
       // ⚠️ Summary only: no comment, no rating and no response count. A count alone
       // identifies a reviewer in a small team.
     },

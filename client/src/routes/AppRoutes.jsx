@@ -12,7 +12,7 @@ import MyTeamPage from "../pages/dashboards/MyTeamPage";
 import NormalisationPage from "../pages/dashboards/NormalisationPage";
 import SelfAssessmentPage from "../pages/appraisal/SelfAssessmentPage";
 import FeedbackOwedPage from "../pages/appraisal/FeedbackOwedPage";
-import MyResultShell from "../pages/shells/MyResultShell";
+import MyResultPage from "../pages/appraisal/MyResultPage";
 import SelfAssessmentFormPage from "../pages/appraisal/SelfAssessmentFormPage";
 import PeerReviewFormPage from "../pages/appraisal/PeerReviewFormPage";
 import TeamMemberPage from "../pages/appraisal/TeamMemberPage";
@@ -56,7 +56,7 @@ const TAB_PAGES = {
 
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
-  "my-result": MyResultShell,
+  "my-result": MyResultPage,
 };
 
 function AppRoutes() {

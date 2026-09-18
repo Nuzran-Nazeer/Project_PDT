@@ -1,5 +1,11 @@
 import { apiFetch } from "./api";
 
+// ⚠️ Neither call takes an id: the result is reached through the signed-in account alone.
+export const getMyResult = () => apiFetch("/reviews/my-result");
+
+export const acknowledgeMyResult = () =>
+  apiFetch("/reviews/my-result/acknowledge", { method: "PUT" });
+
 // A whole cycle publishes by advancing it; this is for one review left out of that move.
 export const publishReview = (id) =>
   apiFetch(`/reviews/${id}/publish`, { method: "PUT" });
