@@ -231,6 +231,12 @@ exports.readinessOn = async (reviewId) => {
   return readinessFrom(records, cycle);
 };
 
+// Null until publication. The acknowledgement is how a supervisor knows the review is closed.
+const asResult = (review) =>
+  review?.publishedAt
+    ? { publishedAt: review.publishedAt, acknowledgedAt: review.acknowledgedAt }
+    : null;
+
 // ⚠️ No coverage check: a reader role can ask about anybody's team.
 exports.teamOn = async (userId, date) => {
   const user = await User.findById(userId).select("_id name employeeId");
@@ -290,7 +296,7 @@ exports.teamOn = async (userId, date) => {
     ? await Review.find({
         cycleId: { $in: cycleIds },
         userId: { $in: members.map((m) => m.userId._id) },
-      }).select("_id cycleId userId checks")
+      }).select("_id cycleId userId checks publishedAt acknowledgedAt")
     : [];
 
   const reviewIdByPerson = new Map(
@@ -331,6 +337,7 @@ exports.teamOn = async (userId, date) => {
         reviewId,
         readiness: reviewId ? readinessFrom(byReview.get(reviewId), cycle) : null,
         sentBack: Boolean(reviewId && pendingSendBack(reviewById.get(reviewId), own)),
+        result: asResult(reviewById.get(reviewId)),
         viaVacancy: byUnit.get(String(m.unitId?._id))?.viaVacancy || false,
       };
     })
