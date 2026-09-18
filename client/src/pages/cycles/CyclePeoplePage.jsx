@@ -224,6 +224,11 @@ function ReviewState({ review }) {
     <span className={tone}>
       {REVIEW_LABELS[review.status] || review.status}
       {date && <span className="text-muted"> · {formatDate(date)}</span>}
+      {review.acknowledgedAt && (
+        <span className="mt-1 block text-[12px] text-muted">
+          Acknowledged {formatDate(review.acknowledgedAt)}
+        </span>
+      )}
       {review.waiting && <Waiting on={review.waiting} />}
     </span>
   );

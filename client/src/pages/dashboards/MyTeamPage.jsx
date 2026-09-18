@@ -4,6 +4,7 @@ import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 import { byRunningCycle } from "../../utils/teamOrder";
+import { formatDate } from "../../utils/dates";
 
 // ⚠️ A reviewer column here is a COUNT, never a name and never a timestamp. In a team of
 // eight the two together identify who wrote what.
@@ -143,6 +144,25 @@ function ReadinessCell({ person }) {
   const readiness = person.readiness;
 
   if (!readiness) return <span className="text-muted">No review yet</span>;
+
+  // Published: the appraisal is over, so the readiness wording below no longer describes it.
+  if (person.result) {
+    return person.result.acknowledgedAt ? (
+      <span className="font-medium text-success">
+        Acknowledged
+        <span className="mt-1 block text-[12px] font-normal text-muted">
+          {formatDate(person.result.acknowledgedAt)}
+        </span>
+      </span>
+    ) : (
+      <span className="text-muted">
+        Published
+        <span className="mt-1 block text-[12px]">
+          {formatDate(person.result.publishedAt)}, not yet acknowledged
+        </span>
+      </span>
+    );
+  }
 
   // HR has sent the colleague summary back; the reason is on the reopened form.
   if (person.sentBack) {
