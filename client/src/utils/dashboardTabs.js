@@ -173,7 +173,7 @@ export const TABS_BY_GROUP = {
       icon: "key",
       title: "Reviewer identity",
       description: "Reveal who gave a piece of feedback, with a written reason",
-      built: false,
+      built: true,
     },
     {
       section: "People data",

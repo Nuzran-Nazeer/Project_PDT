@@ -33,6 +33,7 @@ import ChooseReviewersPage from "../pages/reviewers/ChooseReviewersPage";
 import ReviewerListPage from "../pages/reviewers/ReviewerListPage";
 import SummariesToCheckPage from "../pages/checks/SummariesToCheckPage";
 import SummaryCheckPage from "../pages/checks/SummaryCheckPage";
+import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // ⚠️ Every gate here hides rather than protects: the real check is on the server.
@@ -53,6 +54,7 @@ const TAB_PAGES = {
   "reviewer-lists": ReviewerListsPage,
   "choose-reviewers": ChooseReviewersPage,
   "summaries-to-check": SummariesToCheckPage,
+  "reviewer-identity": ReviewerIdentityPage,
 
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,

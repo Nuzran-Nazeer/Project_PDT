@@ -22,6 +22,15 @@ export const submitFeedback = (id, answers) =>
 // ⚠️ `released: false` is a real state, not an empty list.
 export const getCollected = (reviewId) => apiFetch(`/feedback/collected/${reviewId}`);
 
+// ⚠️ Named by the response's label, never a record id: a confidential record never serves one.
+// HR only, and the server refuses an officer inside the employee's reporting line. The reason
+// is required before any name comes back.
+export const revealAuthor = (reviewId, label, reason) =>
+  apiFetch(`/feedback/collected/${reviewId}/${label}/reveal`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+
 // Keyed on the review: until the first save there is no record to name. 409 until ready.
 export const getSupervisorReview = (reviewId) =>
   apiFetch(`/feedback/supervisor/${reviewId}`);
