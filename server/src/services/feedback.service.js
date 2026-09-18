@@ -292,7 +292,7 @@ const asSelfRecord = ({ user, cycle, review, doc }) => ({
   freeText: doc ? doc.freeText : { strengths: null, development: null },
   submittedAt: doc ? doc.submittedAt : null,
   locksAt: doc ? doc.locksAt : null,
-  editable: Boolean(review) && (!doc || isEditable(doc)),
+  editable: Boolean(review) && !review.publishedAt && (!doc || isEditable(doc)),
   competencies: competenciesFor(user.jobFamily),
 });
 
@@ -319,6 +319,16 @@ const openSelfRecord = async (userId) => {
   if (!review) {
     throw new AppError(
       "You have no review in this cycle, so there is no self-assessment to write",
+      409,
+    );
+  }
+
+  // ⚠️ Nothing about a published review may change, the self-assessment included. The
+  // product cannot reach this, since the supervisor's form waits for the self-assessment
+  // to settle, but a record created here would sit under a result already read.
+  if (review.publishedAt) {
+    throw new AppError(
+      "Your review for this cycle has been published, so its self-assessment can no longer be changed",
       409,
     );
   }

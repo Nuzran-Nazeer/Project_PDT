@@ -7,6 +7,12 @@ const { protect, authorize } = require("../middleware/auth.middleware");
 const HR = ["hr", "head_of_hr"];
 
 // Declared before `/:id` so the word is never read as an id.
+
+// No role gate and no id: a published result belongs to the person signing in for it.
+router.route("/my-result").get(protect, controller.getMyResult);
+
+router.route("/my-result/acknowledge").put(protect, controller.acknowledgeMyResult);
+
 router
   .route("/summary-checks")
   .get(protect, authorize(...HR), controller.listSummaryChecks);

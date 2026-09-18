@@ -123,7 +123,7 @@ exports.peopleInCycle = async (id) => {
   const people = await coverageFor(cycle.parGroup);
 
   const reviews = await Review.find({ cycleId: cycle._id }).select(
-    "userId status publishedAt withdrawnAt checks",
+    "userId status publishedAt withdrawnAt acknowledgedAt checks",
   );
   const reviewFor = new Map(reviews.map((r) => [String(r.userId), r]));
   const waiting = await waitingFor(cycle, reviews);
@@ -138,6 +138,7 @@ exports.peopleInCycle = async (id) => {
             status: review.status,
             publishedAt: review.publishedAt,
             withdrawnAt: review.withdrawnAt,
+            acknowledgedAt: review.acknowledgedAt,
             waiting: waiting.get(String(review._id)) || null,
           }
         : null,
