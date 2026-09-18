@@ -4,6 +4,7 @@ const AppError = require("../utils/AppError");
 const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { coverageOn, loadCoverageOn, resolveCoverage } = require("./hrcoverage.service");
+const { chainAboveOn } = require("./supervision.service");
 
 // ⚠️ The one place that decides which people and units an HR officer may see or act on.
 // No caller may reimplement it or read coverage directly instead.
@@ -82,6 +83,29 @@ exports.assertMayReadEmployee = async (actor, employeeId, on = new Date()) => {
     {
       allowUnplaced: true,
     },
+  );
+};
+
+// Chain-neutrality: covering a unit is not enough to act on somebody you report to or who
+// reports to you. ⚠️ The Head of HR is exempt because they are where these cases escalate to;
+// blocking them as well would leave the escalation with nowhere to go.
+exports.assertNotInReportingLine = async (actor, employeeId, on, action) => {
+  if (holds(actor, UNRESTRICTED_ROLE)) return;
+
+  const day = toDay(on, "date");
+  const [aboveEmployee, aboveActor] = await Promise.all([
+    chainAboveOn(employeeId, day),
+    chainAboveOn(actor.id, day),
+  ]);
+
+  const shared =
+    aboveEmployee.includes(String(actor.id)) || aboveActor.includes(String(employeeId));
+  if (!shared) return;
+
+  const employee = await User.findById(employeeId).select("name");
+  throw new AppError(
+    `You are in ${employee?.name || "this employee"}'s reporting line, so you cannot ${action}. The Head of HR can.`,
+    403,
   );
 };
 

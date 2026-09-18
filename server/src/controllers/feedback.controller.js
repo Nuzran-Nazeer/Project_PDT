@@ -1,5 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/feedback.service");
+const reveal = require("../services/identityReveal.service");
+const { withReviewerIdentity } = require("../services/feedback.privacy");
 
 // ⚠️ Every reviewer-facing handler reads the id from the token, never the URL or the body.
 
@@ -51,4 +53,14 @@ exports.saveSupervisorDraft = asyncHandler(async (req, res) => {
 
 exports.submitSupervisorReview = asyncHandler(async (req, res) => {
   res.json(await service.submitSupervisorReview(req.params.reviewId, req.user, req.body));
+});
+
+// ⚠️ The one handler that marks a response as an authorised identity read. Every other route
+// serving feedback must go through the strip function instead.
+exports.revealAuthor = asyncHandler(async (req, res) => {
+  const payload = await reveal.revealAuthor(
+    { ...req.params, reason: req.body.reason },
+    req.user,
+  );
+  res.json(withReviewerIdentity(res, payload));
 });
