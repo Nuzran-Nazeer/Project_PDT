@@ -1,5 +1,6 @@
 const asyncHandler = require("../utils/asyncHandler");
 const service = require("../services/unitmembership.service");
+const audit = require("../services/audit.service");
 const {
   assertMayActOnEmployee,
   assertMayReadEmployee,
@@ -15,6 +16,15 @@ const mayChange = (req, userId, action) =>
 exports.createMembership = asyncHandler(async (req, res) => {
   await mayChange(req, req.body.userId, "place this person in a unit");
   const membership = await service.createMembership(req.body);
+  await audit.recordHistoryEdit({
+    actor: req.user,
+    targetType: "unitMembership",
+    record: membership,
+    subjectUserId: membership.userId,
+    detail: "Placed this person in a unit",
+    from: membership.from,
+    to: membership.to,
+  });
   res.status(201).json(membership);
 });
 
@@ -22,13 +32,32 @@ exports.createMembership = asyncHandler(async (req, res) => {
 exports.transferMembership = asyncHandler(async (req, res) => {
   await mayChange(req, req.body.userId, "move this person to another unit");
   const membership = await service.transferMembership(req.body);
+  await audit.recordHistoryEdit({
+    actor: req.user,
+    targetType: "unitMembership",
+    record: membership,
+    subjectUserId: membership.userId,
+    detail: "Moved this person to another unit",
+    from: membership.from,
+    to: membership.to,
+  });
   res.status(201).json(membership);
 });
 
 exports.closeMembership = asyncHandler(async (req, res) => {
   const existing = await service.getMembershipById(req.params.id);
   await mayChange(req, existing.userId, "end this person's membership");
-  res.json(await service.closeMembership(req.params.id, req.body.to));
+  const closed = await service.closeMembership(req.params.id, req.body.to);
+  await audit.recordHistoryEdit({
+    actor: req.user,
+    targetType: "unitMembership",
+    record: closed,
+    subjectUserId: closed.userId,
+    detail: "Ended this person's membership of a unit",
+    from: closed.from,
+    to: closed.to,
+  });
+  res.json(closed);
 });
 
 // A unit's roster is readable to every reader; one person's history is scoped.

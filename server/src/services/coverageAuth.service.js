@@ -5,9 +5,11 @@ const { toDay, activeOn } = require("../utils/dateRange");
 const { membershipOn } = require("./unitmembership.service");
 const { coverageOn, loadCoverageOn, resolveCoverage } = require("./hrcoverage.service");
 const { chainAboveOn } = require("./supervision.service");
+const { RESTRICTED_ROLES } = require("../config/constants");
 
-// ⚠️ The one place that decides which people and units an HR officer may see or act on.
-// No caller may reimplement it or read coverage directly instead.
+// ⚠️ The one place that decides what an HR officer may see or do: which people and units they
+// reach, and which roles they may hand out. No caller may reimplement it or read coverage
+// directly instead.
 
 const UNRESTRICTED_ROLE = "head_of_hr";
 const SCOPED_ROLE = "hr";
@@ -38,14 +40,15 @@ exports.assertMayActOnEmployee = async (
   }
 
   const day = toDay(on, "date");
-  const employee = await User.findById(employeeId).select("name");
-  const who = employee?.name || "This employee";
 
+  // ⚠️ These three refusals reach only somebody who is not entitled — an officer who covers the
+  // person never sees them — so naming the employee or their unit would hand an out-of-scope
+  // account real names and unit shapes to map, the way "Review not found" elsewhere refuses to.
   const membership = await membershipOn(employeeId, day);
   if (!membership) {
     if (allowUnplaced) return;
     throw new AppError(
-      `${who} was not in any unit on ${isoDay(day)}, so nobody covers them. Only the Head of HR can ${action}.`,
+      `This employee was not in any unit on ${isoDay(day)}, so nobody covers them. Only the Head of HR can ${action}.`,
       403,
     );
   }
@@ -53,17 +56,42 @@ exports.assertMayActOnEmployee = async (
   const coverage = await coverageOn(membership.unitId, day);
   if (!coverage.primary && !coverage.backup) {
     throw new AppError(
-      `No HR officer covers ${coverage.requestedUnit?.name || "this person's unit"} on ${isoDay(day)}, so only the Head of HR can ${action}.`,
+      `No HR officer covers this employee's unit on ${isoDay(day)}, so only the Head of HR can ${action}.`,
       403,
     );
   }
 
   if (!coversResolved(coverage, actor)) {
     throw new AppError(
-      `You do not cover ${who} on ${isoDay(day)}, so you cannot ${action}.`,
+      `You do not cover this employee on ${isoDay(day)}, so you cannot ${action}.`,
       403,
     );
   }
+};
+
+// ⚠️ Not coverage, but the same question: what may this actor do. Granting an unrestricted role
+// is how an officer escapes coverage altogether, so it is checked wherever roles are written.
+// Taking one away is guarded too — demoting the Head of HR is how their oversight is removed.
+// The comparison is against what the person already holds, so resending an unchanged list is
+// not a grant and an ordinary edit to a leadership-holder's record still goes through.
+exports.assertMayGrantRoles = (actor, roles, currentRoles = []) => {
+  if (roles === undefined) return;
+  if (holds(actor, UNRESTRICTED_ROLE)) return;
+
+  const restrictedIn = (list) =>
+    RESTRICTED_ROLES.filter((role) => (Array.isArray(list) ? list : []).includes(role));
+
+  const before = restrictedIn(currentRoles);
+  const after = restrictedIn(roles);
+  const changed = RESTRICTED_ROLES.filter(
+    (role) => before.includes(role) !== after.includes(role),
+  );
+  if (!changed.length) return;
+
+  throw new AppError(
+    `Only the Head of HR can grant or remove ${changed.join(", ")}.`,
+    403,
+  );
 };
 
 // Coverage only: holding Leadership as well grants nothing here.

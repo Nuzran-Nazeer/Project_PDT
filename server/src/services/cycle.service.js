@@ -5,6 +5,7 @@ const UnitMembership = require("../models/unitmembership.model");
 const AppError = require("../utils/AppError");
 const { toDay, assertOrderedRange, activeOn } = require("../utils/dateRange");
 const { isWaiting, normalisationReadiness } = require("./summaryCheck.state");
+const audit = require("./audit.service");
 const {
   CYCLE_STAGES,
   CYCLE_CANCELLED,
@@ -297,5 +298,17 @@ exports.cancelCycle = async (id, reason, userId) => {
   cycle.cancelReason = trimmed;
 
   await cycle.save();
+
+  // A cycle covers an appraisal group, so there is no one employee to record it against.
+  await audit.record({
+    actorId: userId,
+    action: "cycle_cancellation",
+    subjectUserId: null,
+    targetType: "cycle",
+    targetId: cycle._id,
+    reason: trimmed,
+    detail: `Cancelled the ${cycle.year} cycle for ${cycle.parGroup}`,
+  });
+
   return cycle;
 };

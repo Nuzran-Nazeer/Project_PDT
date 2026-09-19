@@ -7,6 +7,7 @@ const {
   assertMayActOnEmployee,
   assertNotInReportingLine,
 } = require("./coverageAuth.service");
+const audit = require("./audit.service");
 
 // ⚠️ The only place a confidential reviewer's name is looked up on purpose. The record is
 // addressed by its random label, which is the sole handle anyone reading the feedback holds:
@@ -15,49 +16,71 @@ const {
 const HR_ROLES = ["hr", "head_of_hr"];
 const ACTION = "reveal who wrote this feedback";
 
-// ⚠️ The reason is not stored anywhere yet: there is no audit collection. The response says so
-// rather than implying a record exists, and the field moves to the log when that is built.
+// ⚠️ Every attempt against a real review is logged, refused ones included, and the entry is
+// written before the name is returned. A reveal that could not be recorded has not happened.
+// An unknown review id logs nothing: there is no subject to record it against.
 exports.revealAuthor = async ({ reviewId, label, reason }, actor) => {
   const review = await Review.findById(reviewId).select("userId");
   if (!review) throw new AppError("Review not found", 404);
 
-  // Nobody reveals an identity on their own appraisal, whatever they hold. The same refusal
-  // as a review that does not exist, so the refusal itself tells them nothing.
-  if (String(review.userId) === String(actor.id)) {
-    throw new AppError("Review not found", 404);
+  try {
+    // Nobody reveals an identity on their own appraisal, whatever they hold. The same refusal
+    // as a review that does not exist, so the refusal itself tells them nothing.
+    if (String(review.userId) === String(actor.id)) {
+      throw new AppError("Review not found", 404);
+    }
+
+    if (!(actor?.roles || []).some((role) => HR_ROLES.includes(role))) {
+      throw new AppError("You do not have permission for this action", 403);
+    }
+
+    const now = new Date();
+    await assertMayActOnEmployee(actor, review.userId, now, ACTION);
+    await assertNotInReportingLine(actor, review.userId, now, ACTION);
+
+    const record = await Feedback.findOne({ reviewId, label }).select("+reviewerId");
+    if (!record) throw new AppError("That feedback was not found on this review", 404);
+
+    if (!isConfidential(record.reviewerType)) {
+      throw new AppError("That feedback already names its author", 400);
+    }
+
+    // An unsubmitted draft has nothing in it to justify breaking the promise.
+    if (!record.submittedAt) {
+      throw new AppError("That feedback has not been submitted yet", 409);
+    }
+
+    const reviewer = await User.findById(record.reviewerId).select("name");
+
+    // ⚠️ The entry says a name was handed over and on whose feedback. It never carries the
+    // reviewer, or the log becomes a permanent copy of what the design exists to protect.
+    await audit.recordReveal({
+      actor,
+      review,
+      reason,
+      outcome: "allowed",
+      detail: `Revealed the author of colleague feedback ${label}`,
+    });
+
+    // ⚠️ Both names are ones the identity guard refuses unmarked, deliberately: if this shape is
+    // ever copied to a route that forgets the mark, the guard catches it instead of serving it.
+    return {
+      reviewId: String(reviewId),
+      label,
+      reviewerId: String(record.reviewerId),
+      reviewerName: reviewer?.name || null,
+      submittedAt: record.submittedAt,
+      reason: reason.trim(),
+      recorded: true,
+    };
+  } catch (error) {
+    await audit.recordReveal({
+      actor,
+      review,
+      reason,
+      outcome: "refused",
+      detail: `Refused: ${error.message}`,
+    });
+    throw error;
   }
-
-  if (!(actor?.roles || []).some((role) => HR_ROLES.includes(role))) {
-    throw new AppError("You do not have permission for this action", 403);
-  }
-
-  const now = new Date();
-  await assertMayActOnEmployee(actor, review.userId, now, ACTION);
-  await assertNotInReportingLine(actor, review.userId, now, ACTION);
-
-  const record = await Feedback.findOne({ reviewId, label }).select("+reviewerId");
-  if (!record) throw new AppError("That feedback was not found on this review", 404);
-
-  if (!isConfidential(record.reviewerType)) {
-    throw new AppError("That feedback already names its author", 400);
-  }
-
-  // An unsubmitted draft has nothing in it to justify breaking the promise.
-  if (!record.submittedAt) {
-    throw new AppError("That feedback has not been submitted yet", 409);
-  }
-
-  const reviewer = await User.findById(record.reviewerId).select("name");
-
-  // ⚠️ Both names are ones the identity guard refuses unmarked, deliberately: if this shape is
-  // ever copied to a route that forgets the mark, the guard catches it instead of serving it.
-  return {
-    reviewId: String(reviewId),
-    label,
-    reviewerId: String(record.reviewerId),
-    reviewerName: reviewer?.name || null,
-    submittedAt: record.submittedAt,
-    reason: reason.trim(),
-    recorded: false,
-  };
 };

@@ -3,6 +3,7 @@ const userService = require("../services/user.service");
 const inviteService = require("../services/invite.service");
 const {
   assertMayActOnEmployee,
+  assertMayGrantRoles,
   assertMayReadEmployee,
   readScopeFor,
 } = require("../services/coverageAuth.service");
@@ -14,6 +15,7 @@ const mayChange = (req, action) =>
   });
 
 exports.createUser = asyncHandler(async (req, res) => {
+  assertMayGrantRoles(req.user, req.body.roles);
   const user = await userService.createUser(req.body);
   res.status(201).json(user);
 });
@@ -34,6 +36,10 @@ exports.getUser = asyncHandler(async (req, res) => {
 
 exports.updateUser = asyncHandler(async (req, res) => {
   await mayChange(req, "change this person's record");
+  if (req.body.roles !== undefined) {
+    const target = await userService.getUserById(req.params.id);
+    assertMayGrantRoles(req.user, req.body.roles, target.roles);
+  }
   res.json(await userService.updateUser(req.params.id, req.body));
 });
 
