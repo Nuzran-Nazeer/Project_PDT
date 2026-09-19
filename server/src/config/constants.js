@@ -3,6 +3,11 @@
 // ⚠️ `supervisor` is derived from leading a unit on a date, never stored.
 const GRANTABLE_ROLES = ["employee", "hr", "head_of_hr", "leadership", "admin"];
 const DERIVED_ROLES = ["supervisor"];
+
+// ⚠️ Only the Head of HR grants these. `head_of_hr` passes every coverage check, so an officer
+// who could grant it to themselves would have no scope at all; `admin` and `leadership` reach
+// across the whole company by design.
+const RESTRICTED_ROLES = ["head_of_hr", "admin", "leadership"];
 const ROLES = [...GRANTABLE_ROLES, ...DERIVED_ROLES];
 
 // A routing order, not seniority: the first entry held decides the landing page (B7).
@@ -363,6 +368,7 @@ module.exports = {
   ROLES,
   GRANTABLE_ROLES,
   DERIVED_ROLES,
+  RESTRICTED_ROLES,
   ROLE_PRECEDENCE,
   USER_STATUS,
   LOCATIONS,
