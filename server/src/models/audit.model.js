@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
-const { AUDIT_ACTIONS, AUDIT_OUTCOMES, AUDIT_TARGETS } = require("../config/constants");
+const {
+  AUDIT_ACTIONS,
+  AUDIT_OUTCOMES,
+  AUDIT_REFUSAL_CODES,
+  AUDIT_TARGETS,
+} = require("../config/constants");
 
 // The record that makes the confidentiality promise provable. Append only: every write path
 // below refuses, so a later endpoint cannot quietly rewrite history.
@@ -41,6 +46,18 @@ const auditSchema = new mongoose.Schema(
 
     // Present only where the action required one. A gated read would carry none by design.
     reason: { type: String, default: null, trim: true },
+
+    // Why a refusal was refused, in a form a rule can read. The message beside it is for people
+    // and gets reworded; this does not.
+    refusalCode: {
+      type: String,
+      default: null,
+      enum: { values: [...AUDIT_REFUSAL_CODES, null], message: "{VALUE} is not a refusal code" },
+    },
+
+    // ⚠️ The shuffled handle the feedback is served under, never the colleague behind it.
+    // It is here so that revealing eight authors on one person counts as eight and not as one.
+    feedbackLabel: { type: String, default: null },
 
     // One short line for the reader: what was done, in the words of the thing that did it.
     detail: { type: String, default: null, trim: true },
