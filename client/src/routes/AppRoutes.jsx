@@ -35,6 +35,7 @@ import SummariesToCheckPage from "../pages/checks/SummariesToCheckPage";
 import SummaryCheckPage from "../pages/checks/SummaryCheckPage";
 import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
+import MonitoringPage from "../pages/oversight/MonitoringPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // ⚠️ Every gate here hides rather than protects: the real check is on the server.
@@ -57,6 +58,7 @@ const TAB_PAGES = {
   "summaries-to-check": SummariesToCheckPage,
   "reviewer-identity": ReviewerIdentityPage,
   "audit-trail": AuditTrailPage,
+  monitoring: MonitoringPage,
 
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
