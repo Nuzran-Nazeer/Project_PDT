@@ -11,7 +11,7 @@ const GROUPS_BY_ROLE = {
 };
 
 // The gate on which groups are rendered.
-const DELIVERED_GROUPS = ["employee", "supervisor", "hr", "leadership"];
+const DELIVERED_GROUPS = ["employee", "supervisor", "hr", "oversight", "leadership"];
 
 export function sectionGroupsFor(roles, isSupervisor = false) {
   const held = Array.isArray(roles) ? roles : [];
