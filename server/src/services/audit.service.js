@@ -1,5 +1,6 @@
 const Audit = require("../models/audit.model");
 const AppError = require("../utils/AppError");
+const monitoring = require("./monitoring.service");
 const { AUDIT_ACTIONS, AUDIT_OUTCOMES } = require("../config/constants");
 
 // ⚠️ The only way an entry is written. Callers never touch the model: the write must not be
@@ -22,22 +23,44 @@ exports.record = async (entry) => {
 
 // The reason is required for a reveal and refused everywhere it is not, so the shape of the
 // call is checked rather than trusted.
-exports.recordReveal = ({ actor, review, reason, outcome, detail }) =>
-  exports.record({
+exports.recordReveal = async ({
+  actor,
+  review,
+  label,
+  reason,
+  outcome,
+  refusalCode,
+  detail,
+}) => {
+  const entry = await exports.record({
     actorId: actor.id,
     action: "identity_reveal",
     outcome,
     subjectUserId: review.userId,
     targetType: "review",
     targetId: review._id,
+    feedbackLabel: label || null,
     reason: (reason || "").trim() || null,
+    refusalCode: outcome === "refused" ? refusalCode || null : null,
     detail,
   });
+
+  // The monitoring checks hang off the write, not off the caller: an endpoint that forgets
+  // to run them is silent, and nothing else watches this route.
+  await monitoring.onReveal({
+    actorId: actor.id,
+    reviewId: review._id,
+    outcome,
+    refusalCode,
+  });
+
+  return entry;
+};
 
 // Opening or closing a dated record. The change is the point here, so both ends are stored:
 // supervision, coverage and eligibility are all derived from these dates, and moving one moves
 // who could see and do what for a period that may already be over.
-exports.recordHistoryEdit = ({
+exports.recordHistoryEdit = async ({
   actor,
   targetType,
   record,
@@ -45,8 +68,8 @@ exports.recordHistoryEdit = ({
   detail,
   from,
   to,
-}) =>
-  exports.record({
+}) => {
+  const entry = await exports.record({
     actorId: actor.id,
     action: "history_edit",
     subjectUserId: subjectUserId || null,
@@ -58,6 +81,11 @@ exports.recordHistoryEdit = ({
       to: to ? new Date(to).toISOString().slice(0, 10) : null,
     },
   });
+
+  await monitoring.onHistoryEdit({ actorId: actor.id, targetType, from, to });
+
+  return entry;
+};
 
 exports.assertMayRead = (actor) => {
   if (!(actor?.roles || []).includes(UNRESTRICTED_ROLE)) {

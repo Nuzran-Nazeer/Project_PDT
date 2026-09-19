@@ -19,6 +19,46 @@ const AUDIT_ACTIONS = [
   "history_edit",
 ];
 const AUDIT_OUTCOMES = ["allowed", "refused"];
+
+// ⚠️ Why a code and not the message: monitoring has to tell an attempt outside an officer's
+// coverage from somebody clicking a draft, and the refusal messages are written for people.
+// Reword one and a text match goes quiet without failing.
+const AUDIT_REFUSAL_CODES = [
+  "not_found",
+  "feedback_not_found",
+  "not_hr",
+  "outside_coverage",
+  "own_reporting_line",
+  "not_confidential",
+  "not_submitted",
+];
+// The three things worth raising automatically. Everything else in the trail is read on
+// suspicion, which is the point of keeping the trail short.
+const MONITORING_FLAG_TYPES = [
+  "reveal_threshold",
+  "improper_reveal",
+  "history_edit_in_active_cycle",
+];
+const MONITORING_FLAG_STATUS = ["open", "reviewed"];
+
+// More than this many identity reveals by one officer within one cycle is unusual. A reveal is
+// meant to be rare and investigation-driven; a fourth still succeeds, because an investigation
+// stopped halfway has nowhere to go.
+const REVEAL_THRESHOLD = 3;
+
+// The refusals that mean somebody reached for something they had no business reaching for.
+// The rest are mis-clicks: a draft, or feedback that was never anonymous.
+const FLAGGED_REFUSAL_CODES = ["not_hr", "outside_coverage", "own_reporting_line"];
+
+// ⚠️ Where a cycle is actually being worked on. `open` is excluded deliberately: cohort cycles
+// run a year each and overlap, so every day of the calendar sits inside one, and flagging on
+// that would flag every joiner and handover in the company.
+const ACTIVE_CYCLE_STAGES = ["collecting", "supervisor_review", "normalising"];
+
+// Moving a date on any of these moves who supervises, who reviews and who may read. Project
+// assignments are absent: they only decided who was eligible to be drawn.
+const WATCHED_HISTORY_TARGETS = ["unitMembership", "unitLead", "hrCoverage"];
+
 const AUDIT_TARGETS = [
   "review",
   "cycle",
@@ -391,7 +431,14 @@ module.exports = {
   RESTRICTED_ROLES,
   AUDIT_ACTIONS,
   AUDIT_OUTCOMES,
+  AUDIT_REFUSAL_CODES,
   AUDIT_TARGETS,
+  MONITORING_FLAG_TYPES,
+  MONITORING_FLAG_STATUS,
+  REVEAL_THRESHOLD,
+  FLAGGED_REFUSAL_CODES,
+  ACTIVE_CYCLE_STAGES,
+  WATCHED_HISTORY_TARGETS,
   ROLE_PRECEDENCE,
   USER_STATUS,
   LOCATIONS,

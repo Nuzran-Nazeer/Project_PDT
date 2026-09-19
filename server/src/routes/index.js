@@ -15,6 +15,7 @@ const feedbackRoutes = require("./feedback.routes");
 const reviewRoutes = require("./review.routes");
 const reviewerListRoutes = require("./reviewerList.routes");
 const auditRoutes = require("./audit.routes");
+const monitoringRoutes = require("./monitoring.routes");
 
 // A cold start is still connecting on its first request; wait for it rather than report it,
 // but no longer than Mongoose buffers a query. `asPromise` returns at once when nothing is connecting.
@@ -54,5 +55,6 @@ router.use("/reviews", reviewRoutes);
 router.use("/feedback", feedbackRoutes);
 router.use("/reviewer-lists", reviewerListRoutes);
 router.use("/audit", auditRoutes);
+router.use("/monitoring", monitoringRoutes);
 
 module.exports = router;

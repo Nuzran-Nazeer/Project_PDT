@@ -16,6 +16,11 @@ const audit = require("./audit.service");
 const HR_ROLES = ["hr", "head_of_hr"];
 const ACTION = "reveal who wrote this feedback";
 
+// Marks a refusal with the reason a rule can read. The coverage checks are shared with other
+// actions and raise a message, so the code is attached here, where what the refusal means for
+// a reveal is known.
+const stamp = (code, error) => Object.assign(error, { refusalCode: code });
+
 // ⚠️ Every attempt against a real review is logged, refused ones included, and the entry is
 // written before the name is returned. A reveal that could not be recorded has not happened.
 // An unknown review id logs nothing: there is no subject to record it against.
@@ -27,27 +32,43 @@ exports.revealAuthor = async ({ reviewId, label, reason }, actor) => {
     // Nobody reveals an identity on their own appraisal, whatever they hold. The same refusal
     // as a review that does not exist, so the refusal itself tells them nothing.
     if (String(review.userId) === String(actor.id)) {
-      throw new AppError("Review not found", 404);
+      throw stamp("not_found", new AppError("Review not found", 404));
     }
 
     if (!(actor?.roles || []).some((role) => HR_ROLES.includes(role))) {
-      throw new AppError("You do not have permission for this action", 403);
+      throw stamp("not_hr", new AppError("You do not have permission for this action", 403));
     }
 
     const now = new Date();
-    await assertMayActOnEmployee(actor, review.userId, now, ACTION);
-    await assertNotInReportingLine(actor, review.userId, now, ACTION);
+    try {
+      await assertMayActOnEmployee(actor, review.userId, now, ACTION);
+    } catch (error) {
+      throw stamp("outside_coverage", error);
+    }
+    try {
+      await assertNotInReportingLine(actor, review.userId, now, ACTION);
+    } catch (error) {
+      throw stamp("own_reporting_line", error);
+    }
 
     const record = await Feedback.findOne({ reviewId, label }).select("+reviewerId");
-    if (!record) throw new AppError("That feedback was not found on this review", 404);
+    if (!record) {
+      throw stamp(
+        "feedback_not_found",
+        new AppError("That feedback was not found on this review", 404),
+      );
+    }
 
     if (!isConfidential(record.reviewerType)) {
-      throw new AppError("That feedback already names its author", 400);
+      throw stamp("not_confidential", new AppError("That feedback already names its author", 400));
     }
 
     // An unsubmitted draft has nothing in it to justify breaking the promise.
     if (!record.submittedAt) {
-      throw new AppError("That feedback has not been submitted yet", 409);
+      throw stamp(
+        "not_submitted",
+        new AppError("That feedback has not been submitted yet", 409),
+      );
     }
 
     const reviewer = await User.findById(record.reviewerId).select("name");
@@ -57,6 +78,7 @@ exports.revealAuthor = async ({ reviewId, label, reason }, actor) => {
     await audit.recordReveal({
       actor,
       review,
+      label,
       reason,
       outcome: "allowed",
       detail: `Revealed the author of colleague feedback ${label}`,
@@ -77,8 +99,10 @@ exports.revealAuthor = async ({ reviewId, label, reason }, actor) => {
     await audit.recordReveal({
       actor,
       review,
+      label,
       reason,
       outcome: "refused",
+      refusalCode: error.refusalCode,
       detail: `Refused: ${error.message}`,
     });
     throw error;
