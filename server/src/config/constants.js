@@ -8,6 +8,26 @@ const DERIVED_ROLES = ["supervisor"];
 // who could grant it to themselves would have no scope at all; `admin` and `leadership` reach
 // across the whole company by design.
 const RESTRICTED_ROLES = ["head_of_hr", "admin", "leadership"];
+
+// ⚠️ An action belongs here only once something in the code performs it. Normalisation rating
+// changes, limit and deadline overrides and form-template edits are audited actions in the
+// design, and are added when the features that perform them are built.
+const AUDIT_ACTIONS = [
+  "identity_reveal",
+  "cycle_cancellation",
+  "colleague_list_decision",
+  "history_edit",
+];
+const AUDIT_OUTCOMES = ["allowed", "refused"];
+const AUDIT_TARGETS = [
+  "review",
+  "cycle",
+  "reviewerList",
+  "unitMembership",
+  "unitLead",
+  "projectAssignment",
+  "hrCoverage",
+];
 const ROLES = [...GRANTABLE_ROLES, ...DERIVED_ROLES];
 
 // A routing order, not seniority: the first entry held decides the landing page (B7).
@@ -369,6 +389,9 @@ module.exports = {
   GRANTABLE_ROLES,
   DERIVED_ROLES,
   RESTRICTED_ROLES,
+  AUDIT_ACTIONS,
+  AUDIT_OUTCOMES,
+  AUDIT_TARGETS,
   ROLE_PRECEDENCE,
   USER_STATUS,
   LOCATIONS,
