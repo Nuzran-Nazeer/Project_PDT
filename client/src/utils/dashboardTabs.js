@@ -1,5 +1,5 @@
 // One registry, read by the sidebar, the dashboard's action rows and the router.
-// ⚠️ Admin is deliberately absent, and oversight carries one tab of three; see
+// ⚠️ Admin is deliberately absent, and oversight carries two tabs of three; see
 // PDT-DASHBOARD-TABS-PENDING.md.
 
 // `secondary` is the label when the group sits underneath a wider role's group.
@@ -56,9 +56,18 @@ export const TABS_BY_GROUP = {
   // ⚠️ `ownRoute: true` means the router already has a route for this path with a finer
   // gate. A generated one would sit before it and quietly narrow it.
 
-  // Only the Head of HR holds this group, so the trail is linked on one person's screen
-  // and nobody else's. Monitoring flags and HR coverage join it with their own stories.
+  // Only the Head of HR holds this group, so these are linked on one person's screen and
+  // nobody else's. HR coverage joins them with its own story.
   oversight: [
+    {
+      id: "monitoring",
+      path: "/monitoring",
+      label: "Monitoring",
+      icon: "flag",
+      title: "Monitoring",
+      description: "What the trail raised on its own, and what was done about it",
+      built: true,
+    },
     {
       id: "audit-trail",
       path: "/audit-trail",
