@@ -211,6 +211,23 @@ const publishCycle = async (cycleId) => {
   return { published, withdrawn, waiting };
 };
 
+// Every review a published cycle has not released: the ones still waiting, and any that caught
+// up and has not been published on its own yet. ⚠️ Closing the cycle is the end of the road for
+// all of them, so the guard on that move reads this list.
+const stragglersIn = async (cycleId) => {
+  const today = toDay(new Date(), "date");
+  const reviews = await liveReviewsIn(cycleId);
+  const inputsFor = await normalisationInputsFor(reviews);
+
+  const items = [];
+  for (const review of reviews) {
+    items.push(
+      await waitingItemFor(review, normalisationReadiness(inputsFor(review)), today),
+    );
+  }
+  return items;
+};
+
 // One review left waiting by its cycle's publish, once it has caught up.
 const publishReview = async (reviewId, actor) => {
   const review = await Review.findById(reviewId);
@@ -257,6 +274,7 @@ module.exports = {
   normalisationInputsFor,
   waitingItemFor,
   carryIntoNormalisation,
+  stragglersIn,
   publishCycle,
   publishReview,
   PUBLISHED_STATES,
