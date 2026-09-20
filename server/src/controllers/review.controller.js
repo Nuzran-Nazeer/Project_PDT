@@ -13,7 +13,7 @@ exports.acknowledgeMyResult = asyncHandler(async (req, res) => {
 });
 
 exports.publishReview = asyncHandler(async (req, res) => {
-  res.json(await service.publishReview(req.params.id));
+  res.json(await service.publishReview(req.params.id, req.user));
 });
 
 // The whole account is passed: coverage is a relationship the service derives.

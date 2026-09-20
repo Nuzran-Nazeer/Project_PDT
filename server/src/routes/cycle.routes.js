@@ -32,7 +32,7 @@ router
 // Its own route: a general PATCH would invite a client to set `status` to anything.
 router
   .route("/:id/advance")
-  .put(protect, authorize(...CAN_WRITE), validateAdvanceCycle, controller.advanceCycle);
+  .put(protect, authorize("head_of_hr"), validateAdvanceCycle, controller.advanceCycle);
 
 router
   .route("/:id/cancel")

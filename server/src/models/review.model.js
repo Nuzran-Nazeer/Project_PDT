@@ -77,6 +77,10 @@ const reviewSchema = new mongoose.Schema(
     normalisedOverall: { type: Number, default: null },
     publishedAt: { type: Date, default: null },
     withdrawnAt: { type: Date, default: null },
+
+    // A withdrawn review that is later published keeps its withdrawal date, so the record
+    // shows it was set aside and picked up again rather than quietly reappearing.
+    reinstatedAt: { type: Date, default: null },
     acknowledgedAt: { type: Date, default: null },
   },
   { timestamps: true },

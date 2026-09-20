@@ -124,7 +124,7 @@ exports.peopleInCycle = async (id) => {
   const people = await coverageFor(cycle.parGroup);
 
   const reviews = await Review.find({ cycleId: cycle._id }).select(
-    "userId status publishedAt withdrawnAt acknowledgedAt checks",
+    "userId status publishedAt withdrawnAt reinstatedAt acknowledgedAt checks",
   );
   const reviewFor = new Map(reviews.map((r) => [String(r.userId), r]));
   const waiting = await waitingFor(cycle, reviews);
@@ -139,6 +139,7 @@ exports.peopleInCycle = async (id) => {
             status: review.status,
             publishedAt: review.publishedAt,
             withdrawnAt: review.withdrawnAt,
+            reinstatedAt: review.reinstatedAt,
             acknowledgedAt: review.acknowledgedAt,
             waiting: waiting.get(String(review._id)) || null,
           }
@@ -194,8 +195,20 @@ exports.createCycle = async ({ parGroup, year, startDate, endDate }) => {
   });
 };
 
+// Moving a cycle on is company-wide and cannot be undone: publication releases every result in
+// the group at once. It sits with the Head of HR rather than a covering officer, who has no
+// coverage relationship to a whole appraisal group.
+const assertMayAdvance = (actor) => {
+  if (!(actor?.roles || []).includes("head_of_hr")) {
+    throw new AppError("Only the Head of HR can move a cycle to its next stage", 403);
+  }
+};
+
 // The caller names the target stage, so a double-click is refused rather than obeyed.
-exports.advanceCycle = async (id, target, userId) => {
+exports.advanceCycle = async (id, target, actor) => {
+  assertMayAdvance(actor);
+
+  const userId = actor.id;
   const cycle = await exports.getCycleById(id);
 
   if (cycle.status === CYCLE_CANCELLED) {
