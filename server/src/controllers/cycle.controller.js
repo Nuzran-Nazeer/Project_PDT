@@ -43,7 +43,11 @@ exports.getMyCurrentCycle = asyncHandler(async (req, res) => {
 
 // The user id comes from the token, never the body: who opened or cancelled is an audit fact.
 exports.advanceCycle = asyncHandler(async (req, res) => {
-  res.json(await service.advanceCycle(req.params.id, req.body.status, req.user.id));
+  res.json(
+    await service.advanceCycle(req.params.id, req.body.status, req.user, {
+      acknowledged: req.body.acknowledged === true,
+    }),
+  );
 });
 
 exports.cancelCycle = asyncHandler(async (req, res) => {

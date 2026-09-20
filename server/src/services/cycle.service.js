@@ -124,7 +124,7 @@ exports.peopleInCycle = async (id) => {
   const people = await coverageFor(cycle.parGroup);
 
   const reviews = await Review.find({ cycleId: cycle._id }).select(
-    "userId status publishedAt withdrawnAt acknowledgedAt checks",
+    "userId status publishedAt withdrawnAt reinstatedAt acknowledgedAt checks",
   );
   const reviewFor = new Map(reviews.map((r) => [String(r.userId), r]));
   const waiting = await waitingFor(cycle, reviews);
@@ -139,6 +139,7 @@ exports.peopleInCycle = async (id) => {
             status: review.status,
             publishedAt: review.publishedAt,
             withdrawnAt: review.withdrawnAt,
+            reinstatedAt: review.reinstatedAt,
             acknowledgedAt: review.acknowledgedAt,
             waiting: waiting.get(String(review._id)) || null,
           }
@@ -194,8 +195,49 @@ exports.createCycle = async ({ parGroup, year, startDate, endDate }) => {
   });
 };
 
+// Moving a cycle on is company-wide and cannot be undone: publication releases every result in
+// the group at once. It sits with the Head of HR rather than a covering officer, who has no
+// coverage relationship to a whole appraisal group.
+const assertMayAdvance = (actor) => {
+  if (!(actor?.roles || []).includes("head_of_hr")) {
+    throw new AppError("Only the Head of HR can move a cycle to its next stage", 403);
+  }
+};
+
+const NAMES_IN_REFUSAL = 5;
+
+// Publishing a cycle leaves a late review behind on purpose, to be published on its own once it
+// catches up. ⚠️ That path requires the cycle to still be published, and a cycle only moves
+// forwards, so closing one over an unpublished review strands that person for good.
+// Refused once and allowed on an acknowledgement, not refused outright: nothing can dispose of a
+// review nobody will ever write, so an unclearable refusal would put closed out of reach.
+const assertCanClose = async (cycle, acknowledged) => {
+  const { stragglersIn } = require("./review.service");
+  const left = await stragglersIn(cycle._id);
+  if (!left.length) return { stranded: 0 };
+  if (acknowledged) return { stranded: left.length };
+
+  // A cycle can leave twenty behind, so the message names a few and counts the rest: the
+  // people page is where the whole list belongs.
+  const all = left.map((item) => item.employee.name).sort();
+  const shown = all.slice(0, NAMES_IN_REFUSAL);
+  const names =
+    all.length > shown.length
+      ? `${shown.join(", ")} and ${all.length - shown.length} others`
+      : shown.join(", ");
+  const one = all.length === 1;
+
+  throw new AppError(
+    `${one ? "One review has" : `${all.length} reviews have`} not been published in this cycle, and closing it leaves ${one ? "that person" : "those people"} without a result for good: ${names}. Publish ${one ? "it" : "each one"} first, or acknowledge this to close without ${one ? "it" : "them"}.`,
+    409,
+  );
+};
+
 // The caller names the target stage, so a double-click is refused rather than obeyed.
-exports.advanceCycle = async (id, target, userId) => {
+exports.advanceCycle = async (id, target, actor, { acknowledged = false } = {}) => {
+  assertMayAdvance(actor);
+
+  const userId = actor.id;
   const cycle = await exports.getCycleById(id);
 
   if (cycle.status === CYCLE_CANCELLED) {
@@ -228,6 +270,9 @@ exports.advanceCycle = async (id, target, userId) => {
   // ⚠️ Required here, not at the top: review.service requires this file, and a circular
   // require at load time hands one side an empty exports object.
   const outcome = {};
+  if (next === "closed") {
+    outcome.closure = await assertCanClose(cycle, acknowledged);
+  }
   if (next === "collecting") {
     const { openReviewsForCycle } = require("./review.service");
     await openReviewsForCycle(cycle._id);

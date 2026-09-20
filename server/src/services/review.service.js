@@ -12,6 +12,7 @@ const { peopleInCycle } = require("./cycle.service");
 const { membershipOn } = require("./unitmembership.service");
 const { supervisorPeriods, reportingLineOn } = require("./supervision.service");
 const { normalisationReadiness } = require("./summaryCheck.state");
+const { assertMayActOnEmployee } = require("./coverageAuth.service");
 const {
   PEER_REVIEWS_TARGET,
   PEER_DISPLAY_THRESHOLD,
@@ -210,10 +211,31 @@ const publishCycle = async (cycleId) => {
   return { published, withdrawn, waiting };
 };
 
+// Every review a published cycle has not released: the ones still waiting, and any that caught
+// up and has not been published on its own yet. ⚠️ Closing the cycle is the end of the road for
+// all of them, so the guard on that move reads this list.
+const stragglersIn = async (cycleId) => {
+  const today = toDay(new Date(), "date");
+  const reviews = await liveReviewsIn(cycleId);
+  const inputsFor = await normalisationInputsFor(reviews);
+
+  const items = [];
+  for (const review of reviews) {
+    items.push(
+      await waitingItemFor(review, normalisationReadiness(inputsFor(review)), today),
+    );
+  }
+  return items;
+};
+
 // One review left waiting by its cycle's publish, once it has caught up.
-const publishReview = async (reviewId) => {
+const publishReview = async (reviewId, actor) => {
   const review = await Review.findById(reviewId);
   if (!review) throw new AppError("Review not found", 404);
+
+  // The role gate on the route is coarse. Publication is irreversible, so the officer's
+  // coverage decides it, as it does everywhere else an officer acts on one person.
+  await assertMayActOnEmployee(actor, review.userId, new Date(), "publish this review");
 
   if (PUBLISHED_STATES.includes(review.status)) {
     throw new AppError("This review has already been published", 409);
@@ -227,6 +249,8 @@ const publishReview = async (reviewId) => {
     );
   }
 
+  const wasWithdrawn = review.status === "withdrawn";
+
   const now = new Date();
   const inputsFor = await normalisationInputsFor([review]);
   const readiness = normalisationReadiness(inputsFor(review));
@@ -238,6 +262,7 @@ const publishReview = async (reviewId) => {
   }
 
   publishOne(review, now);
+  if (wasWithdrawn) review.reinstatedAt = now;
   await review.save();
   return review;
 };
@@ -249,6 +274,7 @@ module.exports = {
   normalisationInputsFor,
   waitingItemFor,
   carryIntoNormalisation,
+  stragglersIn,
   publishCycle,
   publishReview,
   PUBLISHED_STATES,
