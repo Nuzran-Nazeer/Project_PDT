@@ -14,6 +14,7 @@ const cycleRoutes = require("./cycle.routes");
 const feedbackRoutes = require("./feedback.routes");
 const reviewRoutes = require("./review.routes");
 const reviewerListRoutes = require("./reviewerList.routes");
+const planRoutes = require("./plan.routes");
 const auditRoutes = require("./audit.routes");
 const monitoringRoutes = require("./monitoring.routes");
 
@@ -54,6 +55,9 @@ router.use("/cycles", cycleRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/feedback", feedbackRoutes);
 router.use("/reviewer-lists", reviewerListRoutes);
+
+// "plans", not "development-plans": one collection holds both types, separated by `type`.
+router.use("/plans", planRoutes);
 router.use("/audit", auditRoutes);
 router.use("/monitoring", monitoringRoutes);
 
