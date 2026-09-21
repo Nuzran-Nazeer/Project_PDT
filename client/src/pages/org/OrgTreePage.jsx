@@ -211,7 +211,7 @@ export default function OrgTreePage() {
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Organisation</h1>
           <p className="mt-1 text-muted">
             {canManage
-              ? "The company as a tree of units. Supervision is read from its shape."
+              ? "The company as a tree of units."
               : isOfficer
                 ? "The company as a tree of units. You can add sub-units inside the units you cover; only the Head of HR can change the rest."
                 : "The company as a tree of units. Only the Head of HR can change it."}
@@ -329,8 +329,7 @@ export default function OrgTreePage() {
                     <p id="type" className="text-sm text-ink">
                       sub-unit
                       <span className="block text-[13px] text-muted">
-                        HR officers add sub-units only. Units are created by the Head of
-                        HR.
+                        HR officers add sub-units only. The Head of HR creates units.
                       </span>
                     </p>
                   ) : (

@@ -124,8 +124,7 @@ export default function ProjectDetailPage() {
                     <div>
                       <p className="text-sm font-medium text-ink">Close this project</p>
                       <p className="mt-1 text-[13px] text-muted">
-                        Everyone still on it is taken off on the same date. Nothing is
-                        deleted, and who worked on it stays readable.
+                        Everyone still on it is taken off on the same date.
                       </p>
                     </div>
                     <button
@@ -139,8 +138,7 @@ export default function ProjectDetailPage() {
                 ) : (
                   <div>
                     <p className="text-sm text-ink">
-                      Close <strong>{project.name}</strong>? Every assignment still open
-                      on that date ends with it, and the record of who was on it is kept.
+                      Close <strong>{project.name}</strong>? Open assignments end too.
                     </p>
 
                     <div className="mt-4 max-w-xs">

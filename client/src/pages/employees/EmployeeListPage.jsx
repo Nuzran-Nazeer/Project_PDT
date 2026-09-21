@@ -178,8 +178,7 @@ export default function EmployeeListPage() {
       </div>
 
       <p className="mt-3 text-[13px] text-muted">
-        A person&apos;s unit is on their own record, as dated history. Who covers a unit
-        is on its page under Organisation.
+        Units are on each person&apos;s record. Coverage is under Organisation.
       </p>
     </section>
   );

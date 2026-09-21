@@ -336,8 +336,7 @@ export default function PlanPage() {
         >
           {plan.status !== "draft" ? (
             <p className="text-sm text-muted">
-              Shared on {formatDate(plan.sharedAt)}, waiting for {plan.employee?.name} to
-              acknowledge it.
+              Shared on {formatDate(plan.sharedAt)}. Waiting for {plan.employee?.name}.
             </p>
           ) : (
             <>

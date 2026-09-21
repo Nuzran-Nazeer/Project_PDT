@@ -93,11 +93,7 @@ export default function ReviewerIdentityPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        Colleague feedback is written on the promise that it cannot be traced back to
-        whoever wrote it. Revealing a name breaks that promise for somebody who will never
-        know it happened, so it is for a genuine reason to investigate and nothing
-        lighter. Each reveal is asked for one response at a time and needs a reason in
-        writing.
+        Reveal a name only for a genuine investigation, with a written reason.
       </p>
 
       {error && (
@@ -197,7 +193,7 @@ function Responses({ responses, reviewId }) {
     return (
       <p className="rounded-lg border border-dashed border-line p-4 text-[13px] text-muted">
         {responses.reason === "below_minimum"
-          ? "This review has no colleague section, so there is nothing to reveal."
+          ? "This review has no colleague section."
           : `${responses.settledCount} of ${responses.assignedCount} in. Nothing is shown until ${responses.needed} more have settled.`}
       </p>
     );

@@ -45,6 +45,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
   }, [userId, reloadKey]);
 
   const current = records.find((record) => !record.to) || null;
+  const currentUnitName = current?.unitId?.name || "the current unit";
   const past = records.filter((record) => record.to);
 
   // Discontinued and current units are left out: the server refuses either.
@@ -199,9 +200,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
 
               {current && (
                 <p className="mt-3 text-[13px] text-muted">
-                  The stint in {current.unitId?.name || "the current unit"} ends on that
-                  date and the new one begins the same day, so there is no gap and no
-                  overlap.
+                  The stint in {currentUnitName} ends and the new one begins that day.
                 </p>
               )}
 

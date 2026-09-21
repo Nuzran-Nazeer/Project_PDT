@@ -77,15 +77,14 @@ export default function SelfAssessmentPage() {
           <p className="mx-auto mt-2 max-w-prose text-sm text-muted">
             {user?.parGroup
               ? `The ${user.parGroup} group has no cycle running at the moment.`
-              : "You are not in an appraisal group, so no cycle applies to you."}
+              : "You are not in an appraisal group."}
           </p>
         </div>
       ) : !record.reviewId ? (
         <div className="rounded-xl border border-dashed border-line p-10 text-center">
           <p className="text-ink">Nothing to assess yet</p>
           <p className="mx-auto mt-2 max-w-prose text-sm text-muted">
-            The {cycle.parGroup} {cycle.year} cycle is running, but you have no review in
-            it.
+            The {cycle.parGroup} {cycle.year} cycle is running, but you have no review.
           </p>
         </div>
       ) : (

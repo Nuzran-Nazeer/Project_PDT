@@ -192,7 +192,7 @@ export default function PeerReviewFormPage() {
         title="Competency ratings"
         note={
           editable
-            ? "The same competencies their supervisor rates, asked of you as a colleague. Decline any you have not seen: that is a real answer, not a gap."
+            ? "The same competencies their supervisor rates, asked of you as a colleague. Decline any you have not seen."
             : "As you answered them."
         }
       >
@@ -265,8 +265,7 @@ export default function PeerReviewFormPage() {
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A submitted form can still be corrected for <strong>five hours</strong> before
-            it locks.
+            Correctable for <strong>five hours</strong> after submitting.
           </p>
         </div>
       )}

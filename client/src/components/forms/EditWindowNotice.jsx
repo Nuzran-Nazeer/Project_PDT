@@ -31,11 +31,8 @@ export default function EditWindowNotice({ submittedAt, locksAt, editable }) {
       <div className={`${box} border-line bg-raised`} role="status">
         <p className="font-semibold text-ink">Locked. This can no longer be changed.</p>
         <p className="mt-1 max-w-prose text-muted">
-          You submitted it {formatDateTime(submittedAt)}
-          {locksAt && (
-            <> and the window for corrections closed {formatDateTime(locksAt)}</>
-          )}
-          . What you wrote is below, as it was sent.
+          Submitted {formatDateTime(submittedAt)}
+          {locksAt && <>, corrections closed {formatDateTime(locksAt)}</>}.
         </p>
       </div>
     );

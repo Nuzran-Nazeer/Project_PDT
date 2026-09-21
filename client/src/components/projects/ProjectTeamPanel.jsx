@@ -562,8 +562,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
 
                     {rowAction.kind === "lead" && (
                       <p className="mt-3 text-[13px] text-muted">
-                        Whoever leads the team now stops on that date and stays on the
-                        project. Their term is kept, not overwritten.
+                        The current lead stops on that date and stays on the project.
                       </p>
                     )}
 

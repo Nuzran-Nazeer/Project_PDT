@@ -60,6 +60,7 @@ export default function SupervisorReviewFormPage() {
   const { team, loading: teamLoading } = useTeam();
 
   const person = (team?.team || []).find((member) => member.id === id);
+  const whose = person ? `${person.name}'s` : "the employee's";
   const reviewId = person?.reviewId || null;
 
   const [record, setRecord] = useState(null);
@@ -352,8 +353,7 @@ export default function SupervisorReviewFormPage() {
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A submitted review can still be corrected for <strong>five hours</strong>{" "}
-            before it locks.
+            Correctable for <strong>five hours</strong> after submitting.
           </p>
         </div>
       )}
@@ -382,8 +382,7 @@ export default function SupervisorReviewFormPage() {
             {record.sentBack.reason}
           </p>
           <p className="mt-2 max-w-prose text-muted">
-            Your whole review is open again. Revise the colleague summary, then submit it
-            for a fresh check.
+            Your whole review is open again. Revise the summary, then submit it again.
           </p>
         </div>
       )}
@@ -397,8 +396,7 @@ export default function SupervisorReviewFormPage() {
             Published {formatDate(record.publishedAt)}.
           </p>
           <p className="mt-1 max-w-prose text-muted">
-            This is now part of {person ? `${person.name}'s` : "the employee's"} record
-            and cannot be changed. What you wrote is below, as it was published.
+            This is now part of {whose} record and cannot be changed.
           </p>
         </div>
       ) : (

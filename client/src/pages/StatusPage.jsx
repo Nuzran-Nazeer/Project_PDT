@@ -17,8 +17,7 @@ function StatusPage() {
         Performance &amp; Development Tracker
       </h2>
       <p className="mt-2 max-w-prose leading-relaxed text-muted">
-        A platform built to manage appraisal (PAR) cycles, gather 360° feedback, and track
-        employee growth plans.
+        Appraisal cycles, 360° feedback and development plans.
       </p>
 
       <h3 className="mt-8 text-lg font-semibold text-ink">System Status</h3>

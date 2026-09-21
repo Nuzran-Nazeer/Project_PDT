@@ -21,7 +21,7 @@ const STATE_TEXT = {
   not_submitted: "The supervisor's review has not been submitted yet.",
   in_window:
     "The supervisor's review was submitted less than five hours ago and may still change.",
-  no_section: "This review has no colleague section, so there is nothing to check.",
+  no_section: "This review has no colleague section.",
 };
 
 const ACTION_LABEL = { cleared: "Cleared", sent_back: "Sent back" };
@@ -187,7 +187,7 @@ export default function SummaryCheckPage() {
               <p className="rounded-lg border border-dashed border-line p-4 text-[13px] text-muted">
                 {review.reason === "in_window"
                   ? "Submitted less than five hours ago and may still change. It is shown once it settles."
-                  : "Not submitted yet. What is written and not sent is the supervisor's."}
+                  : "Not submitted yet."}
               </p>
             ) : summaryEmpty ? (
               <p className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-[13px] text-amber-700 dark:text-amber-400">
@@ -263,8 +263,7 @@ export default function SummaryCheckPage() {
                 className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               />
               <p className="mt-2 max-w-prose text-[13px] text-muted">
-                The whole review reopens, not just the summary. It is checked again once
-                resubmitted and settled.
+                The whole review reopens, not just the summary.
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 <button

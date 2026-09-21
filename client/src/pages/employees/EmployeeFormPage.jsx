@@ -453,8 +453,7 @@ export default function EmployeeFormPage() {
           </div>
           {/* `supervisor` is absent because it cannot be granted. */}
           <p className="mt-2 text-[13px] text-muted">
-            Supervisor is not listed. It is worked out from who leads a unit, not granted
-            here.
+            Supervisor is not listed. It follows from who leads a unit.
           </p>
           {fieldErrors.roles && (
             <p className="mt-1.5 text-[13px] text-danger">{fieldErrors.roles}</p>

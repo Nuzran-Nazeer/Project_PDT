@@ -22,7 +22,7 @@ export default function MySupervisorPanel({ line, loading, error }) {
         <p className="mt-2 text-sm text-muted">
           {line?.unit
             ? `Nobody leads ${line.unit.name}, and no unit above it has a lead either, so you have no supervisor at the moment.`
-            : "You are not in a unit yet, so nobody supervises you and you are not part of an appraisal."}
+            : "You are not in a unit, so nobody supervises you and you are not appraised."}
         </p>
       ) : (
         <>

@@ -123,8 +123,7 @@ export default function ActivatePage() {
               {formError}
             </p>
             <p className="mt-4 text-[13px] text-muted">
-              A code works once and expires after seven days. Ask HR to send a new invite,
-              then open the link in that email.
+              A code works once and expires after seven days. Ask HR for a new invite.
             </p>
             <Link
               to="/login"
@@ -143,8 +142,7 @@ export default function ActivatePage() {
               <div>
                 {linkWasMangled && (
                   <p className="mb-4 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
-                    That link looks incomplete. Some email apps cut long links in half.
-                    Paste the whole code from your invite email instead.
+                    That link is incomplete. Paste the full code from your invite email.
                   </p>
                 )}
 

@@ -184,9 +184,7 @@ export default function MyResultPage() {
           ) : (
             <>
               <p className="max-w-prose text-sm text-muted">
-                Acknowledging records that you have read your result. It does not mean you
-                agree with it. There is no route for disputing a result in this release,
-                and an acknowledgement cannot be undone.
+                Records that you read this, not that you agree. It cannot be undone.
               </p>
 
               {actionError && (

@@ -134,8 +134,7 @@ function ListView({ data, busy, run, actionError, notice }) {
           {data.candidates.length > 0 && (
             <>
               <p className="mt-6 text-[13px] text-muted">
-                Everyone the records show worked with them. This is the pool drawn from,
-                not the people who were asked.
+                The pool drawn from, not the people who were asked.
               </p>
               <CandidateTable candidates={data.candidates} changes={data.changes} />
             </>
@@ -210,7 +209,7 @@ function CandidateTable({ candidates, changes, removals, onToggleRemoval, onReas
           {candidates.length === 0 && (
             <tr>
               <td colSpan={5} className="px-4 py-5 text-muted">
-                The records show nobody who worked with them long enough to review them.
+                Nobody worked with them long enough.
               </td>
             </tr>
           )}
@@ -325,12 +324,10 @@ function ConfirmForm({ data, busy, run }) {
     <>
       <Panel>
         <p className="text-sm text-ink">
-          Check this is everyone who worked with {data.reviewee?.name} long enough to
-          review them.
+          Check this is everyone who worked with {data.reviewee?.name} long enough.
         </p>
         <p className="mt-1 text-[13px] text-muted">
-          Confirming fixes the list. Any removal or addition needs a reason and takes
-          effect only once HR approves it. A refused request cannot be made again.
+          Any removal or addition needs a reason and takes effect once HR approves it.
         </p>
       </Panel>
 
@@ -399,8 +396,7 @@ function AddPeople({ reviewId, additions, setAdditions }) {
         Request an addition
       </h2>
       <p className="mt-2 text-[13px] text-muted">
-        For somebody who worked with them but is missing from the records. Only people who
-        can be added are found: nobody above or below them in the reporting line.
+        For somebody missing from the records. Nobody in their reporting line.
       </p>
 
       <input

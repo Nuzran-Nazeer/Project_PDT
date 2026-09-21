@@ -141,8 +141,7 @@ export default function ProjectsPage() {
           </h2>
 
           <p className="mt-2 max-w-prose text-[13px] text-muted">
-            The lead is put on the project from its start date, so there is no need to
-            assign them as well.
+            The lead is assigned from the start date automatically.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

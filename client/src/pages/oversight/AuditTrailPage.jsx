@@ -82,10 +82,7 @@ export default function AuditTrailPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        Every identity reveal, cycle cancellation, decision on a colleague list and edit
-        to a dated record, newest first. A refused reveal is recorded alongside an allowed
-        one. Nothing here can be changed or removed by anyone, which is what makes it
-        worth reading. No entry names a colleague who gave feedback.
+        Newest first. Nothing can be changed or removed, and no entry names a colleague.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -143,7 +140,7 @@ export default function AuditTrailPage() {
         <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
           {action || outcome
             ? "No entry matches that filter."
-            : "Nothing has been recorded yet. The trail starts from the day it was built and does not reach back."}
+            : "Nothing has been recorded yet. The trail does not reach back before it was built."}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line bg-raised">

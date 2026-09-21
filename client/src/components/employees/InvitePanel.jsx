@@ -98,8 +98,7 @@ export default function InvitePanel({ person, onIssued }) {
             role="status"
             className="rounded-lg border border-brand/40 bg-brand/10 px-3 py-2.5 text-[13px] text-ink"
           >
-            Copy this before leaving the page: it cannot be shown again. If it is lost,
-            generate a new one.
+            Copy this now: it cannot be shown again. If it is lost, generate a new one.
           </p>
 
           <div className="mt-4">

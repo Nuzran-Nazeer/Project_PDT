@@ -194,7 +194,7 @@ export default function SelfAssessmentFormPage() {
         <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
           {cycle
             ? `The ${cycle.parGroup} ${cycle.year} cycle is running, but you have no review in it.`
-            : "No cycle is running for your group, so there is nothing to assess yet."}
+            : "No cycle is running for your group."}
         </p>
       </>
     );
@@ -209,7 +209,7 @@ export default function SelfAssessmentFormPage() {
       <FormSection
         letter="A"
         title="Cycle context"
-        note="Read-only, filled by the system. Nothing in this section is typed by you."
+        note="Read-only, filled by the system."
       >
         <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
           <Fact label="Employee ID" value={user?.employeeId} />
@@ -238,7 +238,7 @@ export default function SelfAssessmentFormPage() {
         title="Competency self-rating"
         note={
           editable
-            ? "A rating from 1 to 5 with written evidence. Evidence is required: a number on its own will be refused."
+            ? "A rating from 1 to 5. Every rating needs written evidence."
             : "As you answered them."
         }
       >
@@ -313,8 +313,7 @@ export default function SelfAssessmentFormPage() {
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A submitted assessment can still be corrected for <strong>five hours</strong>{" "}
-            before it locks.
+            Correctable for <strong>five hours</strong> after submitting.
           </p>
         </div>
       )}

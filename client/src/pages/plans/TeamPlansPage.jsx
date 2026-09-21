@@ -57,8 +57,7 @@ export default function TeamPlansPage() {
       />
 
       <p className="mb-6 max-w-prose text-sm text-muted">
-        A development plan turns a published review into work. Each action is tied to a
-        competency the review highlighted, which the employee never sees.
+        Each action is tied to a competency, which the employee never sees.
       </p>
 
       {error && (
@@ -76,7 +75,7 @@ export default function TeamPlansPage() {
         </p>
       ) : people.length === 0 ? (
         <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nobody you supervise has a published review yet, so there is no plan to write.
+          Nobody you supervise has a published review yet.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line bg-raised">

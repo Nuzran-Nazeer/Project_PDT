@@ -150,8 +150,7 @@ export default function TeamMemberPage() {
 
           {person.sentBack && (
             <p className="mt-3 max-w-prose text-[13px] font-medium text-amber-700 dark:text-amber-400">
-              HR has sent your colleague summary back. The reason is at the top of the
-              form.
+              HR sent your colleague summary back. The reason is at the top of the form.
             </p>
           )}
 

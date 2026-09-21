@@ -201,7 +201,7 @@ export default function CyclesPage() {
         title="Appraisal cycles"
         context={
           canManage
-            ? "One run of the review process for one appraisal group. Everything else hangs off it."
+            ? "One run of the review process for one appraisal group."
             : "One run of the review process for one appraisal group. Only HR can change these."
         }
       />
@@ -230,8 +230,7 @@ export default function CyclesPage() {
           </h2>
 
           <p className="mt-2 max-w-prose text-[13px] text-muted">
-            Created as a draft. Opening it starts the 30 days in which it can be
-            cancelled.
+            Created as a draft. Opening it starts the 30 days it can be cancelled in.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -437,10 +436,7 @@ export default function CyclesPage() {
                       Publish every result in this cycle?
                     </p>
                     <p className="mt-2 max-w-prose text-[13px] text-muted">
-                      Everyone in the {cycle.parGroup} group whose review is ready
-                      receives their result at the same time, and it cannot be taken back.
-                      A review that is not ready is left waiting, named, and can be
-                      published on its own once it catches up.
+                      Publishes everyone ready. It cannot be undone; the rest wait.
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-3">
@@ -507,8 +503,7 @@ export default function CyclesPage() {
                     />
 
                     <p className="mt-2 text-[13px] text-muted">
-                      A cycle can only be cancelled within 30 days of opening, and never
-                      once it has moved past open. It is never deleted.
+                      Only within 30 days of opening, and never once past open.
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-3">

@@ -81,9 +81,7 @@ export default function MonitoringPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        What the trail raised on its own, so that misuse is found without reading the whole
-        log. A flag stays open until it is marked reviewed with a note, and marking one
-        reviewed hides nothing: anything that happens afterwards opens a new one.
+        A flag stays open until it is marked reviewed with a note.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -127,8 +125,8 @@ export default function MonitoringPage() {
           {status === "reviewed"
             ? "Nothing has been marked reviewed yet."
             : status === "all"
-              ? "Nothing has been flagged. The checks start from the day they were built and do not reach back."
-              : "Nothing is open. Anything raised from now on appears here."}
+              ? "Nothing has been flagged. The checks do not reach back before they were built."
+              : "Nothing is open."}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line bg-raised">
@@ -191,14 +189,18 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
         onClick={onToggle}
         className="cursor-pointer border-b border-line last:border-0 hover:bg-surface"
       >
-        <td className="px-4 py-3 whitespace-nowrap text-muted">{formatDateTime(flag.raisedAt)}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-muted">
+          {formatDateTime(flag.raisedAt)}
+        </td>
 
         <td className="px-4 py-3 font-medium text-ink">
           {TYPE_LABELS[flag.type] || flag.type}
         </td>
 
         <td className="px-4 py-3">
-          <span className="text-ink">{flag.officerId?.name || "No longer on record"}</span>
+          <span className="text-ink">
+            {flag.officerId?.name || "No longer on record"}
+          </span>
           {flag.officerId?.employeeId && (
             <span className="mt-0.5 block text-[12px] text-muted">
               {flag.officerId.employeeId}
@@ -207,7 +209,9 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
         </td>
 
         <td className="px-4 py-3 whitespace-nowrap text-muted">
-          {flag.cycleId ? `${flag.cycleId.parGroup} ${flag.cycleId.year}` : "None resolved"}
+          {flag.cycleId
+            ? `${flag.cycleId.parGroup} ${flag.cycleId.year}`
+            : "None resolved"}
         </td>
 
         {/* Only the reveal flag counts up to a line; the other two are incidents. */}
@@ -245,7 +249,11 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
             <span className="sr-only">{expanded ? "Hide details" : "Show details"}</span>
             <Icon
               name="chevron"
-              className={expanded ? "h-4 w-4 rotate-90 transition-transform" : "h-4 w-4 transition-transform"}
+              className={
+                expanded
+                  ? "h-4 w-4 rotate-90 transition-transform"
+                  : "h-4 w-4 transition-transform"
+              }
             />
           </button>
         </td>
@@ -255,7 +263,9 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
         <tr id={panelId} className="border-b border-line last:border-0">
           <td colSpan={7} className="bg-surface px-4 py-4">
             <p className="max-w-prose text-sm text-ink">{flag.detail}</p>
-            <p className="mt-1 max-w-prose text-[13px] text-muted">{TYPE_RULES[flag.type]}</p>
+            <p className="mt-1 max-w-prose text-[13px] text-muted">
+              {TYPE_RULES[flag.type]}
+            </p>
             <p className="mt-2 text-[12px] text-muted">
               Last seen {formatDateTime(flag.lastEventAt)}
             </p>

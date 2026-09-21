@@ -384,8 +384,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
                 {!candidateError && candidates.length === 0 && (
                   <p className="mt-3 text-[13px] text-muted">
-                    Nobody was in {parent?.name || "the unit above"} on that date, so
-                    there is nobody who can lead this unit yet.
+                    Nobody was in {parent?.name || "the unit above"} on that date.
                   </p>
                 )}
 
@@ -425,8 +424,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
             {/* Each role is resolved on its own. */}
             <p className="mt-2 text-[13px] text-muted">
-              Covers this unit and everything beneath it, unless a sub-unit has its own
-              officer for that role.
+              Covers this unit and everything beneath it, unless a sub-unit has its own.
             </p>
 
             {["primary", "backup"].map((role) => {
@@ -469,8 +467,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                     </p>
                   ) : (
                     <p className="mt-1.5 text-sm text-muted">
-                      Nobody covers this unit as {label.toLowerCase()}, here or in any
-                      unit above it.
+                      No {label.toLowerCase()} covers this unit or any unit above it.
                     </p>
                   )}
 
@@ -543,8 +540,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
                       {!coverageCandidateError && coverageCandidates.length === 0 && (
                         <p className="mt-3 text-[13px] text-muted">
-                          Nobody holds the HR officer or Head of HR role yet, so there is
-                          nobody who can cover this unit.
+                          Nobody holds the HR officer or Head of HR role yet.
                         </p>
                       )}
 
@@ -587,8 +583,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
             {members.length === 0 ? (
               <p className="mt-2 text-sm text-muted">
-                Nobody is in this unit today. People are placed from their own employee
-                record.
+                Nobody is in this unit today. People are placed from their own record.
               </p>
             ) : (
               <ul className="mt-2 divide-y divide-line rounded-xl border border-line">
@@ -621,8 +616,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                   <div>
                     <p className="text-sm font-medium text-ink">Discontinue this unit</p>
                     <p className="mt-1 text-[13px] text-muted">
-                      It stays in the tree, marked closed. Its members have to be moved
-                      somewhere else first.
+                      Its members have to be moved somewhere else first.
                     </p>
                   </div>
                   <button
@@ -636,9 +630,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               ) : (
                 <div>
                   <p className="text-sm text-ink">
-                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted: it stays
-                    in the tree marked closed, and whoever leads it has their term closed
-                    on the same date.
+                    Discontinue <strong>{unit.name}</strong>? Its lead's term ends too.
                   </p>
 
                   <div className="mt-4 max-w-xs">

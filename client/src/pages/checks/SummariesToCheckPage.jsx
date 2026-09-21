@@ -37,9 +37,7 @@ export default function SummariesToCheckPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        Each supervisor's summary of colleague feedback, compared against the responses it
-        was written from, before the review enters normalisation. A summary is listed once
-        the supervisor's review has settled.
+        Listed once the supervisor's review settles.
       </p>
 
       {error ? (

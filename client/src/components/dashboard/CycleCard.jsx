@@ -32,7 +32,7 @@ export default function CycleCard({ cycle, parGroup, loading }) {
         <p className="mt-2 text-sm text-muted">
           {parGroup
             ? `The ${parGroup} group has no cycle running at the moment.`
-            : "You are not in an appraisal group, so no cycle applies to you."}
+            : "You are not in an appraisal group."}
         </p>
       </div>
     );
