@@ -335,7 +335,7 @@ export const TABS_BY_GROUP = {
       icon: "trend",
       title: "Team development plans",
       description: "Progress on the actions your team agreed",
-      built: false,
+      built: true,
     },
   ],
 };

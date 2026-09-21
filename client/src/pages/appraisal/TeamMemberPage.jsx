@@ -173,6 +173,22 @@ export default function TeamMemberPage() {
             </p>
           )}
         </FormSection>
+
+        {/* A published review is where a development plan starts, so the way in is here. */}
+        {person.result && (
+          <FormSection
+            letter="D"
+            title="Development plan"
+            note="Actions for the year ahead, each tied to a competency the review highlighted."
+          >
+            <Link
+              to="/team-plans"
+              className="inline-block rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-surface"
+            >
+              Go to team plans
+            </Link>
+          </FormSection>
+        )}
       </div>
     </>
   );
