@@ -57,6 +57,9 @@ export default function CyclesPage() {
   const { user, constants } = useAuth();
 
   const canManage = user?.roles?.some((role) => ["hr", "head_of_hr"].includes(role));
+  // Moving a cycle on releases a whole group at once and cannot be undone, so it is the Head
+  // of HR's. Creating and cancelling stay with any officer.
+  const canAdvance = Boolean(user?.roles?.includes("head_of_hr"));
 
   const [cycles, setCycles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +77,8 @@ export default function CyclesPage() {
   const [outcome, setOutcome] = useState(null);
 
   const [publishFor, setPublishFor] = useState("");
+  // The server's refusal names who would be left without a result, so it is the prompt itself.
+  const [closeAck, setCloseAck] = useState(null);
 
   const [cancelFor, setCancelFor] = useState("");
   const [cancelReason, setCancelReason] = useState("");
@@ -133,7 +138,7 @@ export default function CyclesPage() {
     }
   };
 
-  const move = async (cycle) => {
+  const move = async (cycle, acknowledged = false) => {
     const target = nextStage(cycle.status);
     if (!target) return;
 
@@ -141,7 +146,7 @@ export default function CyclesPage() {
     setActionError("");
     setOutcome(null);
     try {
-      const result = await advanceCycle(cycle._id, target);
+      const result = await advanceCycle(cycle._id, target, acknowledged);
       if (result?.normalisation) {
         setOutcome({ cycle, kind: "normalisation", ...result.normalisation });
       }
@@ -149,9 +154,19 @@ export default function CyclesPage() {
         setOutcome({ cycle, kind: "publication", ...result.publication });
         setPublishFor("");
       }
+      if (result?.closure) {
+        setOutcome({ cycle, kind: "closure", ...result.closure });
+      }
+      setCloseAck(null);
       await load();
     } catch (err) {
-      setActionError(err.message);
+      // A refused close is the only refusal here the person can clear, so it is offered again
+      // rather than shown as a dead end.
+      if (target === "closed" && err.status === 409 && !acknowledged) {
+        setCloseAck({ id: cycle._id, message: err.message });
+      } else {
+        setActionError(err.message);
+      }
     } finally {
       setBusyId("");
     }
@@ -368,33 +383,35 @@ export default function CyclesPage() {
 
                   {canManage && (
                     <>
-                      {target === "published"
-                        ? publishFor !== cycle._id && (
-                            <button
-                              type="button"
-                              disabled={busyId === cycle._id}
-                              onClick={() => {
-                                setPublishFor(cycle._id);
-                                setActionError("");
-                                setOutcome(null);
-                              }}
-                              className={secondaryClass}
-                            >
-                              Publish the results
-                            </button>
-                          )
-                        : target && (
-                            <button
-                              type="button"
-                              disabled={busyId === cycle._id}
-                              onClick={() => move(cycle)}
-                              className={secondaryClass}
-                            >
-                              {cycle.status === "draft"
-                                ? "Open this cycle"
-                                : `Move to ${STAGE_LABELS[target].toLowerCase()}`}
-                            </button>
-                          )}
+                      {canAdvance &&
+                        (target === "published"
+                          ? publishFor !== cycle._id && (
+                              <button
+                                type="button"
+                                disabled={busyId === cycle._id}
+                                onClick={() => {
+                                  setPublishFor(cycle._id);
+                                  setActionError("");
+                                  setOutcome(null);
+                                }}
+                                className={secondaryClass}
+                              >
+                                Publish the results
+                              </button>
+                            )
+                          : target &&
+                            closeAck?.id !== cycle._id && (
+                              <button
+                                type="button"
+                                disabled={busyId === cycle._id}
+                                onClick={() => move(cycle)}
+                                className={secondaryClass}
+                              >
+                                {cycle.status === "draft"
+                                  ? "Open this cycle"
+                                  : `Move to ${STAGE_LABELS[target].toLowerCase()}`}
+                              </button>
+                            ))}
 
                       {cancellable && cancelFor !== cycle._id && (
                         <button
@@ -438,6 +455,35 @@ export default function CyclesPage() {
                       <button
                         type="button"
                         onClick={() => setPublishFor("")}
+                        className={secondaryClass}
+                      >
+                        Not yet
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* The server refused once and named who would be left. Closing is still the
+                    move it was; this only makes the cost of it read before it happens. */}
+                {closeAck?.id === cycle._id && (
+                  <div className="mt-4 rounded-lg border border-line p-4">
+                    <p className="max-w-prose text-sm text-ink">{closeAck.message}</p>
+                    <p className="mt-2 max-w-prose text-[13px] text-muted">
+                      A closed cycle cannot publish anyone, and it cannot be reopened.
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        disabled={busyId === cycle._id}
+                        onClick={() => move(cycle, true)}
+                        className={primaryClass}
+                      >
+                        {busyId === cycle._id ? "Closing…" : "Close anyway"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCloseAck(null)}
                         className={secondaryClass}
                       >
                         Not yet
@@ -495,10 +541,17 @@ export default function CyclesPage() {
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-// One notice for both moves: counts first, then every review left waiting, named.
+const MOVED_TO = {
+  publication: "is published",
+  normalisation: "is normalising",
+  closure: "is closed",
+};
+
+// One notice for every move: counts first, then every review left waiting, named.
 function MoveOutcome({ outcome }) {
   const { cycle, kind, waiting = [] } = outcome;
   const title = `${cycle.parGroup} group · ${cycle.year}`;
+  const stranded = kind === "closure" && outcome.stranded > 0;
 
   const counts =
     kind === "publication"
@@ -508,19 +561,28 @@ function MoveOutcome({ outcome }) {
             `${outcome.withdrawn} withdrawn for having no unit and no supervisor review`,
           waiting.length > 0 && `${waiting.length} left waiting`,
         ]
-      : [
-          `${plural(outcome.carried, "review", "reviews")} carried into normalisation`,
-          waiting.length > 0 && `${waiting.length} left waiting`,
-        ];
+      : kind === "closure"
+        ? [
+            stranded
+              ? `${plural(outcome.stranded, "review", "reviews")} left without a result`
+              : "every review was published",
+          ]
+        : [
+            `${plural(outcome.carried, "review", "reviews")} carried into normalisation`,
+            waiting.length > 0 && `${waiting.length} left waiting`,
+          ];
 
   return (
     <div
       role="status"
-      className="mt-4 rounded-lg border border-success/40 bg-success/10 px-3 py-2.5 text-[13px] text-success"
+      className={`mt-4 rounded-lg border px-3 py-2.5 text-[13px] ${
+        stranded
+          ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+          : "border-success/40 bg-success/10 text-success"
+      }`}
     >
       <p>
-        {title} {kind === "publication" ? "is published" : "is normalising"}:{" "}
-        {counts.filter(Boolean).join(", ")}.
+        {title} {MOVED_TO[kind]}: {counts.filter(Boolean).join(", ")}.
       </p>
 
       {waiting.length > 0 && (

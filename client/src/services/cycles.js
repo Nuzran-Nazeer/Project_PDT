@@ -17,11 +17,12 @@ export const getCyclePeople = (id) => apiFetch(`/cycles/${id}/people`);
 export const createCycle = (data) =>
   apiFetch("/cycles", { method: "POST", body: JSON.stringify(data) });
 
-// The target stage is named, so a double-click is refused rather than obeyed.
-export const advanceCycle = (id, status) =>
+// The target stage is named, so a double-click is refused rather than obeyed. Closing over
+// reviews that were never published is refused until it is acknowledged.
+export const advanceCycle = (id, status, acknowledged = false) =>
   apiFetch(`/cycles/${id}/advance`, {
     method: "PUT",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, acknowledged }),
   });
 
 export const cancelCycle = (id, reason) =>
