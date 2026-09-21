@@ -12,6 +12,7 @@ const {
   HR_OFFICER_ROLES,
   PAR_GROUPS,
   competenciesFor,
+  PLAN_ACTION_CATEGORIES,
   EMPLOYEE_ID_PATTERN,
   MIN_PASSWORD_LENGTH,
 } = require("../config/constants");
@@ -44,6 +45,10 @@ exports.getConstants = asyncHandler(async (req, res) => {
     competencies: Object.fromEntries(
       JOB_FAMILIES.map((family) => [family, competenciesFor(family)]),
     ),
+
+    // Goes to everyone: a supervisor is derived, so nothing here knows who will need it.
+    // ⚠️ The list, not a library of suggested actions. The supervisor types the action.
+    planActionCategories: PLAN_ACTION_CATEGORIES,
   };
 
   if (managesRecords) {

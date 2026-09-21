@@ -424,6 +424,61 @@ const COMPETENCY_KEYS = [
   ...Object.values(FAMILY_COMPETENCIES).flatMap((list) => list.map((c) => c.key)),
 ];
 
+// One collection holds both kinds of plan. They share a shape and differ only in their rules.
+const PLAN_TYPES = ["PDP", "PIP"];
+
+// ⚠️ The employee's acknowledgement is what moves a plan to active. Nobody approves a
+// development plan, so `awaiting_ack` is owned by the employee and not by a reviewer.
+const PLAN_STATUS = ["draft", "awaiting_ack", "active", "closed"];
+
+// Required on every action, so the spread of courses against real work is readable.
+const PLAN_ACTION_CATEGORIES = [
+  "certification",
+  "training",
+  "mentoring",
+  "shadowing",
+  "stretch_assignment",
+  "taking_ownership",
+  "presenting",
+  "rotation",
+  "leading_work",
+  "other",
+];
+
+// ⚠️ `overdue` is worked out when a plan is read, from the target date and the state. Nothing
+// in this system runs on a schedule, so it is never written.
+const PLAN_ACTION_STATUS = [
+  "not_started",
+  "in_progress",
+  "done",
+  "overdue",
+  "carried_forward",
+];
+
+const PLAN_ACTION_OPEN_STATUS = ["not_started", "in_progress", "done"];
+
+const CHECK_IN_OUTCOMES = ["on_track", "at_risk", "off_track"];
+
+// Roughly quarterly, with the next appraisal as the fourth touchpoint. Further check-ins
+// beyond these are allowed and shown as additional.
+const EXPECTED_CHECK_INS = 3;
+
+const PLAN_OUTCOMES = [
+  "completed",
+  "carried_forward",
+  "not_completed",
+  "extended",
+  "escalated",
+];
+
+const CARRY_FORWARD_REASONS = [
+  "employee_capacity",
+  "company_workload",
+  "no_longer_relevant",
+  "blocked_externally",
+  "blocked_by_plan_owner",
+];
+
 module.exports = {
   ROLES,
   GRANTABLE_ROLES,
@@ -454,6 +509,15 @@ module.exports = {
   FAMILY_COMPETENCIES,
   competenciesFor,
   COMPETENCY_KEYS,
+  PLAN_TYPES,
+  PLAN_STATUS,
+  PLAN_ACTION_CATEGORIES,
+  PLAN_ACTION_STATUS,
+  PLAN_ACTION_OPEN_STATUS,
+  CHECK_IN_OUTCOMES,
+  EXPECTED_CHECK_INS,
+  PLAN_OUTCOMES,
+  CARRY_FORWARD_REASONS,
   CYCLE_STAGES,
   CYCLE_STATUS,
   CYCLE_CANCELLED,
