@@ -211,11 +211,14 @@ const NAMES_IN_REFUSAL = 5;
 // forwards, so closing one over an unpublished review strands that person for good.
 // Refused once and allowed on an acknowledgement, not refused outright: nothing can dispose of a
 // review nobody will ever write, so an unclearable refusal would put closed out of reach.
-const assertCanClose = async (cycle, acknowledged) => {
-  const { stragglersIn } = require("./review.service");
+const settleClose = async (cycle, acknowledged) => {
+  const { stragglersIn, withdrawStragglers } = require("./review.service");
   const left = await stragglersIn(cycle._id);
   if (!left.length) return { stranded: 0 };
-  if (acknowledged) return { stranded: left.length };
+
+  // Acknowledged, the reviews are set aside rather than left reading as in progress: a closed
+  // cycle can act on none of them, so "waiting on a supervisor" would be a standing untruth.
+  if (acknowledged) return { stranded: await withdrawStragglers(cycle._id) };
 
   // A cycle can leave twenty behind, so the message names a few and counts the rest: the
   // people page is where the whole list belongs.
@@ -271,7 +274,7 @@ exports.advanceCycle = async (id, target, actor, { acknowledged = false } = {}) 
   // require at load time hands one side an empty exports object.
   const outcome = {};
   if (next === "closed") {
-    outcome.closure = await assertCanClose(cycle, acknowledged);
+    outcome.closure = await settleClose(cycle, acknowledged);
   }
   if (next === "collecting") {
     const { openReviewsForCycle } = require("./review.service");
