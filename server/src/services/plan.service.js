@@ -9,12 +9,9 @@ const {
   PUBLISHED_STATES,
 } = require("../config/constants");
 
-// Writing a development plan against a published review, and the supervisor's read of it.
-//
-// ⚠️ Two guards sit at the top of every write here, and both refuse in this service rather
-// than only on the route: the review is published, and the actor supervises that employee
-// today. "Today" is the whole of the transfer rule — nothing stores who owns a plan, so a
-// plan moves to a new supervisor with no code running and no manual step.
+// ⚠️ Every write here refuses in this service, not only on the route: the review must be
+// published and the actor must supervise that employee today. Nothing stores who owns a plan,
+// so "today" is the whole of the transfer rule.
 
 const today = () => new Date();
 

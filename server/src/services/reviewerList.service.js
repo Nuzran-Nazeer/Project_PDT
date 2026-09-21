@@ -620,8 +620,8 @@ const decideChange = async (reviewId, changeId, actor, { approve }) => {
   change.decidedAt = new Date();
   await list.save();
 
-  // ⚠️ The colleague the change concerns is never recorded — naming them would put the shape
-  // of the list in the log. What is recorded is whose list was changed, and how.
+  // ⚠️ The colleague the change concerns is never recorded: naming them would put the shape
+  // of the list in the log. Whose list was changed, and how, is.
   await audit.record({
     actorId: actor.id,
     action: "colleague_list_decision",

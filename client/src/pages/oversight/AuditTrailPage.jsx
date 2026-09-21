@@ -5,12 +5,8 @@ import { formatDate, formatDateTime } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
-// ⚠️ Read only, and it stays that way: an entry cannot be edited or removed, so this screen
-// offers no control that would suggest otherwise.
-//
-// ⚠️ Nothing here works out what an entry means. Every line is the sentence the action wrote
-// for itself, so a reveal cannot be rendered into something naming the colleague behind the
-// feedback.
+// ⚠️ Read only: an entry cannot be edited or removed, so no control here suggests otherwise.
+// ⚠️ Every line is the sentence the action wrote for itself, never re-rendered into a name.
 
 const ACTION_LABELS = {
   identity_reveal: "Identity reveal",

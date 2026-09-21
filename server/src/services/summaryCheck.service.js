@@ -62,10 +62,9 @@ const supervisorDocFor = (reviewId) =>
 const peerCountFor = (reviewId) =>
   Feedback.countDocuments({ reviewId, reviewerType: "peer" });
 
-// ⚠️ A coverage refusal is "not found": a 403 naming the unit tells an officer where a
-// person sits, which is what coverage exists to hide. The author of the summary is refused
-// openly, since they already know the review exists; the other covering officer or the Head
-// of HR checks it instead.
+// ⚠️ A coverage refusal is "not found": a 403 naming the unit tells an officer where a person
+// sits, which is what coverage exists to hide. The summary's own author is refused openly, since
+// they already know the review exists.
 const isSupervisorToday = (line, viewer) =>
   Boolean(line.supervisor && String(line.supervisor.id) === String(viewer.id));
 

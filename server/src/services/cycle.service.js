@@ -206,11 +206,9 @@ const assertMayAdvance = (actor) => {
 
 const NAMES_IN_REFUSAL = 5;
 
-// Publishing a cycle leaves a late review behind on purpose, to be published on its own once it
-// catches up. ⚠️ That path requires the cycle to still be published, and a cycle only moves
-// forwards, so closing one over an unpublished review strands that person for good.
-// Refused once and allowed on an acknowledgement, not refused outright: nothing can dispose of a
-// review nobody will ever write, so an unclearable refusal would put closed out of reach.
+// ⚠️ A late review is published on its own once it catches up, but that path needs the cycle
+// still published and a cycle only moves forwards: closing over one strands that person for good.
+// Refused once then allowed on acknowledgement, so an unclearable refusal cannot block closing.
 const settleClose = async (cycle, acknowledged) => {
   const { stragglersIn, withdrawStragglers } = require("./review.service");
   const left = await stragglersIn(cycle._id);

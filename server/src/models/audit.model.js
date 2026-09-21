@@ -6,12 +6,8 @@ const {
   AUDIT_TARGETS,
 } = require("../config/constants");
 
-// The record that makes the confidentiality promise provable. Append only: every write path
-// below refuses, so a later endpoint cannot quietly rewrite history.
-//
-// ⚠️ An entry never carries a reviewer's name or id, not even on a reveal. It records that a
-// name was handed over and to whom, never which colleague was behind the feedback — otherwise
-// the log becomes a second, permanent copy of the thing the whole design exists to protect.
+// Append only: every write path below refuses, so history cannot be rewritten.
+// ⚠️ An entry records that a name was handed over and to whom, never which colleague wrote it.
 const auditSchema = new mongoose.Schema(
   {
     actorId: {

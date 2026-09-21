@@ -7,13 +7,8 @@ import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import Icon from "../../components/common/Icon";
 
-// ⚠️ Its own screen, not a control beside the feedback. A reveal sits behind choosing a cycle,
-// a person and one response on purpose: an officer reading a summary is not meant to find this
-// under their cursor, and asking for a name should take deciding to.
-//
-// ⚠️ Whether this officer may reveal is the server's answer, never worked out here: the rule
-// turns on coverage and the reporting line, and a browser that guessed would be guessing about
-// somebody's confidentiality.
+// ⚠️ Its own screen, not a control beside the feedback: asking for a name should take deciding to.
+// ⚠️ Whether this officer may reveal is the server's answer, never worked out here.
 
 const primaryClass =
   "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
