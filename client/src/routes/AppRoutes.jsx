@@ -34,6 +34,8 @@ import ReviewerListPage from "../pages/reviewers/ReviewerListPage";
 import SummariesToCheckPage from "../pages/checks/SummariesToCheckPage";
 import SummaryCheckPage from "../pages/checks/SummaryCheckPage";
 import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
+import TeamPlansPage from "../pages/plans/TeamPlansPage";
+import PlanPage from "../pages/plans/PlanPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
 import MonitoringPage from "../pages/oversight/MonitoringPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
@@ -57,6 +59,7 @@ const TAB_PAGES = {
   "choose-reviewers": ChooseReviewersPage,
   "summaries-to-check": SummariesToCheckPage,
   "reviewer-identity": ReviewerIdentityPage,
+  "team-plans": TeamPlansPage,
   "audit-trail": AuditTrailPage,
   monitoring: MonitoringPage,
 
@@ -149,6 +152,7 @@ function AppRoutes() {
             />
             <Route path="/my-team/:id/review" element={<SupervisorReviewFormPage />} />
             <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
+            <Route path="/team-plans/:id" element={<PlanPage />} />
           </Route>
 
           {/* HR too: HR decides and draws, and confirms for somebody nobody supervises. */}
