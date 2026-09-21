@@ -228,6 +228,21 @@ const stragglersIn = async (cycleId) => {
   return items;
 };
 
+// A cycle closing over reviews nobody ever wrote sets them aside, the same as publication does
+// for a leaver whose supervisor review never came. ⚠️ Terminal: picking one up again needs its
+// cycle to be published, and a closed cycle cannot go back, so nothing reopens these.
+const withdrawStragglers = async (cycleId) => {
+  const now = new Date();
+  const reviews = await liveReviewsIn(cycleId);
+
+  for (const review of reviews) {
+    review.status = "withdrawn";
+    review.withdrawnAt = now;
+    await review.save();
+  }
+  return reviews.length;
+};
+
 // One review left waiting by its cycle's publish, once it has caught up.
 const publishReview = async (reviewId, actor) => {
   const review = await Review.findById(reviewId);
@@ -275,6 +290,7 @@ module.exports = {
   waitingItemFor,
   carryIntoNormalisation,
   stragglersIn,
+  withdrawStragglers,
   publishCycle,
   publishReview,
   PUBLISHED_STATES,
