@@ -11,6 +11,12 @@ if (!process.env.DEMO_PASSWORD) {
   );
 }
 
+// ⚠️ Defined once and exported: these addresses appear in the client's env, the server's
+// accepted origin, `baseURL` and the API calls a test makes to arrange its own state. Two
+// copies that drift apart show up as a refused request, not as a wrong address.
+export const CLIENT_URL = "http://localhost:5174";
+export const API_URL = "http://localhost:5001/api";
+
 // The tests only ever run against the qa database: the connection string from
 // server/.env, with its database name replaced by qa.
 function qaDatabaseUri() {
@@ -32,7 +38,7 @@ export default defineConfig({
   // "never": on a failure the HTML report otherwise holds the command open until Ctrl+C.
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:5174",
+    baseURL: CLIENT_URL,
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
@@ -40,22 +46,22 @@ export default defineConfig({
     {
       command: "npm start",
       cwd: "../server",
-      url: "http://localhost:5001/api/status",
+      url: `${API_URL}/status`,
       reuseExistingServer: false,
       env: {
-        PORT: "5001",
+        PORT: String(new URL(API_URL).port),
         MONGO_URI: qaDatabaseUri(),
         // ⚠️ The server accepts requests from this one address only. Leave it out and
         // every sign-in from the test client is refused.
-        CLIENT_URL: "http://localhost:5174",
+        CLIENT_URL,
       },
     },
     {
-      command: "npm run dev -- --port 5174 --strictPort",
+      command: `npm run dev -- --port ${new URL(CLIENT_URL).port} --strictPort`,
       cwd: "../client",
-      url: "http://localhost:5174",
+      url: CLIENT_URL,
       reuseExistingServer: false,
-      env: { VITE_API_URL: "http://localhost:5001/api" },
+      env: { VITE_API_URL: API_URL },
     },
   ],
 });
