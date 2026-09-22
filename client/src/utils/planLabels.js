@@ -38,6 +38,32 @@ const CHECK_IN_OUTCOME_LABELS = {
   off_track: "Off track",
 };
 
+// ⚠️ Held here rather than fetched, the same as the check-in outcomes above: these are the
+// values the form offers, and the server refuses anything else.
+export const CARRY_FORWARD_REASONS = [
+  "employee_capacity",
+  "company_workload",
+  "no_longer_relevant",
+  "blocked_externally",
+  "blocked_by_plan_owner",
+];
+
+const CARRY_REASON_LABELS = {
+  employee_capacity: "Employee capacity",
+  company_workload: "Company workload",
+  no_longer_relevant: "No longer relevant",
+  blocked_externally: "Blocked externally",
+  blocked_by_plan_owner: "Blocked by the plan owner",
+};
+
+const PLAN_OUTCOME_LABELS = {
+  completed: "Every action completed",
+  carried_forward: "Actions carried forward",
+  not_completed: "Not completed",
+};
+
+const CARRIED_TIMES = { 1: "once", 2: "twice" };
+
 const WINDOW_STATE_LABELS = {
   held: "Held",
   open: "Open now",
@@ -54,6 +80,11 @@ export const actionStatusLabel = (key) => ACTION_STATUS_LABELS[key] || key;
 export const planStateLabel = (key) => PLAN_STATE_LABELS[key] || key;
 export const checkInOutcomeLabel = (key) => CHECK_IN_OUTCOME_LABELS[key] || key;
 export const windowStateLabel = (key) => WINDOW_STATE_LABELS[key] || key;
+export const carryReasonLabel = (key) => CARRY_REASON_LABELS[key] || key;
+export const planOutcomeLabel = (key) => PLAN_OUTCOME_LABELS[key] || key;
+
+export const carriedTimesLabel = (times) =>
+  `Carried forward ${CARRIED_TIMES[times] || `${times} times`}`;
 
 export const daysSinceLabel = (days) => {
   if (days === null || days === undefined) return null;

@@ -14,6 +14,14 @@ const primaryClass =
 const secondaryClass =
   "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
 
+// ⚠️ Says what happens to the work, never why an action went unfinished: that reason is
+// recorded for the supervisor and HR alone.
+const CLOSED_OUTCOME = {
+  completed: "Every action on it was completed.",
+  carried_forward: "Anything unfinished carries into your next plan.",
+  not_completed: "It closed with actions unfinished.",
+};
+
 const NOTHING_TO_READ = {
   no_review: "No result has been published for you yet.",
   no_plan: "No plan has been written against your published result yet.",
@@ -119,6 +127,7 @@ export default function MyPlanPage() {
         context={[
           plan.sharedAt && `Shared ${formatDate(plan.sharedAt)}`,
           plan.acknowledgedAt && `Acknowledged ${formatDate(plan.acknowledgedAt)}`,
+          plan.closeDate && `Closed ${formatDate(plan.closeDate)}`,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -126,6 +135,13 @@ export default function MyPlanPage() {
       />
 
       <FormShell>
+        {plan.status === "closed" && (
+          <p className="rounded-xl border border-line bg-raised p-4 text-sm text-muted">
+            This plan closed on {formatDate(plan.closeDate)}.{" "}
+            {CLOSED_OUTCOME[plan.outcome]}
+          </p>
+        )}
+
         <FormSection letter="A" title="Your actions">
           {actionError && (
             <p role="alert" className="mb-3 text-sm text-danger">
@@ -236,6 +252,11 @@ export default function MyPlanPage() {
           {plan.acknowledgedAt ? (
             <p className="max-w-prose text-sm text-muted">
               You acknowledged this plan on {formatDate(plan.acknowledgedAt)}.
+            </p>
+          ) : plan.status === "closed" ? (
+            <p className="max-w-prose text-sm text-muted">
+              This plan closed before it was acknowledged, so it can no longer be
+              acknowledged.
             </p>
           ) : (
             <>

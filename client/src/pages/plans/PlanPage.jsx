@@ -13,13 +13,16 @@ import {
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
+import { ClosureSummary, CarriedMarker } from "../../components/plans/PlanClosure";
 import { formatDate, toDateInput, todayInput } from "../../utils/dates";
 import {
   categoryLabel,
   actionStatusLabel,
   checkInOutcomeLabel,
   daysSinceLabel,
+  carryReasonLabel,
   CHECK_IN_OUTCOMES,
+  CARRY_FORWARD_REASONS,
   TRACKABLE_STATUSES,
 } from "../../utils/planLabels";
 
@@ -34,6 +37,7 @@ const EMPTY = {
   ownerId: "",
   targetDate: "",
   successCriteria: "",
+  carryReason: "",
 };
 
 const EMPTY_CHECK_IN = { at: "", outcome: "", note: "" };
@@ -112,6 +116,7 @@ export default function PlanPage() {
       ownerId: action.owner?.id || "",
       targetDate: toDateInput(action.targetDate),
       successCriteria: action.successCriteria,
+      carryReason: action.carryReason || "",
     });
   };
 
@@ -139,6 +144,10 @@ export default function PlanPage() {
 
   const tracking = plan.status === "active";
   const canRecordCheckIn = plan.checkIns?.canRecord;
+
+  // Only an action that arrived from a closed plan is ever asked for a carry reason.
+  const editing = plan.actions.find((action) => action.id === editingId);
+  const owing = plan.actions.filter((action) => action.owes);
 
   const owners = [
     { id: plan.employee?.id, name: `${plan.employee?.name} (the employee)` },
@@ -174,6 +183,8 @@ export default function PlanPage() {
         </p>
       )}
 
+      <ClosureSummary plan={plan} />
+
       <div className="grid gap-5">
         <FormSection
           letter="A"
@@ -206,6 +217,14 @@ export default function PlanPage() {
                     <span className="font-medium text-ink">Success criterion: </span>
                     {action.successCriteria}
                   </p>
+
+                  <CarriedMarker action={action} />
+
+                  {action.owes && (
+                    <p className="mt-2 text-[13px] text-danger">
+                      Still needs {owedLabel(action.owes)}.
+                    </p>
+                  )}
 
                   {tracking && (
                     <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
@@ -323,7 +342,16 @@ export default function PlanPage() {
                   </select>
                 </Field>
 
-                <Field label="Target date" name="targetDate" missing={missing}>
+                <Field
+                  label="Target date"
+                  name="targetDate"
+                  missing={missing}
+                  hint={
+                    editing?.carriedTargetDate
+                      ? `It arrived due ${formatDate(editing.carriedTargetDate)} and needs a new date.`
+                      : undefined
+                  }
+                >
                   <input
                     id="targetDate"
                     type="date"
@@ -332,6 +360,29 @@ export default function PlanPage() {
                     className={inputClass(missing, "targetDate")}
                   />
                 </Field>
+
+                {editing?.carriedTimes > 0 && (
+                  <Field
+                    label="Why it was not finished"
+                    name="carryReason"
+                    missing={missing}
+                    hint="Recorded against the action. The employee never sees it."
+                  >
+                    <select
+                      id="carryReason"
+                      value={form.carryReason}
+                      onChange={(e) => setForm({ ...form, carryReason: e.target.value })}
+                      className={inputClass(missing, "carryReason")}
+                    >
+                      <option value="">Choose a reason</option>
+                      {CARRY_FORWARD_REASONS.map((key) => (
+                        <option key={key} value={key}>
+                          {carryReasonLabel(key)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
               </div>
 
               <Field
@@ -373,7 +424,9 @@ export default function PlanPage() {
         ) : (
           <FormSection letter="B" title="Actions">
             <p className="text-sm text-muted">
-              This plan has been shared, so its actions can no longer be changed.
+              {plan.status === "closed"
+                ? "This plan has closed, so its actions can no longer be changed."
+                : "This plan has been shared, so its actions can no longer be changed."}
             </p>
           </FormSection>
         )}
@@ -383,17 +436,21 @@ export default function PlanPage() {
           title="Share the plan"
           note="Sharing sends it to the employee. Their acknowledgement is what makes it active."
         >
-          {plan.status !== "draft" ? (
+          {plan.status === "closed" ? (
+            <p className="text-sm text-muted">
+              This plan closed on {formatDate(plan.closeDate)}.
+            </p>
+          ) : plan.status !== "draft" ? (
             <p className="text-sm text-muted">
               Shared on {formatDate(plan.sharedAt)}, waiting for {plan.employee?.name} to
               acknowledge it.
             </p>
           ) : (
             <>
-              {/* Hides the way in, never protects it: the server refuses an empty plan too. */}
+              {/* Hides the way in, never protects it: the server refuses both of these too. */}
               <button
                 type="button"
-                disabled={busy || plan.actions.length === 0}
+                disabled={busy || plan.actions.length === 0 || owing.length > 0}
                 onClick={() => run(() => sharePlan(id))}
                 className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -403,6 +460,14 @@ export default function PlanPage() {
               {plan.actions.length === 0 && (
                 <p className="mt-3 text-[13px] text-muted">
                   Add at least one action first.
+                </p>
+              )}
+
+              {owing.length > 0 && (
+                <p className="mt-3 text-[13px] text-muted">
+                  {owing.length === 1
+                    ? "One action carried forward still needs a reason and a new target date."
+                    : `${owing.length} actions carried forward still need a reason and a new target date.`}
                 </p>
               )}
             </>
@@ -499,6 +564,14 @@ const STATUS_LABELS = {
   active: "Active",
   closed: "Closed",
 };
+
+// The server names what a carried action is short of: one of these, or both.
+const OWED_LABELS = {
+  carryReason: "a reason",
+  targetDate: "a new target date",
+};
+
+const owedLabel = (owes) => owes.map((key) => OWED_LABELS[key] || key).join(" and ");
 
 const inputClass = (missing, name) =>
   `w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${
