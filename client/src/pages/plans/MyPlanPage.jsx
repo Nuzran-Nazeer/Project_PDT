@@ -3,7 +3,8 @@ import { getMyPlan, acknowledgeMyPlan, addProgressNote } from "../../services/pl
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormShell, FormSection } from "../../components/shells/FormShell";
-import { categoryLabel, actionStatusLabel } from "../../utils/planLabels";
+import { CheckInEntries } from "../../components/plans/CheckIns";
+import { categoryLabel, actionStatusLabel, daysSinceLabel } from "../../utils/planLabels";
 
 // ⚠️ The competency behind an action never appears here and is not in the response. The
 // supervisor's page is the only view that carries it.
@@ -141,7 +142,11 @@ export default function MyPlanPage() {
                   <Row label="Category">{categoryLabel(action.category)}</Row>
                   <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
                   <Row label="Target date">{formatDate(action.targetDate)}</Row>
-                  <Row label="State">{actionStatusLabel(action.status)}</Row>
+                  <Row label="State">
+                    {actionStatusLabel(action.status)}
+                    {daysSinceLabel(action.daysSinceChange) &&
+                      ` · ${daysSinceLabel(action.daysSinceChange)}`}
+                  </Row>
                 </dl>
 
                 <p className="mt-3 text-[13px] text-muted">
@@ -223,7 +228,11 @@ export default function MyPlanPage() {
           </ul>
         </FormSection>
 
-        <FormSection letter="B" title="Acknowledge this plan">
+        <FormSection letter="B" title="Check-ins" note="Recorded by your supervisor.">
+          <CheckInEntries entries={plan.checkIns} />
+        </FormSection>
+
+        <FormSection letter="C" title="Acknowledge this plan">
           {plan.acknowledgedAt ? (
             <p className="max-w-prose text-sm text-muted">
               You acknowledged this plan on {formatDate(plan.acknowledgedAt)}.

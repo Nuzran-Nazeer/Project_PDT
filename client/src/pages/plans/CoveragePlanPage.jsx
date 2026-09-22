@@ -4,7 +4,8 @@ import { getPlanForCoverage } from "../../services/plans";
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
-import { categoryLabel, actionStatusLabel } from "../../utils/planLabels";
+import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
+import { categoryLabel, actionStatusLabel, daysSinceLabel } from "../../utils/planLabels";
 
 // HR's read of a plan within their coverage, the same view the supervisor gets.
 // ⚠️ Read only, and it offers no control that would suggest otherwise.
@@ -88,7 +89,11 @@ export default function CoveragePlanPage() {
                 <Row label="From competency">{action.competencyName}</Row>
                 <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
                 <Row label="Target date">{formatDate(action.targetDate)}</Row>
-                <Row label="State">{actionStatusLabel(action.status)}</Row>
+                <Row label="State">
+                  {actionStatusLabel(action.status)}
+                  {daysSinceLabel(action.daysSinceChange) &&
+                    ` · ${daysSinceLabel(action.daysSinceChange)}`}
+                </Row>
               </dl>
 
               <p className="mt-3 text-[13px] text-muted">
@@ -112,6 +117,17 @@ export default function CoveragePlanPage() {
           ))}
         </ul>
       </FormSection>
+
+      {/* Read only, the same as the actions above: this page offers no control. */}
+      <div className="mt-5">
+        <FormSection letter="B" title="Check-ins">
+          <CheckInSchedule summary={plan.checkIns} />
+
+          <div className="mt-4">
+            <CheckInEntries entries={plan.checkIns?.entries} />
+          </div>
+        </FormSection>
+      </div>
     </>
   );
 }
