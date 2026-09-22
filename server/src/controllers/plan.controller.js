@@ -51,3 +51,13 @@ exports.removeAction = asyncHandler(async (req, res) => {
 exports.sharePlan = asyncHandler(async (req, res) => {
   res.json(await service.sharePlan(req.params.id, req.user));
 });
+
+exports.recordCheckIn = asyncHandler(async (req, res) => {
+  res.status(201).json(await service.recordCheckIn(req.params.id, req.user, req.body));
+});
+
+exports.setActionStatus = asyncHandler(async (req, res) => {
+  res.json(
+    await service.setActionStatus(req.params.id, req.params.actionId, req.user, req.body),
+  );
+});

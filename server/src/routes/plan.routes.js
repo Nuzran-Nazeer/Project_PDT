@@ -5,6 +5,8 @@ const {
   validateActionId,
   validateReviewIdBody,
   validateAction,
+  validateActionStatus,
+  validateCheckIn,
   validateNote,
   validateUserId,
 } = require("../validators/plan.validator");
@@ -47,5 +49,21 @@ router
 
 // Sharing hands the plan to the employee; their acknowledgement is what makes it active.
 router.route("/:id/share").put(protect, validatePlanId, controller.sharePlan);
+
+router
+  .route("/:id/actions/:actionId/status")
+  .put(
+    protect,
+    validatePlanId,
+    validateActionId,
+    validateActionStatus,
+    controller.setActionStatus,
+  );
+
+// Appended only: there is no route to edit or delete one, because a check-in is the record of
+// a conversation that happened. A correction is a further check-in.
+router
+  .route("/:id/check-ins")
+  .post(protect, validatePlanId, validateCheckIn, controller.recordCheckIn);
 
 module.exports = router;

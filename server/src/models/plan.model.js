@@ -63,13 +63,17 @@ const actionSchema = new mongoose.Schema({
   carryReason: { type: String, enum: CARRY_FORWARD_REASONS, default: null },
 });
 
-// ⚠️ Appended, never edited or removed: a check-in is the record of a conversation that
-// happened on a date. A correction is a further check-in.
+// ⚠️ Appended, never edited or removed: a check-in records a conversation that happened.
+// Position in the array is therefore the check-in number, and nothing stores it.
 const checkInSchema = new mongoose.Schema(
   {
+    // When the conversation happened against when it was typed up. Both, because that is
+    // what separates a late write-up from a back-dated one.
     at: { type: Date, required: true },
+    recordedAt: { type: Date, required: true },
+
     outcome: { type: String, enum: CHECK_IN_OUTCOMES, required: true },
-    note: { type: String, default: null },
+    note: { type: String, required: true },
     byId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { _id: false },
