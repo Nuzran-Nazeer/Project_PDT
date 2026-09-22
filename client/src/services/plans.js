@@ -26,3 +26,15 @@ export const removeAction = (id, actionId) =>
 
 // Hands the plan to the employee; their acknowledgement is what makes it active.
 export const sharePlan = (id) => apiFetch(`/plans/${id}/share`, { method: "PUT" });
+
+// The employee's own plan, reached without an id: the server decides whose it is.
+export const getMyPlan = () => apiFetch("/plans/mine");
+
+export const acknowledgeMyPlan = () =>
+  apiFetch("/plans/mine/acknowledge", { method: "PUT" });
+
+export const addProgressNote = (actionId, note) =>
+  apiFetch(`/plans/mine/actions/${actionId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });

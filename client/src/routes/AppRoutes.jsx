@@ -36,6 +36,7 @@ import SummaryCheckPage from "../pages/checks/SummaryCheckPage";
 import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
 import TeamPlansPage from "../pages/plans/TeamPlansPage";
 import PlanPage from "../pages/plans/PlanPage";
+import MyPlanPage from "../pages/plans/MyPlanPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
 import MonitoringPage from "../pages/oversight/MonitoringPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
@@ -66,6 +67,7 @@ const TAB_PAGES = {
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
   "my-result": MyResultPage,
+  "my-development-plan": MyPlanPage,
 };
 
 function AppRoutes() {

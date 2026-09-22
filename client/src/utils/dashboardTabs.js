@@ -277,7 +277,7 @@ export const TABS_BY_GROUP = {
       icon: "trend",
       title: "My development plan",
       description: "Track the actions agreed with your supervisor",
-      built: false,
+      built: true,
     },
     {
       id: "my-history",
