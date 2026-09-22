@@ -17,6 +17,7 @@ const AUDIT_ACTIONS = [
   "cycle_cancellation",
   "colleague_list_decision",
   "history_edit",
+  "plan_read",
 ];
 const AUDIT_OUTCOMES = ["allowed", "refused"];
 
@@ -67,6 +68,7 @@ const AUDIT_TARGETS = [
   "unitLead",
   "projectAssignment",
   "hrCoverage",
+  "plan",
 ];
 const ROLES = [...GRANTABLE_ROLES, ...DERIVED_ROLES];
 

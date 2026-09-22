@@ -8,6 +8,10 @@ exports.listTeamPlans = asyncHandler(async (req, res) => {
   res.json(await service.teamPlans(req.user.id));
 });
 
+exports.getPlanForCoverage = asyncHandler(async (req, res) => {
+  res.json(await service.getPlanForCoverage(req.params.userId, req.user));
+});
+
 exports.getMyPlan = asyncHandler(async (req, res) => {
   res.json(await service.myPlan(req.user.id));
 });

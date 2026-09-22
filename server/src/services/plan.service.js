@@ -3,6 +3,8 @@ const Review = require("../models/review.model");
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { teamOn } = require("./supervision.service");
+const { assertHrMayRead } = require("./coverageAuth.service");
+const audit = require("./audit.service");
 const {
   competenciesFor,
   PLAN_ACTION_CATEGORIES,
@@ -365,7 +367,7 @@ const asEmployeePlan = (plan, on = today()) => ({
   actions: plan.actions.map((action) => asEmployeeAction(action, on)),
 });
 
-const employeePlanFor = (userId) =>
+const sharedPlanFor = (userId) =>
   Plan.findOne({ userId, type: "PDP", status: { $in: VISIBLE_TO_EMPLOYEE } }).sort({
     sharedAt: -1,
   });
@@ -373,7 +375,7 @@ const employeePlanFor = (userId) =>
 // Nothing to show separates into two cases the employee can act on differently: no published
 // review to write a plan against, or one published and no plan written yet.
 const myPlan = async (userId) => {
-  const plan = await populated(employeePlanFor(userId));
+  const plan = await populated(sharedPlanFor(userId));
   if (plan) return asEmployeePlan(plan);
 
   return { state: (await publishedReviewFor(userId)) ? "no_plan" : "no_review" };
@@ -418,8 +420,60 @@ const addProgressNote = async (userId, actionId, body) => {
   return myPlan(userId);
 };
 
+const HR_ROLES = ["hr", "head_of_hr"];
+
+// Which of the two refusals it was, in a form a rule can read. The messages are written for
+// people and get reworded; these do not.
+const refusalCodeFor = (actor) =>
+  (actor?.roles || []).some((role) => HR_ROLES.includes(role))
+    ? "outside_coverage"
+    : "not_hr";
+
+// Oversight that leaves no trace is not oversight anyone can prove, so the read is recorded
+// whether it succeeded or not. No reason is asked for: this is gated access, not a reveal.
+const recordPlanRead = (actor, employeeId, plan, outcome, refusalCode = null) =>
+  audit.record({
+    actorId: actor.id,
+    action: "plan_read",
+    outcome,
+    subjectUserId: employeeId,
+    targetType: "plan",
+    targetId: plan?._id || null,
+    refusalCode: outcome === "refused" ? refusalCode : null,
+    detail: "Opened this person's development plan",
+  });
+
+// ⚠️ Read only, and nothing here enforces it: every write goes through `supervisorPlan`,
+// which refuses anyone not supervising the employee today. A path that skips it hands HR an edit.
+const getPlanForCoverage = async (employeeId, actor) => {
+  const plan = await populated(sharedPlanFor(employeeId));
+
+  // Coverage is settled before anything about the plan is said, so an officer outside it
+  // learns nothing either way.
+  try {
+    await assertHrMayRead(actor, employeeId);
+  } catch (error) {
+    await recordPlanRead(actor, employeeId, plan, "refused", refusalCodeFor(actor));
+    throw error;
+  }
+
+  // A draft is never one of these, so the supervisor's working document stays theirs.
+  if (!plan) {
+    await recordPlanRead(actor, employeeId, null, "refused", "not_found");
+    throw new AppError("No plan has been shared for this employee", 404);
+  }
+
+  await recordPlanRead(actor, employeeId, plan, "allowed");
+
+  return {
+    ...asPlan(plan, await competenciesForPlan(plan)),
+    canEdit: false,
+  };
+};
+
 module.exports = {
   teamPlans,
+  getPlanForCoverage,
   myPlan,
   acknowledgeMyPlan,
   addProgressNote,

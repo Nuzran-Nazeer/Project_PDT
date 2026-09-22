@@ -6,6 +6,7 @@ const {
   validateReviewIdBody,
   validateAction,
   validateNote,
+  validateUserId,
 } = require("../validators/plan.validator");
 const { protect } = require("../middleware/auth.middleware");
 
@@ -24,6 +25,12 @@ router.route("/mine/acknowledge").put(protect, controller.acknowledgeMyPlan);
 router
   .route("/mine/actions/:actionId/notes")
   .post(protect, validateActionId, validateNote, controller.addProgressNote);
+
+// HR's read within their coverage, addressed by the employee rather than by the plan: it is
+// reached from that person's record, and the officer has no plan id before opening it.
+router
+  .route("/employee/:userId")
+  .get(protect, validateUserId, controller.getPlanForCoverage);
 
 router.route("/").post(protect, validateReviewIdBody, controller.startPlan);
 
