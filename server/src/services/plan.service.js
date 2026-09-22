@@ -1,5 +1,6 @@
 const Plan = require("../models/plan.model");
 const Review = require("../models/review.model");
+const Cycle = require("../models/cycle.model");
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { teamOn } = require("./supervision.service");
@@ -8,6 +9,11 @@ const audit = require("./audit.service");
 const {
   competenciesFor,
   PLAN_ACTION_CATEGORIES,
+  PLAN_ACTION_OPEN_STATUS,
+  CHECK_IN_OUTCOMES,
+  CHECK_IN_MONTH_OFFSETS,
+  CHECK_IN_WINDOW_DAYS,
+  EXPECTED_CHECK_INS,
   PUBLISHED_STATES,
 } = require("../config/constants");
 
@@ -21,14 +27,22 @@ const asPerson = (user) =>
   user ? { id: String(user._id), name: user.name, employeeId: user.employeeId } : null;
 
 // The competency set the review was opened under, never today's: a move to another job
-// family must not relabel what a past review asked about.
-const competenciesForReview = async (review) => {
+// family must not relabel what a past review asked about. The end of the period that review
+// assessed is what every check-in date is counted from.
+const contextForReview = async (review) => {
   const jobFamily =
-    review.snapshot?.jobFamily ||
-    (await User.findById(review.userId).select("jobFamily"))?.jobFamily ||
+    review?.snapshot?.jobFamily ||
+    (await User.findById(review?.userId).select("jobFamily"))?.jobFamily ||
     null;
 
-  return competenciesFor(jobFamily);
+  const cycle = review?.cycleId
+    ? await Cycle.findById(review.cycleId).select("endDate")
+    : null;
+
+  return {
+    competencies: competenciesFor(jobFamily),
+    assessedTo: cycle?.endDate || null,
+  };
 };
 
 const isPublished = (review) =>
@@ -41,6 +55,76 @@ const displayStatus = (action, on) =>
       ? "overdue"
       : action.status
     : action.status;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const startOfDay = (date) => {
+  const at = new Date(date);
+  at.setHours(0, 0, 0, 0);
+  return at;
+};
+
+const wholeDaysBetween = (from, to) =>
+  Math.max(0, Math.floor((startOfDay(to) - startOfDay(from)) / DAY_MS));
+
+// ⚠️ Clamped to the end of the shorter month. Left to `setMonth`, the 31st of a month four
+// months before a 30-day one rolls forward into the month after, and a due date quietly moves.
+const addMonths = (date, months) => {
+  const at = new Date(date);
+  const day = at.getDate();
+
+  at.setDate(1);
+  at.setMonth(at.getMonth() + months);
+
+  const lastOfMonth = new Date(at.getFullYear(), at.getMonth() + 1, 0).getDate();
+  at.setDate(Math.min(day, lastOfMonth));
+
+  return at;
+};
+
+// Three windows a year, each a week the two of them place the conversation in, counted from
+// the end of the period the review assessed. ⚠️ The plan closes when the next cycle starts
+// collecting, so the last window can pass unopened; that reads as missed, never as an error.
+const checkInWindows = (assessedTo, held, on) => {
+  if (!assessedTo) return [];
+
+  return CHECK_IN_MONTH_OFFSETS.map((months, index) => {
+    const dueOn = addMonths(assessedTo, months);
+    const opensOn = new Date(dueOn.getTime() - (CHECK_IN_WINDOW_DAYS - 1) * DAY_MS);
+
+    let state = "upcoming";
+    if (index < held) state = "held";
+    else if (startOfDay(on) > startOfDay(dueOn)) state = "missed";
+    else if (startOfDay(on) >= startOfDay(opensOn)) state = "open";
+
+    return { number: index + 1, opensOn, dueOn, state };
+  });
+};
+
+const asCheckIn = (checkIn, index) => ({
+  // Position is the check-in number: the array is only ever appended to.
+  number: index + 1,
+  additional: index >= EXPECTED_CHECK_INS,
+  at: checkIn.at,
+  recordedAt: checkIn.recordedAt,
+  outcome: checkIn.outcome,
+  note: checkIn.note,
+  by: asPerson(checkIn.byId),
+});
+
+const checkInSummary = (plan, assessedTo, on) => {
+  const held = plan.checkIns.length;
+
+  return {
+    expected: EXPECTED_CHECK_INS,
+    held,
+    remaining: Math.max(0, EXPECTED_CHECK_INS - held),
+    additional: Math.max(0, held - EXPECTED_CHECK_INS),
+    canRecord: plan.status === "active",
+    windows: checkInWindows(assessedTo, held, on),
+    entries: plan.checkIns.map(asCheckIn),
+  };
+};
 
 // The supervisor's and HR's view of an action. ⚠️ The employee's view is built elsewhere and
 // carries neither `fromCompetency` nor anything derived from it.
@@ -58,6 +142,9 @@ const asAction = (action, competencies, on) => {
     successCriteria: action.successCriteria,
     status: displayStatus(action, on),
     lastUpdatedAt: action.lastUpdatedAt,
+    daysSinceChange: action.lastUpdatedAt
+      ? wholeDaysBetween(action.lastUpdatedAt, on)
+      : null,
     progressNotes: action.progressNotes.map((note) => ({
       note: note.note,
       by: asPerson(note.byId),
@@ -66,7 +153,14 @@ const asAction = (action, competencies, on) => {
   };
 };
 
-const asPlan = (plan, competencies, on = today()) => ({
+// Least recently changed first, so an action nobody has touched for months is the one read
+// before any other. ⚠️ Sorted on a copy: the stored order is the order they were written in.
+const byStalest = (actions) =>
+  [...actions].sort(
+    (a, b) => (a.lastUpdatedAt?.getTime() || 0) - (b.lastUpdatedAt?.getTime() || 0),
+  );
+
+const asPlan = (plan, { competencies, assessedTo }, on = today()) => ({
   id: String(plan._id),
   type: plan.type,
   status: plan.status,
@@ -80,7 +174,8 @@ const asPlan = (plan, competencies, on = today()) => ({
   outcome: plan.outcome,
   outcomeReason: plan.outcomeReason,
   competencies,
-  actions: plan.actions.map((action) => asAction(action, competencies, on)),
+  actions: byStalest(plan.actions).map((action) => asAction(action, competencies, on)),
+  checkIns: checkInSummary(plan, assessedTo, on),
   canEdit: plan.status === "draft",
 });
 
@@ -89,7 +184,8 @@ const populated = (query) =>
     .populate("userId", "name employeeId")
     .populate("createdBy", "name employeeId")
     .populate("actions.ownerId", "name employeeId")
-    .populate("actions.progressNotes.byId", "name employeeId");
+    .populate("actions.progressNotes.byId", "name employeeId")
+    .populate("checkIns.byId", "name employeeId");
 
 // Who the actor supervises today, as a map. One call answers both the list and the guard,
 // and both then agree by construction.
@@ -110,6 +206,19 @@ const assertSupervisesToday = async (actorId, employeeId) => {
 const assertDraft = (plan) => {
   if (plan.status !== "draft") {
     throw new AppError("This plan has been shared, so it can no longer be edited", 409);
+  }
+};
+
+// ⚠️ Active, never merely shared. The employee's acknowledgement is what makes the plan
+// agreed, so both a conversation about it and a move on one of its actions wait for that.
+const assertActive = (plan) => {
+  if (plan.status !== "active") {
+    throw new AppError(
+      plan.status === "closed"
+        ? "This plan has closed, so nothing further can be recorded on it"
+        : "This plan is not active yet, so nothing can be recorded on it",
+      409,
+    );
   }
 };
 
@@ -174,7 +283,7 @@ const teamPlans = async (actorId) => {
 // answer, and two requests racing each other still lose one to the database.
 const startPlanFromReview = async (reviewId, actor) => {
   const review = await Review.findById(reviewId).select(
-    "_id userId status publishedAt snapshot",
+    "_id userId status publishedAt snapshot cycleId",
   );
   if (!review) throw new AppError("Review not found", 404);
 
@@ -188,7 +297,7 @@ const startPlanFromReview = async (reviewId, actor) => {
   await assertSupervisesToday(actor.id, review.userId);
 
   const existing = await populated(Plan.findOne({ reviewId: review._id, type: "PDP" }));
-  if (existing) return asPlan(existing, await competenciesForReview(review));
+  if (existing) return asPlan(existing, await contextForReview(review));
 
   const created = await Plan.create({
     userId: review.userId,
@@ -200,7 +309,7 @@ const startPlanFromReview = async (reviewId, actor) => {
 
   return asPlan(
     await populated(Plan.findById(created._id)),
-    await competenciesForReview(review),
+    await contextForReview(review),
   );
 };
 
@@ -215,9 +324,9 @@ const supervisorPlan = async (planId, actorId) => {
 
 const getPlanForSupervisor = async (planId, actor) => {
   const plan = await supervisorPlan(planId, actor.id);
-  const review = await Review.findById(plan.reviewId).select("userId snapshot");
+  const review = await Review.findById(plan.reviewId).select("userId snapshot cycleId");
 
-  return asPlan(plan, await competenciesForReview(review || plan));
+  return asPlan(plan, await contextForReview(review || plan));
 };
 
 // ⚠️ Every field is required, and the response names all of the empty ones at once rather
@@ -258,20 +367,20 @@ const assertActionComplete = (body, plan, competencies, actorId) => {
   };
 };
 
-const competenciesForPlan = async (plan) => {
-  const review = await Review.findById(plan.reviewId).select("userId snapshot");
-  return competenciesForReview(review || plan);
+const contextForPlan = async (plan) => {
+  const review = await Review.findById(plan.reviewId).select("userId snapshot cycleId");
+  return contextForReview(review || plan);
 };
 
 const addAction = async (planId, actor, body) => {
   const plan = await supervisorPlan(planId, actor.id);
   assertDraft(plan);
 
-  const competencies = await competenciesForPlan(plan);
-  plan.actions.push(assertActionComplete(body, plan, competencies, actor.id));
+  const context = await contextForPlan(plan);
+  plan.actions.push(assertActionComplete(body, plan, context.competencies, actor.id));
   await plan.save();
 
-  return asPlan(await populated(Plan.findById(plan._id)), competencies);
+  return asPlan(await populated(Plan.findById(plan._id)), context);
 };
 
 const editAction = async (planId, actionId, actor, body) => {
@@ -281,11 +390,11 @@ const editAction = async (planId, actionId, actor, body) => {
   const action = plan.actions.id(actionId);
   if (!action) throw new AppError("Action not found", 404);
 
-  const competencies = await competenciesForPlan(plan);
-  action.set(assertActionComplete(body, plan, competencies, actor.id));
+  const context = await contextForPlan(plan);
+  action.set(assertActionComplete(body, plan, context.competencies, actor.id));
   await plan.save();
 
-  return asPlan(await populated(Plan.findById(plan._id)), competencies);
+  return asPlan(await populated(Plan.findById(plan._id)), context);
 };
 
 const removeAction = async (planId, actionId, actor) => {
@@ -298,10 +407,7 @@ const removeAction = async (planId, actionId, actor) => {
   action.deleteOne();
   await plan.save();
 
-  return asPlan(
-    await populated(Plan.findById(plan._id)),
-    await competenciesForPlan(plan),
-  );
+  return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
 };
 
 // Sharing is what hands the plan to the employee to acknowledge. It is refused on an empty
@@ -318,10 +424,75 @@ const sharePlan = async (planId, actor) => {
   plan.sharedAt = new Date();
   await plan.save();
 
-  return asPlan(
-    await populated(Plan.findById(plan._id)),
-    await competenciesForPlan(plan),
-  );
+  return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
+};
+
+// ⚠️ Names every empty field at once, the same as an action: one missing field per attempt
+// is a form nobody finishes.
+const assertCheckInComplete = (body, plan, on) => {
+  const missing = [];
+
+  if (!CHECK_IN_OUTCOMES.includes(body?.outcome)) missing.push("outcome");
+  if (!String(body?.note || "").trim()) missing.push("note");
+
+  const at = body?.at ? new Date(body.at) : new Date(on);
+  if (Number.isNaN(at.getTime())) missing.push("at");
+
+  if (missing.length) {
+    const error = new AppError("This check-in is not complete", 400);
+    error.details = missing;
+    throw error;
+  }
+
+  if (startOfDay(at) > startOfDay(on)) {
+    throw new AppError("A check-in cannot be dated in the future", 400);
+  }
+
+  if (plan.acknowledgedAt && startOfDay(at) < startOfDay(plan.acknowledgedAt)) {
+    throw new AppError("A check-in cannot be dated before the plan was agreed", 400);
+  }
+
+  return {
+    at,
+    recordedAt: new Date(),
+    outcome: body.outcome,
+    note: String(body.note).trim(),
+  };
+};
+
+// ⚠️ Appended and never afterwards edited or removed: a check-in records a conversation that
+// happened on a day. A correction is a further check-in, which is why extra ones are allowed.
+const recordCheckIn = async (planId, actor, body) => {
+  const plan = await supervisorPlan(planId, actor.id);
+  assertActive(plan);
+
+  plan.checkIns.push({
+    ...assertCheckInComplete(body, plan, today()),
+    byId: actor.id,
+  });
+  await plan.save();
+
+  return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
+};
+
+// The supervisor's alone, including on an action the employee owns: somebody other than the
+// person doing the work confirms it is done.
+const setActionStatus = async (planId, actionId, actor, body) => {
+  const plan = await supervisorPlan(planId, actor.id);
+  assertActive(plan);
+
+  if (!PLAN_ACTION_OPEN_STATUS.includes(body?.status)) {
+    throw new AppError("That is not a state an action can be moved to", 400);
+  }
+
+  const action = plan.actions.id(actionId);
+  if (!action) throw new AppError("Action not found", 404);
+
+  // The date is stamped on save, and only where the state really changed.
+  action.status = body.status;
+  await plan.save();
+
+  return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
 };
 
 // The newest published review, used only to tell "no review yet" from "no plan written".
@@ -344,6 +515,9 @@ const asEmployeeAction = (action, on) => ({
   successCriteria: action.successCriteria,
   status: displayStatus(action, on),
   lastUpdatedAt: action.lastUpdatedAt,
+  daysSinceChange: action.lastUpdatedAt
+    ? wholeDaysBetween(action.lastUpdatedAt, on)
+    : null,
   progressNotes: action.progressNotes.map((note) => ({
     note: note.note,
     by: asPerson(note.byId),
@@ -364,7 +538,11 @@ const asEmployeePlan = (plan, on = today()) => ({
   outcome: plan.outcome,
   canAcknowledge: plan.status === "awaiting_ack",
   canAddNote: plan.status !== "closed",
-  actions: plan.actions.map((action) => asEmployeeAction(action, on)),
+  actions: byStalest(plan.actions).map((action) => asEmployeeAction(action, on)),
+
+  // ⚠️ Safe to serve whole: a check-in carries an outcome about the plan, never a rating,
+  // a band or the competency an action came from.
+  checkIns: plan.checkIns.map(asCheckIn),
 });
 
 const sharedPlanFor = (userId) =>
@@ -465,9 +643,14 @@ const getPlanForCoverage = async (employeeId, actor) => {
 
   await recordPlanRead(actor, employeeId, plan, "allowed");
 
+  const readOnly = asPlan(plan, await contextForPlan(plan));
+
+  // ⚠️ Read only, and every flag the client reads has to say so: a write refused in the
+  // service but offered on the page is a button that only ever produces an error.
   return {
-    ...asPlan(plan, await competenciesForPlan(plan)),
+    ...readOnly,
     canEdit: false,
+    checkIns: { ...readOnly.checkIns, canRecord: false },
   };
 };
 
@@ -483,4 +666,6 @@ module.exports = {
   editAction,
   removeAction,
   sharePlan,
+  recordCheckIn,
+  setActionStatus,
 };

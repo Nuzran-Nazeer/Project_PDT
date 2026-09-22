@@ -465,6 +465,14 @@ const CHECK_IN_OUTCOMES = ["on_track", "at_risk", "off_track"];
 // beyond these are allowed and shown as additional.
 const EXPECTED_CHECK_INS = 3;
 
+// Months after the end of the assessed period at which each check-in falls due, so a group
+// ending 30 April is due in August, December and the following April. ⚠️ Counted from that
+// date and never the calendar: groups are set by joining month, so two employees differ.
+const CHECK_IN_MONTH_OFFSETS = [4, 8, 12];
+
+// Each due date is the last day of a week the two of them can place the conversation in.
+const CHECK_IN_WINDOW_DAYS = 7;
+
 const PLAN_OUTCOMES = [
   "completed",
   "carried_forward",
@@ -518,6 +526,8 @@ module.exports = {
   PLAN_ACTION_OPEN_STATUS,
   CHECK_IN_OUTCOMES,
   EXPECTED_CHECK_INS,
+  CHECK_IN_MONTH_OFFSETS,
+  CHECK_IN_WINDOW_DAYS,
   PLAN_OUTCOMES,
   CARRY_FORWARD_REASONS,
   CYCLE_STAGES,
