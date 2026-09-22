@@ -20,6 +20,13 @@ export const SEEDED = {
     dashboard: "Head of HR dashboard",
   },
 
+  // ALT-1002. An HR officer, so coverage applies to them: what they may do depends on
+  // which units they cover, unlike the Head of HR.
+  hr: {
+    email: "hr@altrium.test",
+    dashboard: "HR officer dashboard",
+  },
+
   // ALT-3021. Created but never activated, so it has no password at all.
   invited: {
     email: "yohan.gomes@altrium.test",

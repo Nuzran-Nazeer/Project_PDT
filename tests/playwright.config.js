@@ -19,7 +19,10 @@ export const API_URL = "http://localhost:5001/api";
 
 // The tests only ever run against the qa database: the connection string from
 // server/.env, with its database name replaced by qa.
-function qaDatabaseUri() {
+//
+// ⚠️ Exported so that a test reaching for the database reaches for it through here and
+// cannot name a database of its own. There is no argument to get this wrong with.
+export function qaDatabaseUri() {
   const serverEnv = dotenv.parse(
     fs.readFileSync(new URL("../server/.env", import.meta.url)),
   );
