@@ -27,6 +27,10 @@ export const removeAction = (id, actionId) =>
 // Hands the plan to the employee; their acknowledgement is what makes it active.
 export const sharePlan = (id) => apiFetch(`/plans/${id}/share`, { method: "PUT" });
 
+// HR's read within their coverage, addressed by the employee: the officer reaches it from
+// that person's record and has no plan id before opening it.
+export const getPlanForCoverage = (userId) => apiFetch(`/plans/employee/${userId}`);
+
 // The employee's own plan, reached without an id: the server decides whose it is.
 export const getMyPlan = () => apiFetch("/plans/mine");
 
