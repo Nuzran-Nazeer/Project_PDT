@@ -1,5 +1,9 @@
 const AppError = require("../utils/AppError");
-const { CHECK_IN_OUTCOMES, PLAN_ACTION_OPEN_STATUS } = require("../config/constants");
+const {
+  CHECK_IN_OUTCOMES,
+  PLAN_ACTION_OPEN_STATUS,
+  CARRY_FORWARD_REASONS,
+} = require("../config/constants");
 
 // Request-shape checks only. Whether the review is published, whether the actor supervises
 // the employee today and whether a competency belongs to that review are decided in the service.
@@ -37,6 +41,13 @@ exports.validateAction = (req, res, next) => {
   if (req.body?.ownerId && !OBJECT_ID_RE.test(String(req.body.ownerId))) {
     return next(new AppError("ownerId is not a valid reference", 400));
   }
+
+  // Whether this action needs one at all depends on where it came from, so the service asks.
+  const { carryReason } = req.body || {};
+  if (carryReason && !CARRY_FORWARD_REASONS.includes(carryReason)) {
+    return next(new AppError("That is not a carry-forward reason", 400));
+  }
+
   next();
 };
 

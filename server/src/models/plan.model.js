@@ -48,12 +48,15 @@ const actionSchema = new mongoose.Schema({
 
   // Set when an action arrives from a closed plan. It keeps the competency it came from
   // originally and gains the one from the current review, so a second carry stays visible.
+  // ⚠️ The date it arrived with is kept so a new one can be told from the stale one. Without
+  // it there is no way to know whether the supervisor gave the action a fresh deadline.
   carriedFrom: {
     type: [
       new mongoose.Schema(
         {
           planId: { type: mongoose.Schema.Types.ObjectId, ref: "Plan" },
           competency: String,
+          targetDate: Date,
         },
         { _id: false },
       ),
