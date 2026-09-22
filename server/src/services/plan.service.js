@@ -4,6 +4,7 @@ const Cycle = require("../models/cycle.model");
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { teamOn } = require("./supervision.service");
+const { membershipOn } = require("./unitmembership.service");
 const { assertHrMayRead } = require("./coverageAuth.service");
 const audit = require("./audit.service");
 const {
@@ -11,6 +12,7 @@ const {
   PLAN_ACTION_CATEGORIES,
   PLAN_ACTION_OPEN_STATUS,
   CHECK_IN_OUTCOMES,
+  CARRY_FORWARD_REASONS,
   CHECK_IN_MONTH_OFFSETS,
   CHECK_IN_WINDOW_DAYS,
   EXPECTED_CHECK_INS,
@@ -126,6 +128,21 @@ const checkInSummary = (plan, assessedTo, on) => {
   };
 };
 
+// What a carried action still owes before the plan can be shared: a reason from the fixed list,
+// and a deadline that is not the one it arrived with.
+const carryDebt = (action) => {
+  const arrived = action.carriedFrom?.[action.carriedFrom.length - 1];
+  if (!arrived) return null;
+
+  const missing = [];
+  if (!CARRY_FORWARD_REASONS.includes(action.carryReason)) missing.push("carryReason");
+
+  const arrivedOn = arrived.targetDate?.getTime();
+  if (arrivedOn && action.targetDate?.getTime() === arrivedOn) missing.push("targetDate");
+
+  return missing.length ? missing : null;
+};
+
 // The supervisor's and HR's view of an action. ⚠️ The employee's view is built elsewhere and
 // carries neither `fromCompetency` nor anything derived from it.
 const asAction = (action, competencies, on) => {
@@ -145,6 +162,10 @@ const asAction = (action, competencies, on) => {
     daysSinceChange: action.lastUpdatedAt
       ? wholeDaysBetween(action.lastUpdatedAt, on)
       : null,
+    carriedTimes: action.carriedFrom?.length || 0,
+    carryReason: action.carryReason,
+    carriedTargetDate: action.carriedFrom?.[action.carriedFrom.length - 1]?.targetDate,
+    owes: carryDebt(action),
     progressNotes: action.progressNotes.map((note) => ({
       note: note.note,
       by: asPerson(note.byId),
@@ -177,7 +198,18 @@ const asPlan = (plan, { competencies, assessedTo }, on = today()) => ({
   actions: byStalest(plan.actions).map((action) => asAction(action, competencies, on)),
   checkIns: checkInSummary(plan, assessedTo, on),
   canEdit: plan.status === "draft",
+  closure: closureOf(plan),
 });
+
+// How a closed plan ended, counted from the actions rather than stored twice.
+const closureOf = (plan) =>
+  plan.status === "closed"
+    ? {
+        closeDate: plan.closeDate,
+        completed: plan.actions.filter((a) => a.status === "done").length,
+        carried: plan.actions.filter((a) => a.status === "carried_forward").length,
+      }
+    : null;
 
 const populated = (query) =>
   query
@@ -278,6 +310,38 @@ const teamPlans = async (actorId) => {
   };
 };
 
+// What the last closed plan left unfinished, shaped to start the new one. ⚠️ Each keeps the
+// competency it originally came from and takes a fresh entry, so an action carried twice shows
+// both. The reason and a new date are left empty on purpose: they are what the supervisor owes
+// before this plan can be shared.
+const carriedActionsFor = async (userId) => {
+  const previous = await Plan.findOne({ userId, type: "PDP", status: "closed" }).sort({
+    closeDate: -1,
+  });
+  if (!previous) return [];
+
+  return previous.actions
+    .filter((action) => action.status === "carried_forward")
+    .map((action) => ({
+      description: action.description,
+      category: action.category,
+      fromCompetency: action.fromCompetency,
+      ownerId: action.ownerId,
+      targetDate: action.targetDate,
+      successCriteria: action.successCriteria,
+      status: "not_started",
+      carriedFrom: [
+        ...action.carriedFrom,
+        {
+          planId: previous._id,
+          competency: action.fromCompetency,
+          targetDate: action.targetDate,
+        },
+      ],
+      carryReason: null,
+    }));
+};
+
 // Starting a plan twice on the same review opens the one already there rather than making a
 // second. ⚠️ The unique index on `reviewId` is the real guarantee; this read is the friendly
 // answer, and two requests racing each other still lose one to the database.
@@ -305,6 +369,7 @@ const startPlanFromReview = async (reviewId, actor) => {
     type: "PDP",
     status: "draft",
     createdBy: actor.id,
+    actions: await carriedActionsFor(review.userId),
   });
 
   return asPlan(
@@ -331,7 +396,7 @@ const getPlanForSupervisor = async (planId, actor) => {
 
 // ⚠️ Every field is required, and the response names all of the empty ones at once rather
 // than the first: a form that reveals one missing field per attempt is a form nobody finishes.
-const assertActionComplete = (body, plan, competencies, actorId) => {
+const assertActionComplete = (body, plan, competencies, actorId, action = null) => {
   const missing = [];
 
   if (!String(body.description || "").trim()) missing.push("description");
@@ -351,6 +416,12 @@ const assertActionComplete = (body, plan, competencies, actorId) => {
     missing.push("fromCompetency");
   }
 
+  // Only ever asked of an action that arrived from a closed plan.
+  const carried = Boolean(action?.carriedFrom?.length);
+  if (carried && !CARRY_FORWARD_REASONS.includes(body.carryReason)) {
+    missing.push("carryReason");
+  }
+
   if (missing.length) {
     const error = new AppError("This action is not complete", 400);
     error.details = missing;
@@ -364,6 +435,7 @@ const assertActionComplete = (body, plan, competencies, actorId) => {
     ownerId,
     targetDate,
     successCriteria: String(body.successCriteria).trim(),
+    ...(carried ? { carryReason: body.carryReason } : {}),
   };
 };
 
@@ -391,7 +463,7 @@ const editAction = async (planId, actionId, actor, body) => {
   if (!action) throw new AppError("Action not found", 404);
 
   const context = await contextForPlan(plan);
-  action.set(assertActionComplete(body, plan, context.competencies, actor.id));
+  action.set(assertActionComplete(body, plan, context.competencies, actor.id, action));
   await plan.save();
 
   return asPlan(await populated(Plan.findById(plan._id)), context);
@@ -418,6 +490,20 @@ const sharePlan = async (planId, actor) => {
 
   if (plan.actions.length === 0) {
     throw new AppError("A plan with no actions cannot be shared", 409);
+  }
+
+  // ⚠️ An action arriving from a closed plan owes a reason and a new deadline before anyone
+  // agrees to it. Refused here rather than on the form, which only hides the way in.
+  const owing = plan.actions.filter((action) => carryDebt(action));
+  if (owing.length) {
+    const error = new AppError(
+      owing.length === 1
+        ? "One action carried forward still needs a reason and a new target date"
+        : `${owing.length} actions carried forward still need a reason and a new target date`,
+      409,
+    );
+    error.details = owing.map((action) => String(action._id));
+    throw error;
   }
 
   plan.status = "awaiting_ack";
@@ -493,6 +579,59 @@ const setActionStatus = async (planId, actionId, actor, body) => {
   await plan.save();
 
   return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
+};
+
+// Plans a cycle's start closes: the ones already handed to the employee. ⚠️ A draft is left
+// alone. It was never shared, so there is nothing to record an outcome against, and the
+// supervisor may still be writing it.
+const CLOSEABLE = ["awaiting_ack", "active"];
+
+// Every open plan for the group whose cycle is starting, which closes them on the group's own
+// date rather than on a calendar one. ⚠️ Read from the user record, not from unit history, so
+// somebody who has left the company is still reached and their plan still closes.
+const closePlansForCycle = async (cycle) => {
+  const people = await User.find({ parGroup: cycle.parGroup }).select("_id").lean();
+  if (!people.length) return { closed: 0, plansCompleted: 0, plansCarried: 0, left: 0 };
+
+  const plans = await Plan.find({
+    userId: { $in: people.map((person) => person._id) },
+    type: "PDP",
+    status: { $in: CLOSEABLE },
+  });
+
+  const on = today();
+  const counts = { closed: plans.length, plansCompleted: 0, plansCarried: 0, left: 0 };
+
+  for (const plan of plans) {
+    const left = !(await membershipOn(plan.userId, on));
+    const unfinished = plan.actions.filter((action) => action.status !== "done");
+
+    plan.status = "closed";
+    plan.closeDate = on;
+
+    if (left) {
+      // ⚠️ Nothing is marked carried: there is no next plan to carry it to, and an action
+      // reading as carried forward with nowhere to go is a claim the record cannot keep.
+      plan.outcome = "not_completed";
+      plan.outcomeReason = "Left the company";
+      counts.left += 1;
+    } else {
+      for (const action of unfinished) action.status = "carried_forward";
+
+      plan.outcome = unfinished.length ? "carried_forward" : "completed";
+
+      // ⚠️ Recorded, never waited for: a plan must not be able to hold up a cycle, and an
+      // automatic close has nobody present to ask.
+      plan.outcomeReason = plan.acknowledgedAt ? null : "Never acknowledged";
+
+      if (unfinished.length) counts.plansCarried += 1;
+      else counts.plansCompleted += 1;
+    }
+
+    await plan.save();
+  }
+
+  return counts;
 };
 
 // The newest published review, used only to tell "no review yet" from "no plan written".
@@ -668,4 +807,5 @@ module.exports = {
   sharePlan,
   recordCheckIn,
   setActionStatus,
+  closePlansForCycle,
 };

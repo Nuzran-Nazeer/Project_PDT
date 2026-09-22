@@ -279,6 +279,12 @@ exports.advanceCycle = async (id, target, actor, { acknowledged = false } = {}) 
   if (next === "collecting") {
     const { openReviewsForCycle } = require("./review.service");
     await openReviewsForCycle(cycle._id);
+
+    // A plan runs until the next appraisal starts gathering, so this event is what ends it.
+    // ⚠️ Nothing in this system runs on a schedule, so there is no other moment it could
+    // happen, and two groups therefore close on genuinely different dates.
+    const { closePlansForCycle } = require("./plan.service");
+    outcome.plans = await closePlansForCycle(cycle);
   }
   if (next === "normalising") {
     const { carryIntoNormalisation } = require("./review.service");
