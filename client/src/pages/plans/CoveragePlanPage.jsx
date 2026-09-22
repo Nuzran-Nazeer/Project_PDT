@@ -5,6 +5,7 @@ import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
+import { ClosureSummary, CarriedMarker } from "../../components/plans/PlanClosure";
 import { categoryLabel, actionStatusLabel, daysSinceLabel } from "../../utils/planLabels";
 
 // HR's read of a plan within their coverage, the same view the supervisor gets.
@@ -78,6 +79,8 @@ export default function CoveragePlanPage() {
         backTo={`/employees/${id}`}
       />
 
+      <ClosureSummary plan={plan} />
+
       <FormSection letter="A" title="Actions">
         <ul className="grid gap-3">
           {plan.actions.map((action) => (
@@ -100,6 +103,8 @@ export default function CoveragePlanPage() {
                 <span className="font-medium text-ink">Success criterion: </span>
                 {action.successCriteria}
               </p>
+
+              <CarriedMarker action={action} />
 
               {action.progressNotes.length > 0 && (
                 <ul className="mt-3 grid gap-2 border-t border-line pt-3">
