@@ -37,6 +37,7 @@ import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
 import TeamPlansPage from "../pages/plans/TeamPlansPage";
 import PlanPage from "../pages/plans/PlanPage";
 import MyPlanPage from "../pages/plans/MyPlanPage";
+import CoveragePlanPage from "../pages/plans/CoveragePlanPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
 import MonitoringPage from "../pages/oversight/MonitoringPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
@@ -169,6 +170,10 @@ function AppRoutes() {
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/employees" element={<EmployeeListPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+          </Route>
+          {/* Not leadership: they reach an employee record but never their plan. */}
+          <Route element={<ProtectedRoute allow={["hr", "head_of_hr"]} />}>
+            <Route path="/employees/:id/plan" element={<CoveragePlanPage />} />
           </Route>
           <Route element={<ProtectedRoute allow={["hr"]} />}>
             <Route path="/employees/new" element={<EmployeeFormPage />} />
