@@ -8,6 +8,20 @@ exports.listTeamPlans = asyncHandler(async (req, res) => {
   res.json(await service.teamPlans(req.user.id));
 });
 
+exports.getMyPlan = asyncHandler(async (req, res) => {
+  res.json(await service.myPlan(req.user.id));
+});
+
+exports.acknowledgeMyPlan = asyncHandler(async (req, res) => {
+  res.json(await service.acknowledgeMyPlan(req.user.id));
+});
+
+exports.addProgressNote = asyncHandler(async (req, res) => {
+  res
+    .status(201)
+    .json(await service.addProgressNote(req.user.id, req.params.actionId, req.body));
+});
+
 exports.startPlan = asyncHandler(async (req, res) => {
   res.status(201).json(await service.startPlanFromReview(req.body.reviewId, req.user));
 });

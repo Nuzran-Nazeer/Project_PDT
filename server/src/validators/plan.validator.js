@@ -22,6 +22,13 @@ exports.validateReviewIdBody = (req, res, next) => {
   next();
 };
 
+exports.validateNote = (req, res, next) => {
+  if (!String(req.body?.note || "").trim()) {
+    return next(new AppError("A progress note cannot be empty", 400));
+  }
+  next();
+};
+
 // ⚠️ Only that `ownerId` is a reference. Whether it is the employee or the supervisor is a
 // rule about two other records, so it belongs in the service.
 exports.validateAction = (req, res, next) => {

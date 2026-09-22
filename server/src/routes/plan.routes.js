@@ -5,6 +5,7 @@ const {
   validateActionId,
   validateReviewIdBody,
   validateAction,
+  validateNote,
 } = require("../validators/plan.validator");
 const { protect } = require("../middleware/auth.middleware");
 
@@ -14,6 +15,15 @@ const { protect } = require("../middleware/auth.middleware");
 
 // Declared before `/:id` so the word is never read as an id.
 router.route("/team").get(protect, controller.listTeamPlans);
+
+// The employee's own plan, reached without an id: nothing they send chooses whose plan it is.
+router.route("/mine").get(protect, controller.getMyPlan);
+
+router.route("/mine/acknowledge").put(protect, controller.acknowledgeMyPlan);
+
+router
+  .route("/mine/actions/:actionId/notes")
+  .post(protect, validateActionId, validateNote, controller.addProgressNote);
 
 router.route("/").post(protect, validateReviewIdBody, controller.startPlan);
 

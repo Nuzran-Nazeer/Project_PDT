@@ -9,12 +9,9 @@ const {
   PUBLISHED_STATES,
 } = require("../config/constants");
 
-// Writing a development plan against a published review, and the supervisor's read of it.
-//
-// ⚠️ Two guards sit at the top of every write here, and both refuse in this service rather
-// than only on the route: the review is published, and the actor supervises that employee
-// today. "Today" is the whole of the transfer rule — nothing stores who owns a plan, so a
-// plan moves to a new supervisor with no code running and no manual step.
+// ⚠️ Every write here refuses in this service, not only on the route: the review must be
+// published and the actor must supervise that employee today. Nothing stores who owns a plan,
+// so "today" is the whole of the transfer rule.
 
 const today = () => new Date();
 
@@ -325,8 +322,107 @@ const sharePlan = async (planId, actor) => {
   );
 };
 
+// The newest published review, used only to tell "no review yet" from "no plan written".
+const publishedReviewFor = (userId) =>
+  Review.findOne({ userId, status: { $in: PUBLISHED_STATES } })
+    .sort({ publishedAt: -1 })
+    .select("_id");
+
+// A draft is never one of these, so a plan reaches the employee only once it is shared.
+const VISIBLE_TO_EMPLOYEE = ["awaiting_ack", "active", "closed"];
+
+// ⚠️ Built field by field, never from `asAction` and never by spreading the action: the
+// competency an action came from is the one thing this projection must not carry.
+const asEmployeeAction = (action, on) => ({
+  id: String(action._id),
+  description: action.description,
+  category: action.category,
+  owner: asPerson(action.ownerId),
+  targetDate: action.targetDate,
+  successCriteria: action.successCriteria,
+  status: displayStatus(action, on),
+  lastUpdatedAt: action.lastUpdatedAt,
+  progressNotes: action.progressNotes.map((note) => ({
+    note: note.note,
+    by: asPerson(note.byId),
+    at: note.at,
+  })),
+});
+
+// ⚠️ No `competencies` list either. Serving the set the review was opened under would
+// hand back by the collection what `asEmployeeAction` withholds per action.
+const asEmployeePlan = (plan, on = today()) => ({
+  state: "plan",
+  id: String(plan._id),
+  type: plan.type,
+  status: plan.status,
+  sharedAt: plan.sharedAt,
+  acknowledgedAt: plan.acknowledgedAt,
+  closeDate: plan.closeDate,
+  outcome: plan.outcome,
+  canAcknowledge: plan.status === "awaiting_ack",
+  canAddNote: plan.status !== "closed",
+  actions: plan.actions.map((action) => asEmployeeAction(action, on)),
+});
+
+const employeePlanFor = (userId) =>
+  Plan.findOne({ userId, type: "PDP", status: { $in: VISIBLE_TO_EMPLOYEE } }).sort({
+    sharedAt: -1,
+  });
+
+// Nothing to show separates into two cases the employee can act on differently: no published
+// review to write a plan against, or one published and no plan written yet.
+const myPlan = async (userId) => {
+  const plan = await populated(employeePlanFor(userId));
+  if (plan) return asEmployeePlan(plan);
+
+  return { state: (await publishedReviewFor(userId)) ? "no_plan" : "no_review" };
+};
+
+// Acknowledging is what makes a plan active. A second attempt finds nothing awaiting one and
+// is refused, which is also what a plan that was never shared gets.
+const acknowledgeMyPlan = async (userId) => {
+  const plan = await Plan.findOne({ userId, type: "PDP", status: "awaiting_ack" }).sort({
+    sharedAt: -1,
+  });
+
+  if (!plan) throw new AppError("You have no plan waiting to be acknowledged", 409);
+
+  plan.status = "active";
+  plan.acknowledgedAt = new Date();
+  await plan.save();
+
+  return myPlan(userId);
+};
+
+// ⚠️ The only write the employee has on a plan. Nothing else is touched here, so an action
+// status and anything the supervisor wrote stay theirs.
+const addProgressNote = async (userId, actionId, body) => {
+  const note = String(body?.note || "").trim();
+  if (!note) throw new AppError("A progress note cannot be empty", 400);
+
+  const plan = await Plan.findOne({
+    userId,
+    type: "PDP",
+    status: { $in: ["awaiting_ack", "active"] },
+  }).sort({ sharedAt: -1 });
+
+  if (!plan) throw new AppError("You have no open plan to write against", 409);
+
+  const action = plan.actions.id(actionId);
+  if (!action) throw new AppError("Action not found", 404);
+
+  action.progressNotes.push({ note, byId: userId, at: new Date() });
+  await plan.save();
+
+  return myPlan(userId);
+};
+
 module.exports = {
   teamPlans,
+  myPlan,
+  acknowledgeMyPlan,
+  addProgressNote,
   startPlanFromReview,
   getPlanForSupervisor,
   addAction,
