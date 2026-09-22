@@ -42,3 +42,15 @@ export const addProgressNote = (actionId, note) =>
     method: "POST",
     body: JSON.stringify({ note }),
   });
+
+// Appended only: there is no call to edit or delete one, because a check-in records a
+// conversation that happened. A correction is a further check-in.
+export const recordCheckIn = (id, checkIn) =>
+  apiFetch(`/plans/${id}/check-ins`, { method: "POST", body: JSON.stringify(checkIn) });
+
+// The supervisor's alone, including on an action the employee owns.
+export const setActionStatus = (id, actionId, status) =>
+  apiFetch(`/plans/${id}/actions/${actionId}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });

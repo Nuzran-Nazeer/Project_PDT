@@ -7,11 +7,21 @@ import {
   editAction,
   removeAction,
   sharePlan,
+  recordCheckIn,
+  setActionStatus,
 } from "../../services/plans";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
-import { formatDate, toDateInput } from "../../utils/dates";
-import { categoryLabel, actionStatusLabel } from "../../utils/planLabels";
+import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
+import { formatDate, toDateInput, todayInput } from "../../utils/dates";
+import {
+  categoryLabel,
+  actionStatusLabel,
+  checkInOutcomeLabel,
+  daysSinceLabel,
+  CHECK_IN_OUTCOMES,
+  TRACKABLE_STATUSES,
+} from "../../utils/planLabels";
 
 // The supervisor's view: every action shows the competency it came from and who owns it.
 // ⚠️ This is the only view that carries the competency. The employee's own page and the
@@ -26,6 +36,8 @@ const EMPTY = {
   successCriteria: "",
 };
 
+const EMPTY_CHECK_IN = { at: "", outcome: "", note: "" };
+
 export default function PlanPage() {
   const { id } = useParams();
   const { user, constants } = useAuth();
@@ -35,6 +47,7 @@ export default function PlanPage() {
   const [missing, setMissing] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
+  const [checkIn, setCheckIn] = useState({ ...EMPTY_CHECK_IN, at: todayInput() });
   const [busy, setBusy] = useState(false);
 
   const categories = constants?.planActionCategories || [];
@@ -80,6 +93,15 @@ export default function PlanPage() {
     return run(() => (editingId ? editAction(id, editingId, form) : addAction(id, form)));
   };
 
+  const submitCheckIn = (event) => {
+    event.preventDefault();
+    return run(async () => {
+      const saved = await recordCheckIn(id, checkIn);
+      setCheckIn({ ...EMPTY_CHECK_IN, at: todayInput() });
+      return saved;
+    });
+  };
+
   const startEditing = (action) => {
     setEditingId(action.id);
     setMissing([]);
@@ -115,6 +137,9 @@ export default function PlanPage() {
     );
   }
 
+  const tracking = plan.status === "active";
+  const canRecordCheckIn = plan.checkIns?.canRecord;
+
   const owners = [
     { id: plan.employee?.id, name: `${plan.employee?.name} (the employee)` },
     { id: user?._id, name: `${user?.name} (you)` },
@@ -125,8 +150,9 @@ export default function PlanPage() {
       <PageHeader
         title={`${plan.employee?.name}'s development plan`}
         context={[
-          plan.status === "draft" ? "Draft" : "Shared, awaiting acknowledgement",
+          STATUS_LABELS[plan.status] || plan.status,
           plan.sharedAt && `shared ${formatDate(plan.sharedAt)}`,
+          plan.acknowledgedAt && `acknowledged ${formatDate(plan.acknowledgedAt)}`,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -169,13 +195,36 @@ export default function PlanPage() {
                     <Row label="From competency">{action.competencyName}</Row>
                     <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
                     <Row label="Target date">{formatDate(action.targetDate)}</Row>
-                    <Row label="State">{actionStatusLabel(action.status)}</Row>
+                    <Row label="State">
+                      {actionStatusLabel(action.status)}
+                      {daysSinceLabel(action.daysSinceChange) &&
+                        ` · ${daysSinceLabel(action.daysSinceChange)}`}
+                    </Row>
                   </dl>
 
                   <p className="mt-3 text-[13px] text-muted">
                     <span className="font-medium text-ink">Success criterion: </span>
                     {action.successCriteria}
                   </p>
+
+                  {tracking && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                      <span className="text-[13px] font-medium text-ink">Move to</span>
+                      {TRACKABLE_STATUSES.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={busy || action.status === status}
+                          onClick={() =>
+                            run(() => setActionStatus(id, action.id, status))
+                          }
+                          className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-[13px] text-muted transition-colors hover:text-brand disabled:cursor-default disabled:border-brand disabled:text-brand disabled:opacity-100"
+                        >
+                          {actionStatusLabel(status)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {plan.canEdit && (
                     <div className="mt-3 flex gap-3">
@@ -359,10 +408,97 @@ export default function PlanPage() {
             </>
           )}
         </FormSection>
+
+        <FormSection letter="D" title="Check-ins">
+          <CheckInSchedule summary={plan.checkIns} />
+
+          <div className="mt-4">
+            <CheckInEntries entries={plan.checkIns?.entries} />
+          </div>
+
+          {canRecordCheckIn ? (
+            <form
+              onSubmit={submitCheckIn}
+              className="mt-4 grid gap-4 border-t border-line pt-4"
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Date of the conversation"
+                  name="at"
+                  missing={missing}
+                  hint="The day you spoke, which may not be today."
+                >
+                  <input
+                    id="at"
+                    type="date"
+                    max={todayInput()}
+                    value={checkIn.at}
+                    onChange={(e) => setCheckIn({ ...checkIn, at: e.target.value })}
+                    className={inputClass(missing, "at")}
+                  />
+                </Field>
+
+                <Field label="Outcome" name="outcome" missing={missing}>
+                  <select
+                    id="outcome"
+                    value={checkIn.outcome}
+                    onChange={(e) => setCheckIn({ ...checkIn, outcome: e.target.value })}
+                    className={inputClass(missing, "outcome")}
+                  >
+                    <option value="">Choose an outcome</option>
+                    {CHECK_IN_OUTCOMES.map((key) => (
+                      <option key={key} value={key}>
+                        {checkInOutcomeLabel(key)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+
+              <Field
+                label="Note"
+                name="note"
+                missing={missing}
+                hint="What was discussed. This cannot be changed once recorded."
+              >
+                <textarea
+                  id="note"
+                  rows={3}
+                  value={checkIn.note}
+                  onChange={(e) => setCheckIn({ ...checkIn, note: e.target.value })}
+                  className={inputClass(missing, "note")}
+                />
+              </Field>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {busy ? "Recording…" : "Record the check-in"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className="mt-4 border-t border-line pt-4 text-[13px] text-muted">
+              {plan.status === "closed"
+                ? "This plan has closed."
+                : `Check-ins open once ${plan.employee?.name} acknowledges the plan.`}
+            </p>
+          )}
+        </FormSection>
       </div>
     </>
   );
 }
+
+const STATUS_LABELS = {
+  draft: "Draft",
+  awaiting_ack: "Shared, awaiting acknowledgement",
+  active: "Active",
+  closed: "Closed",
+};
 
 const inputClass = (missing, name) =>
   `w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${
