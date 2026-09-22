@@ -14,6 +14,7 @@ const validateId = (param, label) => (req, res, next) => {
 
 exports.validatePlanId = validateId("id", "id");
 exports.validateActionId = validateId("actionId", "actionId");
+exports.validateUserId = validateId("userId", "userId");
 
 exports.validateReviewIdBody = (req, res, next) => {
   if (!OBJECT_ID_RE.test(String(req.body?.reviewId || ""))) {
