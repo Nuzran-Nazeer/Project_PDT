@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { getImprovementQueue, decidePlan } from "../../services/plans";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
-import { ImprovementDetails } from "../../components/plans/ImprovementPlan";
+import { ImprovementPlanSummary } from "../../components/plans/ImprovementPlan";
 import { formatDate } from "../../utils/dates";
-import { categoryLabel } from "../../utils/planLabels";
 
 // ⚠️ What an officer may decide, not what they may read: the server drops anyone outside
 // their coverage and anyone in their own reporting line before the list is built.
@@ -81,29 +80,7 @@ export default function ImprovementQueuePage() {
               title={plan.employee?.name}
               note={`Written by ${plan.createdBy?.name || "their supervisor"} · sent ${formatDate(plan.improvement?.submittedAt)}`}
             >
-              <ImprovementDetails plan={plan} />
-
-              <ul className="grid gap-3">
-                {plan.actions.map((action) => (
-                  <li
-                    key={action.id}
-                    className="rounded-lg border border-line p-4 text-sm"
-                  >
-                    <p className="font-medium text-ink">{action.description}</p>
-
-                    <p className="mt-2 text-[13px] text-muted">
-                      {categoryLabel(action.category)} · {action.competencyName} ·{" "}
-                      {action.owner?.name || "Not recorded"} · due{" "}
-                      {formatDate(action.targetDate)}
-                    </p>
-
-                    <p className="mt-2 text-[13px] text-muted">
-                      <span className="font-medium text-ink">Success criterion: </span>
-                      {action.successCriteria}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <ImprovementPlanSummary plan={plan} />
 
               <div className="mt-4 border-t border-line pt-4">
                 <label

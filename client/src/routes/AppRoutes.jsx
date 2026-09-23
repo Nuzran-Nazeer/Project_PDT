@@ -41,6 +41,7 @@ import MyImprovementPlanPage from "../pages/plans/MyImprovementPlanPage";
 import CoveragePlanPage from "../pages/plans/CoveragePlanPage";
 import StartImprovementPlanPage from "../pages/plans/StartImprovementPlanPage";
 import ImprovementQueuePage from "../pages/plans/ImprovementQueuePage";
+import OpenEscalationsPage from "../pages/plans/OpenEscalationsPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
 import MonitoringPage from "../pages/oversight/MonitoringPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
@@ -66,6 +67,7 @@ const TAB_PAGES = {
   "reviewer-identity": ReviewerIdentityPage,
   "team-plans": TeamPlansPage,
   "improvement-approvals": ImprovementQueuePage,
+  "improvement-escalations": OpenEscalationsPage,
   "audit-trail": AuditTrailPage,
   monitoring: MonitoringPage,
 

@@ -217,6 +217,16 @@ export const TABS_BY_GROUP = {
       built: true,
     },
     {
+      section: "Running the cycle",
+      id: "improvement-escalations",
+      path: "/improvement-escalations",
+      label: "Open escalations",
+      icon: "flag",
+      title: "Open escalations",
+      description: "Record how an escalated improvement plan ended",
+      built: true,
+    },
+    {
       section: "People data",
       id: "employee-records",
       path: "/employees",

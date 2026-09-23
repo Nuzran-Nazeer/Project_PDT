@@ -46,6 +46,20 @@ export const decidePlan = (id, decision, reason) =>
 // What is waiting on the officer reading it, across the units they cover today.
 export const getImprovementQueue = () => apiFetch("/plans/improvement/queue");
 
+// How the supervisor ends a plan. ⚠️ Only completed and not completed close it: extending
+// moves the end date and escalating hands it to HR, and both leave it running.
+export const recordImprovementOutcome = (id, body) =>
+  apiFetch(`/plans/${id}/outcome`, { method: "PUT", body: JSON.stringify(body) });
+
+// The only write an officer has on a plan, and only on one the supervisor escalated.
+export const closeEscalatedPlan = (id, body) =>
+  apiFetch(`/plans/${id}/escalation`, { method: "PUT", body: JSON.stringify(body) });
+
+export const getOpenEscalations = () => apiFetch("/plans/improvement/escalations");
+
+export const getImprovementPlansForCoverage = (userId) =>
+  apiFetch(`/plans/employee/${userId}/improvement`);
+
 // HR's read within their coverage, addressed by the employee: the officer reaches it from
 // that person's record and has no plan id before opening it.
 export const getPlanForCoverage = (userId) => apiFetch(`/plans/employee/${userId}`);

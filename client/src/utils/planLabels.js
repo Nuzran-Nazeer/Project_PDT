@@ -86,6 +86,26 @@ const PLAN_OUTCOME_LABELS = {
   completed: "Every action completed",
   carried_forward: "Actions carried forward",
   not_completed: "Not completed",
+  extended: "Extended",
+  escalated: "Escalated to HR",
+};
+
+// ⚠️ Only the first two close a plan. Extending moves the end date and escalating hands it to
+// HR, and both leave it running, which is why the wording here is a choice and not a state.
+export const IMPROVEMENT_SUPERVISOR_OUTCOMES = [
+  "completed",
+  "not_completed",
+  "extended",
+  "escalated",
+];
+
+export const IMPROVEMENT_HR_OUTCOMES = ["completed", "not_completed"];
+
+const OUTCOME_CHOICE_LABELS = {
+  completed: "Completed",
+  not_completed: "Not completed",
+  extended: "Extend it",
+  escalated: "Escalate to HR",
 };
 
 const CARRIED_TIMES = { 1: "once", 2: "twice" };
@@ -112,6 +132,7 @@ export const checkInOutcomeLabel = (key) => CHECK_IN_OUTCOME_LABELS[key] || key;
 export const windowStateLabel = (key) => WINDOW_STATE_LABELS[key] || key;
 export const carryReasonLabel = (key) => CARRY_REASON_LABELS[key] || key;
 export const planOutcomeLabel = (key) => PLAN_OUTCOME_LABELS[key] || key;
+export const outcomeChoiceLabel = (key) => OUTCOME_CHOICE_LABELS[key] || key;
 
 export const carriedTimesLabel = (times) =>
   `Carried forward ${CARRIED_TIMES[times] || `${times} times`}`;
