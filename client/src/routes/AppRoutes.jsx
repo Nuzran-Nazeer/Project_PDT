@@ -37,6 +37,7 @@ import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
 import TeamPlansPage from "../pages/plans/TeamPlansPage";
 import PlanPage from "../pages/plans/PlanPage";
 import MyPlanPage from "../pages/plans/MyPlanPage";
+import MyImprovementPlanPage from "../pages/plans/MyImprovementPlanPage";
 import CoveragePlanPage from "../pages/plans/CoveragePlanPage";
 import StartImprovementPlanPage from "../pages/plans/StartImprovementPlanPage";
 import ImprovementQueuePage from "../pages/plans/ImprovementQueuePage";
@@ -72,6 +73,7 @@ const TAB_PAGES = {
   "feedback-i-owe": FeedbackOwedPage,
   "my-result": MyResultPage,
   "my-development-plan": MyPlanPage,
+  "my-improvement-plan": MyImprovementPlanPage,
 };
 
 function AppRoutes() {

@@ -56,6 +56,14 @@ export const getMyPlan = () => apiFetch("/plans/mine");
 export const acknowledgeMyPlan = () =>
   apiFetch("/plans/mine/acknowledge", { method: "PUT" });
 
+// Every improvement plan they have had, newest first. ⚠️ Closed ones stay: this is the one
+// page whose access outlasts the plan.
+export const getMyImprovementPlans = () => apiFetch("/plans/mine/improvement");
+
+// Records that they read it. The plan was already running, so nothing else changes.
+export const acknowledgeMyImprovementPlan = () =>
+  apiFetch("/plans/mine/improvement/acknowledge", { method: "PUT" });
+
 export const addProgressNote = (actionId, note) =>
   apiFetch(`/plans/mine/actions/${actionId}/notes`, {
     method: "POST",

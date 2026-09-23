@@ -290,6 +290,15 @@ export const TABS_BY_GROUP = {
       built: true,
     },
     {
+      id: "my-improvement-plan",
+      path: "/my-improvement-plan",
+      label: "My improvement plan",
+      icon: "target",
+      title: "My improvement plan",
+      description: "What is expected of you, by when",
+      built: true,
+    },
+    {
       id: "my-history",
       path: "/my-history",
       label: "My history",
