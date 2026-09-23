@@ -14,6 +14,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
 import { ClosureSummary, CarriedMarker } from "../../components/plans/PlanClosure";
+import { ImprovementDetails } from "../../components/plans/ImprovementPlan";
 import { formatDate, toDateInput, todayInput } from "../../utils/dates";
 import {
   categoryLabel,
@@ -21,14 +22,14 @@ import {
   checkInOutcomeLabel,
   daysSinceLabel,
   carryReasonLabel,
+  planStatusLabel,
   CHECK_IN_OUTCOMES,
   CARRY_FORWARD_REASONS,
   TRACKABLE_STATUSES,
 } from "../../utils/planLabels";
 
-// The supervisor's view: every action shows the competency it came from and who owns it.
-// ⚠️ This is the only view that carries the competency. The employee's own page and the
-// response behind it never do.
+// The supervisor's view of both kinds of plan. ⚠️ This is the only view that carries the
+// competency. The employee's own page and the response behind it never do.
 
 const EMPTY = {
   description: "",
@@ -142,12 +143,18 @@ export default function PlanPage() {
     );
   }
 
+  const isImprovement = plan.type === "PIP";
   const tracking = plan.status === "active";
   const canRecordCheckIn = plan.checkIns?.canRecord;
 
   // Only an action that arrived from a closed plan is ever asked for a carry reason.
   const editing = plan.actions.find((action) => action.id === editingId);
   const owing = plan.actions.filter((action) => action.owes);
+
+  // A conversation that went off track is the second way into an improvement plan.
+  const offTrack = (plan.checkIns?.entries || []).filter(
+    (entry) => entry.outcome === "off_track",
+  );
 
   const owners = [
     { id: plan.employee?.id, name: `${plan.employee?.name} (the employee)` },
@@ -157,9 +164,9 @@ export default function PlanPage() {
   return (
     <>
       <PageHeader
-        title={`${plan.employee?.name}'s development plan`}
+        title={`${plan.employee?.name}'s ${isImprovement ? "improvement" : "development"} plan`}
         context={[
-          STATUS_LABELS[plan.status] || plan.status,
+          planStatusLabel(plan.status),
           plan.sharedAt && `shared ${formatDate(plan.sharedAt)}`,
           plan.acknowledgedAt && `acknowledged ${formatDate(plan.acknowledgedAt)}`,
         ]
@@ -184,6 +191,7 @@ export default function PlanPage() {
       )}
 
       <ClosureSummary plan={plan} />
+      <ImprovementDetails plan={plan} />
 
       <div className="grid gap-5">
         <FormSection
@@ -433,8 +441,12 @@ export default function PlanPage() {
 
         <FormSection
           letter="C"
-          title="Share the plan"
-          note="Sharing sends it to the employee. Their acknowledgement is what makes it active."
+          title={isImprovement ? "Approval and sharing" : "Share the plan"}
+          note={
+            isImprovement
+              ? "HR approves it before the employee sees anything."
+              : "Sharing sends it to the employee. Their acknowledgement is what makes it active."
+          }
         >
           {plan.status === "closed" ? (
             <p className="text-sm text-muted">
@@ -553,17 +565,43 @@ export default function PlanPage() {
             </p>
           )}
         </FormSection>
+
+        {/* ⚠️ Only on a development plan, and never on the employee's page or HR's read.
+            An improvement plan is not started from another improvement plan. */}
+        {!isImprovement && (
+          <FormSection
+            letter="E"
+            title="Improvement plan"
+            note="A formal route for a serious concern. HR approves it before the employee sees it."
+          >
+            <Link
+              to={`/team-plans/${id}/improvement`}
+              className="text-sm text-brand transition-colors hover:underline"
+            >
+              Start one from the published result
+            </Link>
+
+            {offTrack.length > 0 && (
+              <ul className="mt-3 grid gap-2 border-t border-line pt-3">
+                {offTrack.map((entry) => (
+                  <li key={entry.number} className="text-[13px]">
+                    <Link
+                      to={`/team-plans/${id}/improvement?checkIn=${entry.number}`}
+                      className="text-brand transition-colors hover:underline"
+                    >
+                      Start one from check-in {entry.number}
+                    </Link>
+                    <span className="text-muted"> · {formatDate(entry.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+        )}
       </div>
     </>
   );
 }
-
-const STATUS_LABELS = {
-  draft: "Draft",
-  awaiting_ack: "Shared, awaiting acknowledgement",
-  active: "Active",
-  closed: "Closed",
-};
 
 // The server names what a carried action is short of: one of these, or both.
 const OWED_LABELS = {

@@ -56,6 +56,30 @@ const CARRY_REASON_LABELS = {
   blocked_by_plan_owner: "Blocked by the plan owner",
 };
 
+// The values the start form offers, held here for the same reason as the check-in outcomes
+// above: the server refuses anything else, and its bounds are what the form allows.
+export const IMPROVEMENT_PLAN_TYPES = ["performance", "behaviour", "collaboration"];
+export const IMPROVEMENT_MIN_DAYS = 30;
+export const IMPROVEMENT_MAX_DAYS = 90;
+
+const IMPROVEMENT_TYPE_LABELS = {
+  performance: "Performance",
+  behaviour: "Behaviour",
+  collaboration: "Collaboration",
+};
+
+const PLAN_STATUS_LABELS = {
+  draft: "Draft",
+  awaiting_ack: "Shared, awaiting acknowledgement",
+  active: "Active",
+  closed: "Closed",
+};
+
+const TRIGGER_LABELS = {
+  review: "A published result",
+  check_in: "A check-in recorded as off track",
+};
+
 const PLAN_OUTCOME_LABELS = {
   completed: "Every action completed",
   carried_forward: "Actions carried forward",
@@ -75,6 +99,10 @@ const WINDOW_STATE_LABELS = {
 // carried forward is written when it closes, so neither is a state anyone picks.
 export const TRACKABLE_STATUSES = ["not_started", "in_progress", "done"];
 
+export const improvementTypeLabel = (key) => IMPROVEMENT_TYPE_LABELS[key] || key;
+export const planStatusLabel = (key) => PLAN_STATUS_LABELS[key] || key;
+export const triggerLabel = (key) => TRIGGER_LABELS[key] || key;
+
 export const categoryLabel = (key) => CATEGORY_LABELS[key] || key;
 export const actionStatusLabel = (key) => ACTION_STATUS_LABELS[key] || key;
 export const planStateLabel = (key) => PLAN_STATE_LABELS[key] || key;
@@ -90,6 +118,21 @@ export const daysSinceLabel = (days) => {
   if (days === null || days === undefined) return null;
   if (days === 0) return "changed today";
   return days === 1 ? "1 day ago" : `${days} days ago`;
+};
+
+export const daysRemainingLabel = (days) => {
+  if (days === null || days === undefined) return null;
+  if (days === 0) return "ends today";
+  return days === 1 ? "1 day left" : `${days} days left`;
+};
+
+// Amber reads as somebody's turn rather than as a problem, which is what a plan waiting on
+// a person is.
+export const PLAN_STATUS_TONE = {
+  draft: "text-muted",
+  awaiting_ack: "font-medium text-success",
+  active: "font-medium text-success",
+  closed: "text-muted",
 };
 
 export const PLAN_STATE_TONE = {

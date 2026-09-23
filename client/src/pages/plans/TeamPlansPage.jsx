@@ -4,7 +4,12 @@ import { useAuth } from "../../hooks/useAuth";
 import { getTeamPlans, startPlan } from "../../services/plans";
 import PageHeader from "../../components/layout/PageHeader";
 import { formatDate } from "../../utils/dates";
-import { planStateLabel, PLAN_STATE_TONE } from "../../utils/planLabels";
+import {
+  planStateLabel,
+  planStatusLabel,
+  PLAN_STATE_TONE,
+  PLAN_STATUS_TONE,
+} from "../../utils/planLabels";
 
 // ⚠️ Everyone supervised today whose review is published, and nobody else. Somebody
 // supervised last year and not now is absent because the list is built from today's team.
@@ -89,6 +94,7 @@ export default function TeamPlansPage() {
                 <Th>Review published</Th>
                 <Th>Plan</Th>
                 <Th>Actions</Th>
+                <Th>Improvement plan</Th>
                 <Th> </Th>
               </tr>
             </thead>
@@ -109,6 +115,19 @@ export default function TeamPlansPage() {
                   </td>
                   <td className="px-4 py-3 text-muted">
                     {person.state === "owed" ? "—" : person.actionCount}
+                  </td>
+                  <td className="px-4 py-3">
+                    {person.improvement ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/team-plans/${person.improvement.id}`)}
+                        className={`transition-colors hover:underline ${PLAN_STATUS_TONE[person.improvement.status] || "text-muted"}`}
+                      >
+                        {planStatusLabel(person.improvement.status)}
+                      </button>
+                    ) : (
+                      <span className="text-muted">None</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <button
