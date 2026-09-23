@@ -7,6 +7,9 @@ const {
   CHECK_IN_OUTCOMES,
   PLAN_OUTCOMES,
   CARRY_FORWARD_REASONS,
+  IMPROVEMENT_PLAN_TYPES,
+  IMPROVEMENT_TRIGGERS,
+  PLAN_APPROVAL_DECISIONS,
 } = require("../config/constants");
 
 // Development plans and improvement plans share this shape and differ only in their rules,
@@ -82,6 +85,33 @@ const checkInSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// What started an improvement plan: a published result low enough to warrant one, or a
+// development-plan check-in that went off track. ⚠️ The review is named here and never in
+// `reviewId`, which the development plan for that same review already holds.
+const triggerSchema = new mongoose.Schema(
+  {
+    source: { type: String, enum: IMPROVEMENT_TRIGGERS, required: true },
+    reviewId: { type: mongoose.Schema.Types.ObjectId, ref: "Review", default: null },
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: "Plan", default: null },
+    checkInNumber: { type: Number, default: null },
+  },
+  { _id: false },
+);
+
+// HR's last decision. ⚠️ One record, overwritten rather than appended to, and it survives a
+// resubmission so the next officer sees why it was sent back. The sequence is the trail's job.
+const approvalSchema = new mongoose.Schema(
+  {
+    decision: { type: String, enum: PLAN_APPROVAL_DECISIONS, required: true },
+    byId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    at: { type: Date, required: true },
+
+    // Required on a refusal and null on an approval: a plan sent back has to say why.
+    reason: { type: String, default: null },
+  },
+  { _id: false },
+);
+
 const planSchema = new mongoose.Schema(
   {
     userId: {
@@ -103,8 +133,25 @@ const planSchema = new mongoose.Schema(
 
     // Improvement-plan fields. They stay null on a development plan and are kept here
     // because both types are one collection with one shape.
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     durationDays: { type: Number, default: null },
+
+    // When it last went to HR, and what HR said. Nobody approves a development plan.
+    submittedAt: { type: Date, default: null },
+    approval: { type: approvalSchema, default: null },
+
+    // The case type. Required when an improvement plan is created, read only by HR, and
+    // nothing in the system branches on it.
+    improvementType: { type: String, enum: IMPROVEMENT_PLAN_TYPES, default: null },
+
+    // What the plan is about, as a stable key and never a display name. An action carries
+    // its own; this is the concern the whole plan was raised over.
+    forCompetency: { type: String, default: null },
+
+    // ⚠️ Both are set when the plan is shared, not when it is written: HR's approval can take
+    // days, and a window fixed at drafting would start before anybody had agreed to it.
+    endDate: { type: Date, default: null },
+
+    trigger: { type: triggerSchema, default: null },
 
     sharedAt: { type: Date, default: null },
     acknowledgedAt: { type: Date, default: null },
@@ -126,6 +173,17 @@ const planSchema = new mongoose.Schema(
 planSchema.index(
   { reviewId: 1 },
   { unique: true, partialFilterExpression: { reviewId: { $type: "objectId" } } },
+);
+
+// One improvement plan open per employee. ⚠️ Named, because `userId` is indexed above and two
+// indexes wanting the name `userId_1` end with Mongoose keeping the first and dropping this one.
+planSchema.index(
+  { userId: 1 },
+  {
+    name: "one_open_improvement_plan",
+    unique: true,
+    partialFilterExpression: { type: "PIP", closeDate: { $type: "null" } },
+  },
 );
 
 // ⚠️ Mongoose 9 hooks take no `next` callback; writing one throws "next is not a function".

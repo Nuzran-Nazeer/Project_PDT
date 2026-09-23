@@ -4,6 +4,8 @@ const {
   validatePlanId,
   validateActionId,
   validateReviewIdBody,
+  validateImprovementSource,
+  validateDecision,
   validateAction,
   validateActionStatus,
   validateCheckIn,
@@ -36,7 +38,25 @@ router
 
 router.route("/").post(protect, validateReviewIdBody, controller.startPlan);
 
+// Its own route, not a field on the one above: the two have different entry points, different
+// references in the body and different rules about who may start one.
+router
+  .route("/improvement")
+  .post(protect, validateImprovementSource, controller.startImprovementPlan);
+
+// Addressed by nothing, the same as the employee's own plan: nothing the caller sends
+// chooses whose plans come back.
+router.route("/improvement/queue").get(protect, controller.listImprovementQueue);
+
 router.route("/:id").get(protect, validatePlanId, controller.getPlan);
+
+// Sending an improvement plan to HR, and HR's answer: the only writes here the supervisor
+// does not make.
+router.route("/:id/submit").put(protect, validatePlanId, controller.submitForApproval);
+
+router
+  .route("/:id/decision")
+  .put(protect, validatePlanId, validateDecision, controller.decideImprovementPlan);
 
 router
   .route("/:id/actions")
