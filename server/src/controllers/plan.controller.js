@@ -54,6 +54,22 @@ exports.decideImprovementPlan = asyncHandler(async (req, res) => {
   res.json(await service.decideImprovementPlan(req.params.id, req.user, req.body));
 });
 
+exports.listOpenEscalations = asyncHandler(async (req, res) => {
+  res.json(await service.openEscalations(req.user));
+});
+
+exports.getImprovementPlansForCoverage = asyncHandler(async (req, res) => {
+  res.json(await service.improvementPlansForCoverage(req.params.userId, req.user));
+});
+
+exports.recordImprovementOutcome = asyncHandler(async (req, res) => {
+  res.json(await service.recordImprovementOutcome(req.params.id, req.user, req.body));
+});
+
+exports.closeEscalatedPlan = asyncHandler(async (req, res) => {
+  res.json(await service.closeEscalatedPlan(req.params.id, req.user, req.body));
+});
+
 exports.getPlan = asyncHandler(async (req, res) => {
   res.json(await service.getPlanForSupervisor(req.params.id, req.user));
 });

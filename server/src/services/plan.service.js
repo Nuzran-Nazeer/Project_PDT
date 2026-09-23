@@ -28,6 +28,8 @@ const {
   IMPROVEMENT_MAX_DAYS,
   IMPROVEMENT_TRIGGER_SCORE,
   PLAN_APPROVAL_DECISIONS,
+  IMPROVEMENT_SUPERVISOR_OUTCOMES,
+  IMPROVEMENT_HR_OUTCOMES,
 } = require("../config/constants");
 
 // ⚠️ Every write here refuses in this service, not only on the route: the review must be
@@ -207,6 +209,24 @@ const improvementOf = (plan, on) =>
         endDate: plan.endDate,
         daysRemaining: plan.endDate ? wholeDaysBetween(on, plan.endDate) : null,
         submittedAt: plan.submittedAt,
+        extension: plan.extension
+          ? {
+              at: plan.extension.at,
+              by: asPerson(plan.extension.byId),
+              reason: plan.extension.reason,
+              days: plan.extension.days,
+              previousEndDate: plan.extension.previousEndDate,
+            }
+          : null,
+        escalation: plan.escalation
+          ? {
+              at: plan.escalation.at,
+              by: asPerson(plan.escalation.byId),
+              note: plan.escalation.note,
+            }
+          : null,
+        canExtend: plan.status === "active" && !plan.extension && !plan.escalation,
+        canClose: plan.status === "active" && !plan.escalation,
         approval: plan.approval
           ? {
               decision: plan.approval.decision,
@@ -261,6 +281,9 @@ const populated = (query) =>
     .populate("userId", "name employeeId")
     .populate("createdBy", "name employeeId")
     .populate("approval.byId", "name employeeId")
+    .populate("extension.byId", "name employeeId")
+    .populate("escalation.byId", "name employeeId")
+    .populate("closedBy", "name employeeId")
     .populate("actions.ownerId", "name employeeId")
     .populate("actions.progressNotes.byId", "name employeeId")
     .populate("checkIns.byId", "name employeeId");
@@ -620,11 +643,21 @@ const startImprovementPlan = async (body, actor) => {
 };
 
 // Loads a plan and refuses unless the actor supervises its employee today.
+// ⚠️ A closed improvement plan is refused here as well. The employee keeps theirs and so does
+// HR; the supervisor's ends with the plan, the same way access ends everywhere else.
 const supervisorPlan = async (planId, actorId) => {
   const plan = await populated(Plan.findById(planId));
   if (!plan) throw new AppError("Plan not found", 404);
 
   await assertSupervisesToday(actorId, plan.userId._id);
+
+  if (plan.type === "PIP" && plan.status === "closed") {
+    throw new AppError(
+      "This improvement plan has closed, so it is no longer open to you",
+      403,
+    );
+  }
+
   return plan;
 };
 
@@ -990,6 +1023,7 @@ const asEmployeePlan = (plan, on = today()) => ({
   acknowledgedAt: plan.acknowledgedAt,
   closeDate: plan.closeDate,
   outcome: plan.outcome,
+  outcomeReason: plan.outcomeReason,
   canAcknowledge: plan.status === "awaiting_ack",
   canAddNote: plan.status !== "closed",
   actions: byStalest(plan.actions).map((action) => asEmployeeAction(action, on)),
@@ -1259,9 +1293,10 @@ const decideImprovementPlan = async (planId, actor, body) => {
   return asReadOnly(asPlan(decided, await contextForPlan(decided)));
 };
 
-// Everything waiting on this officer, across the units they cover today. Plans in their own
-// reporting line are dropped as well as refused: a queue nobody may act on reads as a fault.
-const improvementQueue = async (actor) => {
+// The improvement plans within this officer's reach, for the two lists they work from.
+// ⚠️ Anyone in their own reporting line is dropped as well as refused on the write: a list
+// holding work nobody may touch reads as a fault rather than as a rule.
+const improvementPlansForOfficer = async (actor, filter) => {
   assertHrOfficer(actor);
 
   const inScope = await readScopeFor(actor, {
@@ -1270,12 +1305,10 @@ const improvementQueue = async (actor) => {
     includeUnplaced: false,
   });
 
-  const waiting = await populated(
-    Plan.find({ type: "PIP", status: "awaiting_approval" }).sort({ submittedAt: 1 }),
-  );
+  const found = await populated(Plan.find({ type: "PIP", ...filter }));
 
   const mine = [];
-  for (const plan of waiting) {
+  for (const plan of found) {
     if (!inScope(plan.userId._id)) continue;
 
     try {
@@ -1288,6 +1321,188 @@ const improvementQueue = async (actor) => {
   }
 
   return { on: today().toISOString().slice(0, 10), plans: mine };
+};
+
+// Escalated and still open. ⚠️ Listed rather than waited on: an escalation with no closing
+// entry leaves every count in the system wrong, and nothing else would surface it.
+const openEscalations = (actor) =>
+  improvementPlansForOfficer(actor, {
+    status: "active",
+    escalation: { $ne: null },
+  });
+
+// ⚠️ Read only. Every write goes through `supervisorPlan`, which refuses HR outright, and the
+// one write an officer has is closing a plan the supervisor escalated.
+const improvementPlansForCoverage = async (employeeId, actor) => {
+  try {
+    await assertHrMayRead(actor, employeeId);
+  } catch (error) {
+    await recordPlanRead(actor, employeeId, null, "refused", refusalCodeFor(actor));
+    throw error;
+  }
+
+  const plans = await populated(
+    Plan.find({
+      userId: employeeId,
+      type: "PIP",
+      status: { $in: VISIBLE_TO_EMPLOYEE },
+    }).sort({ sharedAt: -1 }),
+  );
+
+  await recordPlanRead(
+    actor,
+    employeeId,
+    plans[0],
+    plans.length ? "allowed" : "refused",
+    plans.length ? null : "not_found",
+  );
+
+  if (!plans.length) {
+    throw new AppError("No improvement plan has been shared for this employee", 404);
+  }
+
+  const built = [];
+  for (const plan of plans) {
+    built.push(asReadOnly(asPlan(plan, await contextForPlan(plan))));
+  }
+
+  return { plans: built };
+};
+
+// Everything waiting on this officer, across the units they cover today. Plans in their own
+// reporting line are dropped as well as refused: a queue nobody may act on reads as a fault.
+const improvementQueue = (actor) =>
+  improvementPlansForOfficer(actor, { status: "awaiting_approval" });
+
+const recordOutcomeEntry = (actor, plan, detail, reason) =>
+  audit.record({
+    actorId: actor.id,
+    action: "improvement_plan_outcome",
+    outcome: "allowed",
+    subjectUserId: plan.userId._id || plan.userId,
+    targetType: "plan",
+    targetId: plan._id,
+    reason: reason || null,
+    detail,
+  });
+
+// ⚠️ Two of the four choices do not close the plan. Extending moves the end date and
+// escalating hands it to HR, and both leave it active with its actions unchanged.
+const recordImprovementOutcome = async (planId, actor, body) => {
+  const { outcome } = body || {};
+  const note = String(body?.note || "").trim();
+
+  if (!IMPROVEMENT_SUPERVISOR_OUTCOMES.includes(outcome)) {
+    throw new AppError("That is not an outcome this plan can end with", 400);
+  }
+
+  if (!note) {
+    const error = new AppError("An outcome has to say what happened", 400);
+    error.details = ["note"];
+    throw error;
+  }
+
+  const plan = await supervisorPlan(planId, actor.id);
+
+  if (plan.type !== "PIP") {
+    throw new AppError("A development plan closes with its cycle, not by hand", 409);
+  }
+
+  assertActive(plan);
+
+  // Terminal from this side: the plan is HR's once it has been escalated, and a second
+  // outcome from the supervisor would take it back off them.
+  if (plan.escalation) {
+    throw new AppError("This plan has been escalated, so HR records how it ends", 409);
+  }
+
+  let detail;
+
+  if (outcome === "extended") {
+    if (plan.extension) {
+      throw new AppError("This plan has already been extended once", 409);
+    }
+
+    const days = Number(body?.days);
+    if (
+      !Number.isInteger(days) ||
+      days < IMPROVEMENT_MIN_DAYS ||
+      days > IMPROVEMENT_MAX_DAYS
+    ) {
+      const error = new AppError(
+        `An extension runs ${IMPROVEMENT_MIN_DAYS} to ${IMPROVEMENT_MAX_DAYS} days`,
+        400,
+      );
+      error.details = ["days"];
+      throw error;
+    }
+
+    // ⚠️ Counted from today, not from the end date it is replacing: the criterion is days
+    // from the day of the extension, and a plan extended late would otherwise gain no time.
+    plan.extension = {
+      at: new Date(),
+      byId: actor.id,
+      reason: note,
+      days,
+      previousEndDate: plan.endDate,
+    };
+    plan.endDate = new Date(startOfDay(today()).getTime() + days * DAY_MS);
+    detail = `Extended an improvement plan by ${days} days`;
+  } else if (outcome === "escalated") {
+    plan.escalation = { at: new Date(), byId: actor.id, note };
+    plan.outcome = "escalated";
+    detail = "Escalated an improvement plan to HR";
+  } else {
+    plan.status = "closed";
+    plan.closeDate = today();
+    plan.outcome = outcome;
+    plan.outcomeReason = note;
+    plan.closedBy = actor.id;
+    detail = "Closed an improvement plan";
+  }
+
+  await plan.save();
+  await recordOutcomeEntry(actor, plan, detail, note);
+
+  const saved = await populated(Plan.findById(plan._id));
+  return asPlan(saved, await contextForPlan(saved));
+};
+
+// The only write an officer has on a plan, and only on one the supervisor escalated.
+const closeEscalatedPlan = async (planId, actor, body) => {
+  const { outcome } = body || {};
+  const note = String(body?.note || "").trim();
+
+  if (!IMPROVEMENT_HR_OUTCOMES.includes(outcome)) {
+    throw new AppError("That is not an outcome an escalated plan can close with", 400);
+  }
+
+  if (!note) {
+    const error = new AppError("Closing a plan has to say what happened", 400);
+    error.details = ["note"];
+    throw error;
+  }
+
+  const plan = await populated(Plan.findById(planId));
+  if (!plan || plan.type !== "PIP") throw new AppError("Plan not found", 404);
+
+  await assertMayDecide(actor, plan);
+
+  if (!plan.escalation || plan.status !== "active") {
+    throw new AppError("This plan is not an open escalation", 409);
+  }
+
+  plan.status = "closed";
+  plan.closeDate = today();
+  plan.outcome = outcome;
+  plan.outcomeReason = note;
+  plan.closedBy = actor.id;
+  await plan.save();
+
+  await recordOutcomeEntry(actor, plan, "Closed an escalated improvement plan", note);
+
+  const closed = await populated(Plan.findById(plan._id));
+  return asReadOnly(asPlan(closed, await contextForPlan(closed)));
 };
 
 module.exports = {
@@ -1307,6 +1522,10 @@ module.exports = {
   submitForApproval,
   decideImprovementPlan,
   improvementQueue,
+  openEscalations,
+  improvementPlansForCoverage,
+  recordImprovementOutcome,
+  closeEscalatedPlan,
   sharePlan,
   recordCheckIn,
   setActionStatus,
