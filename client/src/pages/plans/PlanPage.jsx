@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import {
   getPlan,
@@ -8,6 +8,7 @@ import {
   removeAction,
   sharePlan,
   submitForApproval,
+  recordImprovementOutcome,
   recordCheckIn,
   setActionStatus,
 } from "../../services/plans";
@@ -24,6 +25,8 @@ import {
   daysSinceLabel,
   carryReasonLabel,
   planStatusLabel,
+  outcomeChoiceLabel,
+  IMPROVEMENT_SUPERVISOR_OUTCOMES,
   CHECK_IN_OUTCOMES,
   CARRY_FORWARD_REASONS,
   TRACKABLE_STATUSES,
@@ -44,8 +47,11 @@ const EMPTY = {
 
 const EMPTY_CHECK_IN = { at: "", outcome: "", note: "" };
 
+const EMPTY_OUTCOME = { outcome: "", note: "", days: "" };
+
 export default function PlanPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, constants } = useAuth();
 
   const [plan, setPlan] = useState(null);
@@ -54,6 +60,7 @@ export default function PlanPage() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [checkIn, setCheckIn] = useState({ ...EMPTY_CHECK_IN, at: todayInput() });
+  const [ending, setEnding] = useState(EMPTY_OUTCOME);
   const [busy, setBusy] = useState(false);
 
   const categories = constants?.planActionCategories || [];
@@ -106,6 +113,37 @@ export default function PlanPage() {
       setCheckIn({ ...EMPTY_CHECK_IN, at: todayInput() });
       return saved;
     });
+  };
+
+  const submitOutcome = async (event) => {
+    event.preventDefault();
+
+    setBusy(true);
+    setError("");
+    setMissing([]);
+
+    try {
+      const saved = await recordImprovementOutcome(id, {
+        outcome: ending.outcome,
+        note: ending.note,
+        ...(ending.outcome === "extended" ? { days: Number(ending.days) } : {}),
+      });
+
+      // ⚠️ A closed improvement plan is no longer the supervisor's to read, so staying here
+      // would leave them on a page the next request refuses.
+      if (saved.status === "closed") {
+        navigate("/team-plans");
+        return;
+      }
+
+      setPlan(saved);
+      setEnding(EMPTY_OUTCOME);
+    } catch (err) {
+      setError(err.message);
+      setMissing(err.details || []);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const startEditing = (action) => {
@@ -603,6 +641,100 @@ export default function PlanPage() {
             </p>
           )}
         </FormSection>
+
+        {isImprovement && plan.improvement?.canClose && (
+          <FormSection
+            letter="E"
+            title="End the plan"
+            note="Completing or not completing it closes it. Extending and escalating do not."
+          >
+            <form onSubmit={submitOutcome} className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Outcome" name="outcome" missing={missing}>
+                  <select
+                    id="outcome"
+                    value={ending.outcome}
+                    onChange={(e) => setEnding({ ...ending, outcome: e.target.value })}
+                    className={inputClass(missing, "outcome")}
+                  >
+                    <option value="">Choose an outcome</option>
+                    {IMPROVEMENT_SUPERVISOR_OUTCOMES.map((key) => (
+                      <option
+                        key={key}
+                        value={key}
+                        disabled={key === "extended" && !plan.improvement.canExtend}
+                      >
+                        {outcomeChoiceLabel(key)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                {ending.outcome === "extended" && (
+                  <Field
+                    label="Extra days"
+                    name="days"
+                    missing={missing}
+                    hint="30 to 90, counted from today."
+                  >
+                    <input
+                      id="days"
+                      type="number"
+                      min={30}
+                      max={90}
+                      value={ending.days}
+                      onChange={(e) => setEnding({ ...ending, days: e.target.value })}
+                      className={inputClass(missing, "days")}
+                    />
+                  </Field>
+                )}
+              </div>
+
+              <Field
+                label="What happened"
+                name="note"
+                missing={missing}
+                hint={
+                  ending.outcome === "escalated"
+                    ? "HR reads this, and they decide how the plan ends from here."
+                    : "Recorded against the plan and shown to the employee."
+                }
+              >
+                <textarea
+                  id="note"
+                  rows={3}
+                  value={ending.note}
+                  onChange={(e) => setEnding({ ...ending, note: e.target.value })}
+                  className={inputClass(missing, "note")}
+                />
+              </Field>
+
+              {!plan.improvement.canExtend && (
+                <p className="text-[13px] text-muted">
+                  This plan has already been extended once.
+                </p>
+              )}
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={busy || !ending.outcome || !ending.note.trim()}
+                  className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? "Recording…" : "Record the outcome"}
+                </button>
+              </div>
+            </form>
+          </FormSection>
+        )}
+
+        {isImprovement && plan.improvement?.escalation && (
+          <FormSection letter="E" title="End the plan">
+            <p className="text-sm text-muted">
+              This plan has been escalated, so HR records how it ends.
+            </p>
+          </FormSection>
+        )}
 
         {/* ⚠️ Only on a development plan, and never on the employee's page or HR's read.
             An improvement plan is not started from another improvement plan. */}

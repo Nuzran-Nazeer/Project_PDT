@@ -217,6 +217,16 @@ export const TABS_BY_GROUP = {
       built: true,
     },
     {
+      section: "Running the cycle",
+      id: "improvement-escalations",
+      path: "/improvement-escalations",
+      label: "Open escalations",
+      icon: "flag",
+      title: "Open escalations",
+      description: "Record how an escalated improvement plan ended",
+      built: true,
+    },
+    {
       section: "People data",
       id: "employee-records",
       path: "/employees",
@@ -287,6 +297,15 @@ export const TABS_BY_GROUP = {
       icon: "trend",
       title: "My development plan",
       description: "Track the actions agreed with your supervisor",
+      built: true,
+    },
+    {
+      id: "my-improvement-plan",
+      path: "/my-improvement-plan",
+      label: "My improvement plan",
+      icon: "target",
+      title: "My improvement plan",
+      description: "What is expected of you, by when",
       built: true,
     },
     {
