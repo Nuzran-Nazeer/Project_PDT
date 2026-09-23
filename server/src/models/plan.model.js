@@ -9,6 +9,7 @@ const {
   CARRY_FORWARD_REASONS,
   IMPROVEMENT_PLAN_TYPES,
   IMPROVEMENT_TRIGGERS,
+  PLAN_APPROVAL_DECISIONS,
 } = require("../config/constants");
 
 // Development plans and improvement plans share this shape and differ only in their rules,
@@ -97,6 +98,20 @@ const triggerSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// HR's last decision. ⚠️ One record, overwritten rather than appended to, and it survives a
+// resubmission so the next officer sees why it was sent back. The sequence is the trail's job.
+const approvalSchema = new mongoose.Schema(
+  {
+    decision: { type: String, enum: PLAN_APPROVAL_DECISIONS, required: true },
+    byId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    at: { type: Date, required: true },
+
+    // Required on a refusal and null on an approval: a plan sent back has to say why.
+    reason: { type: String, default: null },
+  },
+  { _id: false },
+);
+
 const planSchema = new mongoose.Schema(
   {
     userId: {
@@ -118,8 +133,11 @@ const planSchema = new mongoose.Schema(
 
     // Improvement-plan fields. They stay null on a development plan and are kept here
     // because both types are one collection with one shape.
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     durationDays: { type: Number, default: null },
+
+    // When it last went to HR, and what HR said. Nobody approves a development plan.
+    submittedAt: { type: Date, default: null },
+    approval: { type: approvalSchema, default: null },
 
     // The case type. Required when an improvement plan is created, read only by HR, and
     // nothing in the system branches on it.

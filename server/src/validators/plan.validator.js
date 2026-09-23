@@ -4,6 +4,7 @@ const {
   PLAN_ACTION_OPEN_STATUS,
   CARRY_FORWARD_REASONS,
   IMPROVEMENT_TRIGGERS,
+  PLAN_APPROVAL_DECISIONS,
 } = require("../config/constants");
 
 // Request-shape checks only. Whether the review is published, whether the actor supervises
@@ -49,6 +50,20 @@ exports.validateImprovementSource = (req, res, next) => {
     if (!Number.isInteger(Number(checkInNumber)) || Number(checkInNumber) < 1) {
       return next(new AppError("checkInNumber is not a check-in", 400));
     }
+  }
+
+  next();
+};
+
+exports.validateDecision = (req, res, next) => {
+  const { decision, reason } = req.body || {};
+
+  if (!PLAN_APPROVAL_DECISIONS.includes(decision)) {
+    return next(new AppError("decision is not a decision", 400));
+  }
+
+  if (decision === "refused" && !String(reason || "").trim()) {
+    return next(new AppError("Sending a plan back has to say why", 400));
   }
 
   next();

@@ -34,6 +34,18 @@ exports.startImprovementPlan = asyncHandler(async (req, res) => {
   res.status(201).json(await service.startImprovementPlan(req.body, req.user));
 });
 
+exports.listImprovementQueue = asyncHandler(async (req, res) => {
+  res.json(await service.improvementQueue(req.user));
+});
+
+exports.submitForApproval = asyncHandler(async (req, res) => {
+  res.json(await service.submitForApproval(req.params.id, req.user));
+});
+
+exports.decideImprovementPlan = asyncHandler(async (req, res) => {
+  res.json(await service.decideImprovementPlan(req.params.id, req.user, req.body));
+});
+
 exports.getPlan = asyncHandler(async (req, res) => {
   res.json(await service.getPlanForSupervisor(req.params.id, req.user));
 });

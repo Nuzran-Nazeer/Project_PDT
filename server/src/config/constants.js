@@ -19,6 +19,7 @@ const AUDIT_ACTIONS = [
   "history_edit",
   "plan_read",
   "improvement_plan_started",
+  "improvement_plan_decision",
   "improvement_plan_shared",
 ];
 const AUDIT_OUTCOMES = ["allowed", "refused"];
@@ -433,7 +434,16 @@ const PLAN_TYPES = ["PDP", "PIP"];
 
 // ⚠️ The employee's acknowledgement is what moves a plan to active. Nobody approves a
 // development plan, so `awaiting_ack` is owned by the employee and not by a reviewer.
-const PLAN_STATUS = ["draft", "awaiting_ack", "active", "closed"];
+// ⚠️ The two approval states belong to an improvement plan alone, so a check written as
+// "not draft means shared" is wrong.
+const PLAN_STATUS = [
+  "draft",
+  "awaiting_approval",
+  "approved",
+  "awaiting_ack",
+  "active",
+  "closed",
+];
 
 // Required on every action, so the spread of courses against real work is readable.
 const PLAN_ACTION_CATEGORIES = [
@@ -496,6 +506,9 @@ const IMPROVEMENT_TRIGGER_SCORE = 2;
 // Where a plan was started from. One route either way: everything after creation is identical.
 const IMPROVEMENT_TRIGGERS = ["review", "check_in"];
 
+// A refusal carries a written reason and sends the plan back as a draft, as often as needed.
+const PLAN_APPROVAL_DECISIONS = ["approved", "refused"];
+
 const CARRY_FORWARD_REASONS = [
   "employee_capacity",
   "company_workload",
@@ -549,6 +562,7 @@ module.exports = {
   IMPROVEMENT_MAX_DAYS,
   IMPROVEMENT_TRIGGER_SCORE,
   IMPROVEMENT_TRIGGERS,
+  PLAN_APPROVAL_DECISIONS,
   CARRY_FORWARD_REASONS,
   CYCLE_STAGES,
   CYCLE_STATUS,

@@ -6,7 +6,12 @@ const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const { teamOn } = require("./supervision.service");
 const { membershipOn } = require("./unitmembership.service");
-const { assertHrMayRead } = require("./coverageAuth.service");
+const {
+  assertHrMayRead,
+  assertMayActOnEmployee,
+  assertNotInReportingLine,
+  readScopeFor,
+} = require("./coverageAuth.service");
 const audit = require("./audit.service");
 const {
   competenciesFor,
@@ -22,6 +27,7 @@ const {
   IMPROVEMENT_MIN_DAYS,
   IMPROVEMENT_MAX_DAYS,
   IMPROVEMENT_TRIGGER_SCORE,
+  PLAN_APPROVAL_DECISIONS,
 } = require("../config/constants");
 
 // ⚠️ Every write here refuses in this service, not only on the route: the review must be
@@ -200,7 +206,15 @@ const improvementOf = (plan, on) =>
         durationDays: plan.durationDays,
         endDate: plan.endDate,
         daysRemaining: plan.endDate ? wholeDaysBetween(on, plan.endDate) : null,
-        approvedBy: asPerson(plan.approvedBy),
+        submittedAt: plan.submittedAt,
+        approval: plan.approval
+          ? {
+              decision: plan.approval.decision,
+              by: asPerson(plan.approval.byId),
+              at: plan.approval.at,
+              reason: plan.approval.reason,
+            }
+          : null,
         trigger: plan.trigger
           ? {
               source: plan.trigger.source,
@@ -246,7 +260,7 @@ const populated = (query) =>
   query
     .populate("userId", "name employeeId")
     .populate("createdBy", "name employeeId")
-    .populate("approvedBy", "name employeeId")
+    .populate("approval.byId", "name employeeId")
     .populate("actions.ownerId", "name employeeId")
     .populate("actions.progressNotes.byId", "name employeeId")
     .populate("checkIns.byId", "name employeeId");
@@ -269,12 +283,28 @@ const assertSupervisesToday = async (actorId, employeeId) => {
 
 // Open, for an improvement plan: one is running from the moment it is drafted, so a second
 // cannot be started beside it.
-const IMPROVEMENT_OPEN = ["draft", "awaiting_ack", "active"];
+const IMPROVEMENT_OPEN = [
+  "draft",
+  "awaiting_approval",
+  "approved",
+  "awaiting_ack",
+  "active",
+];
 
+// ⚠️ An approved plan is locked as hard as a shared one. Editing the actions after HR agreed
+// to them would leave the approval attached to a document nobody with authority ever read.
 const assertDraft = (plan) => {
-  if (plan.status !== "draft") {
-    throw new AppError("This plan has been shared, so it can no longer be edited", 409);
-  }
+  if (plan.status === "draft") return;
+
+  const why = {
+    awaiting_approval: "This plan is with HR for a decision, so it cannot be edited",
+    approved: "This plan has been approved, so it can no longer be edited",
+  };
+
+  throw new AppError(
+    why[plan.status] || "This plan has been shared, so it can no longer be edited",
+    409,
+  );
 };
 
 // ⚠️ Active, never merely shared. The employee's acknowledgement is what makes the plan
@@ -696,11 +726,47 @@ const removeAction = async (planId, actionId, actor) => {
   return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
 };
 
+// ⚠️ A development plan is shared straight from draft. An improvement plan reaches the
+// employee only once a second person has agreed it should, which is a confidentiality control.
+const assertMayShare = (plan) => {
+  if (plan.type !== "PIP") return assertDraft(plan);
+  if (plan.status === "approved") return;
+
+  const why = {
+    draft: "An improvement plan has to be approved by HR before it can be shared",
+    awaiting_approval: "This plan is still with HR for a decision",
+  };
+
+  throw new AppError(why[plan.status] || "This plan has already been shared", 409);
+};
+
+// Sent to HR, not to the employee. An empty plan is refused here as well as at sharing: a
+// plan with no actions is nothing for an officer to form a view on.
+const submitForApproval = async (planId, actor) => {
+  const plan = await supervisorPlan(planId, actor.id);
+
+  if (plan.type !== "PIP") {
+    throw new AppError("A development plan is not approved by anyone", 409);
+  }
+
+  assertDraft(plan);
+
+  if (plan.actions.length === 0) {
+    throw new AppError("A plan with no actions cannot be sent for approval", 409);
+  }
+
+  plan.status = "awaiting_approval";
+  plan.submittedAt = new Date();
+  await plan.save();
+
+  return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
+};
+
 // Sharing is what hands the plan to the employee to acknowledge. It is refused on an empty
 // plan: a plan with no actions is nothing to agree to.
 const sharePlan = async (planId, actor) => {
   const plan = await supervisorPlan(planId, actor.id);
-  assertDraft(plan);
+  assertMayShare(plan);
 
   if (plan.actions.length === 0) {
     throw new AppError("A plan with no actions cannot be shared", 409);
@@ -1040,6 +1106,144 @@ const getPlanForCoverage = async (employeeId, actor) => {
   };
 };
 
+const asReadOnly = (plan) => ({
+  ...plan,
+  canEdit: false,
+  checkIns: { ...plan.checkIns, canRecord: false },
+});
+
+// ⚠️ Not a coarse gate. The scope helper answers "only yourself" for anyone who is not an
+// officer, which would hand an employee their own plan while it is still with HR.
+const assertHrOfficer = (actor) => {
+  if (!(actor?.roles || []).some((role) => HR_ROLES.includes(role))) {
+    throw new AppError("You do not have permission for this action", 403);
+  }
+};
+
+const recordDecision = (
+  actor,
+  plan,
+  outcome,
+  { refusalCode = null, reason = null, detail = null } = {},
+) =>
+  audit.record({
+    actorId: actor.id,
+    action: "improvement_plan_decision",
+    outcome,
+    subjectUserId: plan.userId._id || plan.userId,
+    targetType: "plan",
+    targetId: plan._id,
+    reason: reason || null,
+    refusalCode: outcome === "refused" ? refusalCode : null,
+    detail: detail || "Attempted a decision on an improvement plan",
+  });
+
+// They cover the employee today, and they are not in their reporting line. ⚠️ Both refusals
+// are recorded: an attempt outside an officer's coverage is what the trail exists to show.
+const assertMayDecide = async (actor, plan) => {
+  const employeeId = plan.userId._id || plan.userId;
+
+  try {
+    await assertMayActOnEmployee(
+      actor,
+      employeeId,
+      today(),
+      "decide this person's improvement plan",
+    );
+  } catch (error) {
+    await recordDecision(actor, plan, "refused", { refusalCode: refusalCodeFor(actor) });
+    throw error;
+  }
+
+  try {
+    await assertNotInReportingLine(
+      actor,
+      employeeId,
+      today(),
+      "decide their improvement plan",
+    );
+  } catch (error) {
+    await recordDecision(actor, plan, "refused", { refusalCode: "own_reporting_line" });
+    throw error;
+  }
+};
+
+// A refusal sends the plan back as an editable draft, as often as the two of them need.
+// ⚠️ The reason is stored on the plan as well as in the trail, which the supervisor cannot read.
+const decideImprovementPlan = async (planId, actor, body) => {
+  const { decision } = body || {};
+  const reason = String(body?.reason || "").trim();
+
+  if (!PLAN_APPROVAL_DECISIONS.includes(decision)) {
+    throw new AppError("That is not a decision", 400);
+  }
+
+  if (decision === "refused" && !reason) {
+    throw new AppError("Sending a plan back has to say why", 400);
+  }
+
+  const plan = await populated(Plan.findById(planId));
+  if (!plan || plan.type !== "PIP") throw new AppError("Plan not found", 404);
+
+  await assertMayDecide(actor, plan);
+
+  if (plan.status !== "awaiting_approval") {
+    throw new AppError("This plan is not waiting on a decision", 409);
+  }
+
+  plan.status = decision === "approved" ? "approved" : "draft";
+  plan.approval = {
+    decision,
+    byId: actor.id,
+    at: new Date(),
+    reason: decision === "refused" ? reason : null,
+  };
+  await plan.save();
+
+  // The reason goes in the trail's own field, which is what a refusal is read back by.
+  await recordDecision(actor, plan, "allowed", {
+    reason: decision === "refused" ? reason : null,
+    detail:
+      decision === "approved"
+        ? "Approved an improvement plan"
+        : "Sent an improvement plan back to the supervisor",
+  });
+
+  const decided = await populated(Plan.findById(plan._id));
+  return asReadOnly(asPlan(decided, await contextForPlan(decided)));
+};
+
+// Everything waiting on this officer, across the units they cover today. Plans in their own
+// reporting line are dropped as well as refused: a queue nobody may act on reads as a fault.
+const improvementQueue = async (actor) => {
+  assertHrOfficer(actor);
+
+  const inScope = await readScopeFor(actor, {
+    on: today(),
+    asHr: true,
+    includeUnplaced: false,
+  });
+
+  const waiting = await populated(
+    Plan.find({ type: "PIP", status: "awaiting_approval" }).sort({ submittedAt: 1 }),
+  );
+
+  const mine = [];
+  for (const plan of waiting) {
+    if (!inScope(plan.userId._id)) continue;
+
+    try {
+      await assertNotInReportingLine(actor, plan.userId._id, today(), "decide it");
+    } catch {
+      continue;
+    }
+
+    mine.push(asReadOnly(asPlan(plan, await contextForPlan(plan))));
+  }
+
+  return { on: today().toISOString().slice(0, 10), plans: mine };
+};
+
 module.exports = {
   teamPlans,
   getPlanForCoverage,
@@ -1052,6 +1256,9 @@ module.exports = {
   addAction,
   editAction,
   removeAction,
+  submitForApproval,
+  decideImprovementPlan,
+  improvementQueue,
   sharePlan,
   recordCheckIn,
   setActionStatus,
