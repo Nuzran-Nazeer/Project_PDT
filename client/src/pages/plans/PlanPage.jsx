@@ -7,6 +7,7 @@ import {
   editAction,
   removeAction,
   sharePlan,
+  submitForApproval,
   recordCheckIn,
   setActionStatus,
 } from "../../services/plans";
@@ -452,6 +453,43 @@ export default function PlanPage() {
             <p className="text-sm text-muted">
               This plan closed on {formatDate(plan.closeDate)}.
             </p>
+          ) : plan.status === "awaiting_approval" ? (
+            <p className="text-sm text-muted">
+              With HR for a decision. Nothing about it reaches {plan.employee?.name} yet,
+              and its actions cannot be changed while it is there.
+            </p>
+          ) : isImprovement && plan.status === "draft" ? (
+            <>
+              <button
+                type="button"
+                disabled={busy || plan.actions.length === 0}
+                onClick={() => run(() => submitForApproval(id))}
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Send to HR
+              </button>
+
+              {plan.actions.length === 0 && (
+                <p className="mt-3 text-[13px] text-muted">
+                  Add at least one action first.
+                </p>
+              )}
+            </>
+          ) : plan.status === "approved" ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => sharePlan(id))}
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+              >
+                Share with {plan.employee?.name}
+              </button>
+
+              <p className="mt-3 text-[13px] text-muted">
+                The start and end dates are set the moment you share it.
+              </p>
+            </>
           ) : plan.status !== "draft" ? (
             <p className="text-sm text-muted">
               Shared on {formatDate(plan.sharedAt)}, waiting for {plan.employee?.name} to

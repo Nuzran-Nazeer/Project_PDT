@@ -32,6 +32,20 @@ export const sharePlan = (id) => apiFetch(`/plans/${id}/share`, { method: "PUT" 
 export const startImprovementPlan = (body) =>
   apiFetch("/plans/improvement", { method: "POST", body: JSON.stringify(body) });
 
+// Sends an improvement plan to HR. It cannot be shared until an officer approves it.
+export const submitForApproval = (id) =>
+  apiFetch(`/plans/${id}/submit`, { method: "PUT" });
+
+// A refusal needs a written reason and returns the plan to the supervisor as a draft.
+export const decidePlan = (id, decision, reason) =>
+  apiFetch(`/plans/${id}/decision`, {
+    method: "PUT",
+    body: JSON.stringify({ decision, reason }),
+  });
+
+// What is waiting on the officer reading it, across the units they cover today.
+export const getImprovementQueue = () => apiFetch("/plans/improvement/queue");
+
 // HR's read within their coverage, addressed by the employee: the officer reaches it from
 // that person's record and has no plan id before opening it.
 export const getPlanForCoverage = (userId) => apiFetch(`/plans/employee/${userId}`);

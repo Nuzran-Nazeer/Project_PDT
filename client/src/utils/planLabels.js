@@ -70,6 +70,8 @@ const IMPROVEMENT_TYPE_LABELS = {
 
 const PLAN_STATUS_LABELS = {
   draft: "Draft",
+  awaiting_approval: "With HR for a decision",
+  approved: "Approved, not yet shared",
   awaiting_ack: "Shared, awaiting acknowledgement",
   active: "Active",
   closed: "Closed",
@@ -130,6 +132,8 @@ export const daysRemainingLabel = (days) => {
 // a person is.
 export const PLAN_STATUS_TONE = {
   draft: "text-muted",
+  awaiting_approval: "text-amber-700 dark:text-amber-400",
+  approved: "text-amber-700 dark:text-amber-400",
   awaiting_ack: "font-medium text-success",
   active: "font-medium text-success",
   closed: "text-muted",

@@ -40,6 +40,29 @@ export function ImprovementDetails({ plan }) {
           <Row label="Runs">{detail.durationDays} days from the day it is shared</Row>
         )}
       </dl>
+
+      <ApprovalMarker approval={detail.approval} />
+    </div>
+  );
+}
+
+// Shown to the supervisor as well as to HR: a refused plan says why, and the supervisor
+// cannot read the audit trail.
+export function ApprovalMarker({ approval }) {
+  if (!approval) return null;
+
+  const refused = approval.decision === "refused";
+
+  return (
+    <div className="mt-3 border-t border-line pt-3 text-[13px]">
+      <p className={refused ? "text-danger" : "text-success"}>
+        {refused ? "Sent back by" : "Approved by"} {approval.by?.name || "an HR officer"}{" "}
+        on {formatDate(approval.at)}
+      </p>
+
+      {approval.reason && (
+        <p className="mt-1 whitespace-pre-line text-muted">{approval.reason}</p>
+      )}
     </div>
   );
 }

@@ -207,6 +207,16 @@ export const TABS_BY_GROUP = {
       built: true,
     },
     {
+      section: "Running the cycle",
+      id: "improvement-approvals",
+      path: "/improvement-approvals",
+      label: "Improvement plans",
+      icon: "check",
+      title: "Improvement plans to decide",
+      description: "Approve or send back a plan before the employee sees it",
+      built: true,
+    },
+    {
       section: "People data",
       id: "employee-records",
       path: "/employees",
