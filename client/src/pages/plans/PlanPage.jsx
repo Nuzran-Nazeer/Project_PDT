@@ -183,6 +183,7 @@ export default function PlanPage() {
   }
 
   const isImprovement = plan.type === "PIP";
+  const meetingKind = isImprovement ? "meeting" : "check-in";
   const tracking = plan.status === "active";
   const canRecordCheckIn = plan.checkIns?.canRecord;
 
@@ -562,11 +563,11 @@ export default function PlanPage() {
           )}
         </FormSection>
 
-        <FormSection letter="D" title="Check-ins">
-          <CheckInSchedule summary={plan.checkIns} />
+        <FormSection letter="D" title={isImprovement ? "Meetings" : "Check-ins"}>
+          <CheckInSchedule summary={plan.checkIns} kind={meetingKind} />
 
           <div className="mt-4">
-            <CheckInEntries entries={plan.checkIns?.entries} />
+            <CheckInEntries entries={plan.checkIns?.entries} kind={meetingKind} />
           </div>
 
           {canRecordCheckIn ? (
@@ -629,7 +630,9 @@ export default function PlanPage() {
                   disabled={busy}
                   className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
                 >
-                  {busy ? "Recording…" : "Record the check-in"}
+                  {busy
+                    ? "Recording…"
+                    : `Record the ${isImprovement ? "meeting" : "check-in"}`}
                 </button>
               </div>
             </form>
