@@ -136,6 +136,20 @@ const escalationSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// When a development plan was frozen while an improvement plan ran, and when it came back.
+// ⚠️ A list, not a pair of dates: an employee can be on more than one across a year.
+const suspensionSchema = new mongoose.Schema(
+  {
+    from: { type: Date, required: true },
+
+    // Null while the plan is still frozen. The improvement plan closing is what fills it.
+    to: { type: Date, default: null },
+
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: "Plan", required: true },
+  },
+  { _id: false },
+);
+
 const planSchema = new mongoose.Schema(
   {
     userId: {
@@ -193,6 +207,10 @@ const planSchema = new mongoose.Schema(
 
     actions: { type: [actionSchema], default: [] },
     checkIns: { type: [checkInSchema], default: [] },
+
+    // Development plans only. ⚠️ Appended to, never replaced: the closed periods are what a
+    // missed check-in window is measured against long after the improvement plan has gone.
+    suspensions: { type: [suspensionSchema], default: [] },
 
     outcome: { type: String, enum: PLAN_OUTCOMES, default: null },
     outcomeReason: { type: String, default: null },

@@ -437,12 +437,15 @@ const PLAN_TYPES = ["PDP", "PIP"];
 // development plan, so `awaiting_ack` is owned by the employee and not by a reviewer.
 // ⚠️ The two approval states belong to an improvement plan alone, so a check written as
 // "not draft means shared" is wrong.
+// ⚠️ `suspended` belongs to a development plan alone: it is frozen while an improvement plan
+// runs. A check written as "not active means finished" is wrong too.
 const PLAN_STATUS = [
   "draft",
   "awaiting_approval",
   "approved",
   "awaiting_ack",
   "active",
+  "suspended",
   "closed",
 ];
 
@@ -485,6 +488,14 @@ const CHECK_IN_MONTH_OFFSETS = [4, 8, 12];
 
 // Each due date is the last day of a week the two of them can place the conversation in.
 const CHECK_IN_WINDOW_DAYS = 7;
+
+// An improvement plan's meetings, which are its check-ins on a schedule of its own. ⚠️ Monthly
+// from the plan's own start date, so a 30-day plan owes one and a 90-day plan three. The three
+// roughly quarterly windows of a development plan say nothing about 30 to 90 days.
+const MEETING_INTERVAL_DAYS = 30;
+
+// A meeting counts against a due date if it lands this many days either side of it.
+const MEETING_WINDOW_DAYS = 7;
 
 const PLAN_OUTCOMES = [
   "completed",
@@ -572,6 +583,8 @@ module.exports = {
   EXPECTED_CHECK_INS,
   CHECK_IN_MONTH_OFFSETS,
   CHECK_IN_WINDOW_DAYS,
+  MEETING_INTERVAL_DAYS,
+  MEETING_WINDOW_DAYS,
   PLAN_OUTCOMES,
   IMPROVEMENT_PLAN_TYPES,
   IMPROVEMENT_MIN_DAYS,
