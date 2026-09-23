@@ -99,22 +99,43 @@ const addMonths = (date, months) => {
   return at;
 };
 
+// ⚠️ Only a window the suspension covers end to end. One that had opened before the plan was
+// frozen was a conversation they could have had, and it stays missed.
+const suspendedThrough = (suspensions, opensOn, dueOn, on) =>
+  (suspensions || []).some((period) => {
+    const from = startOfDay(period.from);
+    const until = period.to ? startOfDay(period.to) : startOfDay(on);
+    return startOfDay(opensOn) >= from && startOfDay(dueOn) <= until;
+  });
+
 // Three windows a year, each a week the two of them place the conversation in, counted from
 // the end of the period the review assessed. ⚠️ The plan closes when the next cycle starts
 // collecting, so the last window can pass unopened; that reads as missed, never as an error.
-const checkInWindows = (assessedTo, held, on) => {
+// ⚠️ Held check-ins fill the windows in order, skipping suspended ones: the gap was the
+// system's doing, and marking it missed blames the supervisor for a pause it imposed.
+const checkInWindows = (assessedTo, held, on, suspensions) => {
   if (!assessedTo) return [];
+
+  let unplaced = held;
 
   return CHECK_IN_MONTH_OFFSETS.map((months, index) => {
     const dueOn = addMonths(assessedTo, months);
     const opensOn = new Date(dueOn.getTime() - (CHECK_IN_WINDOW_DAYS - 1) * DAY_MS);
+    const window = { number: index + 1, opensOn, dueOn };
 
-    let state = "upcoming";
-    if (index < held) state = "held";
-    else if (startOfDay(on) > startOfDay(dueOn)) state = "missed";
-    else if (startOfDay(on) >= startOfDay(opensOn)) state = "open";
+    if (suspendedThrough(suspensions, opensOn, dueOn, on)) {
+      return { ...window, state: "suspended" };
+    }
 
-    return { number: index + 1, opensOn, dueOn, state };
+    if (unplaced > 0) {
+      unplaced -= 1;
+      return { ...window, state: "held" };
+    }
+
+    if (startOfDay(on) > startOfDay(dueOn)) return { ...window, state: "missed" };
+    if (startOfDay(on) >= startOfDay(opensOn)) return { ...window, state: "open" };
+
+    return { ...window, state: "upcoming" };
   });
 };
 
@@ -181,15 +202,18 @@ const checkInSummary = (plan, assessedTo, on) => {
   const held = plan.checkIns.length;
 
   const windows =
-    plan.type === "PIP" ? meetingWindows(plan, on) : checkInWindows(assessedTo, held, on);
+    plan.type === "PIP"
+      ? meetingWindows(plan, on)
+      : checkInWindows(assessedTo, held, on, plan.suspensions);
 
-  // A plan with no dates yet owes nothing, and an improvement plan has none until it is shared.
+  // A plan with no dates yet owes nothing, and an improvement plan has none until it is
+  // shared. ⚠️ A window a suspension covered is not owed either.
   const expected =
     plan.type === "PIP"
       ? plan.startDate && plan.endDate
         ? windows.length
         : null
-      : EXPECTED_CHECK_INS;
+      : EXPECTED_CHECK_INS - windows.filter((w) => w.state === "suspended").length;
 
   return {
     expected,
@@ -320,9 +344,19 @@ const asPlan = (plan, { competencies, assessedTo }, on = today()) => ({
   actions: byStalest(plan.actions).map((action) => asAction(action, competencies, on)),
   checkIns: checkInSummary(plan, assessedTo, on),
   canEdit: plan.status === "draft",
+  suspension: openSuspension(plan),
   closure: closureOf(plan),
   improvement: improvementOf(plan, on),
 });
+
+// The open period, if the plan is frozen right now. ⚠️ Read from the list rather than stored
+// twice: the closed periods are still needed long after the improvement plan has gone.
+const openSuspension = (plan) => {
+  if (plan.status !== "suspended") return null;
+
+  const period = (plan.suspensions || []).find((one) => !one.to);
+  return period ? { from: period.from } : null;
+};
 
 // How a closed plan ended, counted from the actions rather than stored twice.
 const closureOf = (plan) =>
@@ -391,14 +425,18 @@ const assertDraft = (plan) => {
 // ⚠️ Active, never merely shared. The employee's acknowledgement is what makes the plan
 // agreed, so both a conversation about it and a move on one of its actions wait for that.
 const assertActive = (plan) => {
-  if (plan.status !== "active") {
-    throw new AppError(
-      plan.status === "closed"
-        ? "This plan has closed, so nothing further can be recorded on it"
-        : "This plan is not active yet, so nothing can be recorded on it",
-      409,
-    );
-  }
+  if (plan.status === "active") return;
+
+  const why = {
+    closed: "This plan has closed, so nothing further can be recorded on it",
+    suspended:
+      "This plan is suspended while an improvement plan runs, so nothing can be recorded on it",
+  };
+
+  throw new AppError(
+    why[plan.status] || "This plan is not active yet, so nothing can be recorded on it",
+    409,
+  );
 };
 
 // Everyone the supervisor supervises today whose review is published, marked owed where no
@@ -459,7 +497,13 @@ const teamPlans = async (actorId) => {
           publishedAt: review.publishedAt,
           planId: plan ? String(plan._id) : null,
           // `owed` is the absence of a plan, not a stored state.
-          state: plan ? (plan.status === "draft" ? "draft" : "shared") : "owed",
+          state: plan
+            ? plan.status === "draft"
+              ? "draft"
+              : plan.status === "suspended"
+                ? "suspended"
+                : "shared"
+            : "owed",
           actionCount: plan ? plan.actions.length : 0,
           improvement: improvementFor.has(String(member.id))
             ? {
@@ -817,6 +861,43 @@ const removeAction = async (planId, actionId, actor) => {
   return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
 };
 
+// Nobody is asked to work on two plans at once. ⚠️ Only an active development plan is frozen:
+// one still waiting to be acknowledged has not started, and one already closed cannot.
+const suspendDevelopmentPlan = async (userId, improvementPlanId) => {
+  const plan = await Plan.findOne({ userId, type: "PDP", status: "active" }).sort({
+    sharedAt: -1,
+  });
+
+  if (!plan) return null;
+
+  plan.status = "suspended";
+  plan.suspensions.push({ from: new Date(), to: null, planId: improvementPlanId });
+  await plan.save();
+
+  return plan;
+};
+
+// ⚠️ Status and the open period, and nothing else: the actions and their states come back
+// exactly as they were left.
+const resumeDevelopmentPlan = async (userId, improvementPlanId) => {
+  const plan = await Plan.findOne({
+    userId,
+    type: "PDP",
+    status: "suspended",
+    "suspensions.planId": improvementPlanId,
+  });
+
+  if (!plan) return null;
+
+  const open = plan.suspensions.find((period) => !period.to);
+  if (open) open.to = new Date();
+
+  plan.status = "active";
+  await plan.save();
+
+  return plan;
+};
+
 // ⚠️ A development plan is shared straight from draft. An improvement plan reaches the
 // employee only once a second person has agreed it should, which is a confidentiality control.
 const assertMayShare = (plan) => {
@@ -904,7 +985,10 @@ const sharePlan = async (planId, actor) => {
   plan.sharedAt = new Date();
   await plan.save();
 
+  // Sharing is what starts the improvement plan, so it is also what freezes the other one.
   if (plan.type === "PIP") {
+    await suspendDevelopmentPlan(plan.userId._id, plan._id);
+
     await audit.record({
       actorId: actor.id,
       action: "improvement_plan_shared",
@@ -990,7 +1074,7 @@ const setActionStatus = async (planId, actionId, actor, body) => {
 // Plans a cycle's start closes: the ones already handed to the employee. ⚠️ A draft is left
 // alone. It was never shared, so there is nothing to record an outcome against, and the
 // supervisor may still be writing it.
-const CLOSEABLE = ["awaiting_ack", "active"];
+const CLOSEABLE = ["awaiting_ack", "active", "suspended"];
 
 // Every open plan for the group whose cycle is starting, which closes them on the group's own
 // date rather than on a calendar one. ⚠️ Read from the user record, not from unit history, so
@@ -1047,7 +1131,7 @@ const publishedReviewFor = (userId) =>
     .select("_id");
 
 // A draft is never one of these, so a plan reaches the employee only once it is shared.
-const VISIBLE_TO_EMPLOYEE = ["awaiting_ack", "active", "closed"];
+const VISIBLE_TO_EMPLOYEE = ["awaiting_ack", "active", "suspended", "closed"];
 
 // ⚠️ Built field by field, never from `asAction` and never by spreading the action: the
 // competency an action came from is the one thing this projection must not carry.
@@ -1083,7 +1167,8 @@ const asEmployeePlan = (plan, on = today()) => ({
   outcome: plan.outcome,
   outcomeReason: plan.outcomeReason,
   canAcknowledge: plan.status === "awaiting_ack",
-  canAddNote: plan.status !== "closed",
+  suspension: openSuspension(plan),
+  canAddNote: plan.status !== "closed" && plan.status !== "suspended",
   actions: byStalest(plan.actions).map((action) => asEmployeeAction(action, on)),
 
   // ⚠️ Safe to serve whole: a check-in carries an outcome about the plan, never a rating,
@@ -1177,7 +1262,15 @@ const addProgressNote = async (userId, actionId, body) => {
     "actions._id": actionId,
   });
 
-  if (!plan) throw new AppError("You have no open plan to write against", 409);
+  if (!plan) {
+    const suspended = await Plan.findOne({ userId, status: "suspended" }).select("_id");
+    throw new AppError(
+      suspended
+        ? "Your development plan is suspended while your improvement plan runs"
+        : "You have no open plan to write against",
+      409,
+    );
+  }
 
   const action = plan.actions.id(actionId);
   if (!action) throw new AppError("Action not found", 404);
@@ -1520,6 +1613,10 @@ const recordImprovementOutcome = async (planId, actor, body) => {
   }
 
   await plan.save();
+
+  if (plan.status === "closed") {
+    await resumeDevelopmentPlan(plan.userId._id, plan._id);
+  }
   await recordOutcomeEntry(actor, plan, detail, note);
 
   const saved = await populated(Plan.findById(plan._id));
@@ -1557,6 +1654,7 @@ const closeEscalatedPlan = async (planId, actor, body) => {
   plan.closedBy = actor.id;
   await plan.save();
 
+  await resumeDevelopmentPlan(plan.userId._id, plan._id);
   await recordOutcomeEntry(actor, plan, "Closed an escalated improvement plan", note);
 
   const closed = await populated(Plan.findById(plan._id));

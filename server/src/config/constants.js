@@ -437,12 +437,15 @@ const PLAN_TYPES = ["PDP", "PIP"];
 // development plan, so `awaiting_ack` is owned by the employee and not by a reviewer.
 // ⚠️ The two approval states belong to an improvement plan alone, so a check written as
 // "not draft means shared" is wrong.
+// ⚠️ `suspended` belongs to a development plan alone: it is frozen while an improvement plan
+// runs. A check written as "not active means finished" is wrong too.
 const PLAN_STATUS = [
   "draft",
   "awaiting_approval",
   "approved",
   "awaiting_ack",
   "active",
+  "suspended",
   "closed",
 ];
 
