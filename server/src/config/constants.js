@@ -486,6 +486,14 @@ const CHECK_IN_MONTH_OFFSETS = [4, 8, 12];
 // Each due date is the last day of a week the two of them can place the conversation in.
 const CHECK_IN_WINDOW_DAYS = 7;
 
+// An improvement plan's meetings, which are its check-ins on a schedule of its own. ⚠️ Monthly
+// from the plan's own start date, so a 30-day plan owes one and a 90-day plan three. The three
+// roughly quarterly windows of a development plan say nothing about 30 to 90 days.
+const MEETING_INTERVAL_DAYS = 30;
+
+// A meeting counts against a due date if it lands this many days either side of it.
+const MEETING_WINDOW_DAYS = 7;
+
 const PLAN_OUTCOMES = [
   "completed",
   "carried_forward",
@@ -572,6 +580,8 @@ module.exports = {
   EXPECTED_CHECK_INS,
   CHECK_IN_MONTH_OFFSETS,
   CHECK_IN_WINDOW_DAYS,
+  MEETING_INTERVAL_DAYS,
+  MEETING_WINDOW_DAYS,
   PLAN_OUTCOMES,
   IMPROVEMENT_PLAN_TYPES,
   IMPROVEMENT_MIN_DAYS,

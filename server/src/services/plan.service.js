@@ -21,6 +21,8 @@ const {
   CARRY_FORWARD_REASONS,
   CHECK_IN_MONTH_OFFSETS,
   CHECK_IN_WINDOW_DAYS,
+  MEETING_INTERVAL_DAYS,
+  MEETING_WINDOW_DAYS,
   EXPECTED_CHECK_INS,
   PUBLISHED_STATES,
   IMPROVEMENT_PLAN_TYPES,
@@ -116,6 +118,52 @@ const checkInWindows = (assessedTo, held, on) => {
   });
 };
 
+// An improvement plan's meetings, monthly from its own start date. ⚠️ A due date past the end
+// date is not counted, so nothing is ever marked missed for a meeting that could not happen.
+// Extending the plan moves the end date, which is how added time brings further meetings due.
+const meetingDueDates = (plan) => {
+  if (!plan.startDate || !plan.endDate) return [];
+
+  const from = startOfDay(plan.startDate);
+  const until = startOfDay(plan.endDate);
+  const dates = [];
+
+  for (let number = 1; ; number += 1) {
+    const dueOn = new Date(from.getTime() + number * MEETING_INTERVAL_DAYS * DAY_MS);
+    if (dueOn > until) return dates;
+    dates.push({ number, dueOn });
+  }
+};
+
+// ⚠️ Matched by date, never by position. A development plan's check-ins fill their windows in
+// order; a meeting counts against whichever due date it lands within a week of.
+const meetingWindows = (plan, on) => {
+  const taken = new Set();
+
+  return meetingDueDates(plan).map(({ number, dueOn }) => {
+    const opensOn = new Date(dueOn.getTime() - MEETING_WINDOW_DAYS * DAY_MS);
+    const closesOn = new Date(dueOn.getTime() + MEETING_WINDOW_DAYS * DAY_MS);
+
+    const index = plan.checkIns.findIndex(
+      (meeting, at) =>
+        !taken.has(at) &&
+        startOfDay(meeting.at) >= opensOn &&
+        startOfDay(meeting.at) <= closesOn,
+    );
+
+    if (index >= 0) {
+      taken.add(index);
+      return { number, opensOn, dueOn, closesOn, state: "held" };
+    }
+
+    let state = "upcoming";
+    if (startOfDay(on) > closesOn) state = "missed";
+    else if (startOfDay(on) >= opensOn) state = "open";
+
+    return { number, opensOn, dueOn, closesOn, state };
+  });
+};
+
 const asCheckIn = (checkIn, index) => ({
   // Position is the check-in number: the array is only ever appended to.
   number: index + 1,
@@ -127,11 +175,21 @@ const asCheckIn = (checkIn, index) => ({
   by: asPerson(checkIn.byId),
 });
 
-// ⚠️ An improvement plan runs 30 to 90 days, so three windows counted off an appraisal period
-// say nothing about one. It carries what was held and no schedule at all.
+// ⚠️ Two schedules, not one. A development plan owes three windows counted off the period its
+// review assessed; an improvement plan owes one a month counted off its own start date.
 const checkInSummary = (plan, assessedTo, on) => {
   const held = plan.checkIns.length;
-  const expected = plan.type === "PIP" ? null : EXPECTED_CHECK_INS;
+
+  const windows =
+    plan.type === "PIP" ? meetingWindows(plan, on) : checkInWindows(assessedTo, held, on);
+
+  // A plan with no dates yet owes nothing, and an improvement plan has none until it is shared.
+  const expected =
+    plan.type === "PIP"
+      ? plan.startDate && plan.endDate
+        ? windows.length
+        : null
+      : EXPECTED_CHECK_INS;
 
   return {
     expected,
@@ -139,7 +197,7 @@ const checkInSummary = (plan, assessedTo, on) => {
     remaining: expected === null ? null : Math.max(0, expected - held),
     additional: expected === null ? 0 : Math.max(0, held - expected),
     canRecord: plan.status === "active",
-    windows: expected === null ? [] : checkInWindows(assessedTo, held, on),
+    windows,
     entries: plan.checkIns.map(asCheckIn),
   };
 };
