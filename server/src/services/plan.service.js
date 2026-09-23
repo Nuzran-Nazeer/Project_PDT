@@ -807,7 +807,9 @@ const sharePlan = async (planId, actor) => {
     }
   }
 
-  plan.status = "awaiting_ack";
+  // ⚠️ An improvement plan is active the moment it is shared. It cannot wait on the person it
+  // concerns, so their acknowledgement only records that they read it.
+  plan.status = plan.type === "PIP" ? "active" : "awaiting_ack";
   plan.sharedAt = new Date();
   await plan.save();
 
@@ -997,10 +999,52 @@ const asEmployeePlan = (plan, on = today()) => ({
   checkIns: plan.checkIns.map(asCheckIn),
 });
 
+// ⚠️ Safe to build from the development plan's projection, which is already field by field:
+// what it withholds per action it withholds here. The dates are all that is added, and the
+// case type, the competency and the officer who approved it are none of the employee's.
+const asEmployeeImprovementPlan = (plan, on = today()) => ({
+  ...asEmployeePlan(plan, on),
+  canAcknowledge: plan.status === "active" && !plan.acknowledgedAt,
+  startDate: plan.startDate,
+  endDate: plan.endDate,
+  daysRemaining: plan.endDate ? wholeDaysBetween(on, plan.endDate) : null,
+});
+
 const sharedPlanFor = (userId) =>
   Plan.findOne({ userId, type: "PDP", status: { $in: VISIBLE_TO_EMPLOYEE } }).sort({
     sharedAt: -1,
   });
+
+// Every improvement plan the employee has had, newest first. Closed ones stay: this is the
+// one page whose access outlasts the plan, and the supervisor's does not.
+const improvementPlansFor = (userId) =>
+  Plan.find({ userId, type: "PIP", status: { $in: VISIBLE_TO_EMPLOYEE } }).sort({
+    sharedAt: -1,
+  });
+
+const myImprovementPlans = async (userId) => ({
+  plans: (await populated(improvementPlansFor(userId))).map((plan) =>
+    asEmployeeImprovementPlan(plan),
+  ),
+});
+
+// Records that they read it and nothing else: the plan was already active. A second attempt
+// finds none waiting, which is also what an acknowledged plan gets.
+const acknowledgeMyImprovementPlan = async (userId) => {
+  const plan = await Plan.findOne({
+    userId,
+    type: "PIP",
+    status: "active",
+    acknowledgedAt: null,
+  }).sort({ sharedAt: -1 });
+
+  if (!plan) throw new AppError("You have no improvement plan waiting to be read", 409);
+
+  plan.acknowledgedAt = new Date();
+  await plan.save();
+
+  return myImprovementPlans(userId);
+};
 
 // Nothing to show separates into two cases the employee can act on differently: no published
 // review to write a plan against, or one published and no plan written yet.
@@ -1033,11 +1077,13 @@ const addProgressNote = async (userId, actionId, body) => {
   const note = String(body?.note || "").trim();
   if (!note) throw new AppError("A progress note cannot be empty", 400);
 
+  // ⚠️ Found by the action rather than by the plan: the employee can have a development plan
+  // and an improvement plan at once, and the action is what says which one this belongs to.
   const plan = await Plan.findOne({
     userId,
-    type: "PDP",
     status: { $in: ["awaiting_ack", "active"] },
-  }).sort({ sharedAt: -1 });
+    "actions._id": actionId,
+  });
 
   if (!plan) throw new AppError("You have no open plan to write against", 409);
 
@@ -1047,7 +1093,7 @@ const addProgressNote = async (userId, actionId, body) => {
   action.progressNotes.push({ note, byId: userId, at: new Date() });
   await plan.save();
 
-  return myPlan(userId);
+  return plan.type === "PIP" ? myImprovementPlans(userId) : myPlan(userId);
 };
 
 const HR_ROLES = ["hr", "head_of_hr"];
@@ -1248,7 +1294,9 @@ module.exports = {
   teamPlans,
   getPlanForCoverage,
   myPlan,
+  myImprovementPlans,
   acknowledgeMyPlan,
+  acknowledgeMyImprovementPlan,
   addProgressNote,
   startPlanFromReview,
   startImprovementPlan,

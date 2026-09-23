@@ -26,6 +26,14 @@ router.route("/mine").get(protect, controller.getMyPlan);
 
 router.route("/mine/acknowledge").put(protect, controller.acknowledgeMyPlan);
 
+// Their improvement plans, reached the same way and for the same reason. Closed ones stay
+// here, which is the one place the employee's access outlasts the plan.
+router.route("/mine/improvement").get(protect, controller.getMyImprovementPlans);
+
+router
+  .route("/mine/improvement/acknowledge")
+  .put(protect, controller.acknowledgeMyImprovementPlan);
+
 router
   .route("/mine/actions/:actionId/notes")
   .post(protect, validateActionId, validateNote, controller.addProgressNote);

@@ -20,6 +20,14 @@ exports.acknowledgeMyPlan = asyncHandler(async (req, res) => {
   res.json(await service.acknowledgeMyPlan(req.user.id));
 });
 
+exports.getMyImprovementPlans = asyncHandler(async (req, res) => {
+  res.json(await service.myImprovementPlans(req.user.id));
+});
+
+exports.acknowledgeMyImprovementPlan = asyncHandler(async (req, res) => {
+  res.json(await service.acknowledgeMyImprovementPlan(req.user.id));
+});
+
 exports.addProgressNote = asyncHandler(async (req, res) => {
   res
     .status(201)
