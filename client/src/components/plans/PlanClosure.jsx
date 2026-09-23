@@ -31,6 +31,26 @@ export function ClosureSummary({ plan }) {
   );
 }
 
+// ⚠️ Shown on every page that shows the plan, including the employee's: a frozen plan that
+// looks ordinary is one somebody keeps working on.
+export function SuspensionNotice({ plan, mine = false }) {
+  if (!plan?.suspension) return null;
+
+  return (
+    <div className="mb-5 rounded-xl border border-line bg-raised p-4 text-sm">
+      <p className="font-medium text-amber-700 dark:text-amber-400">
+        Suspended since {formatDate(plan.suspension.from)}
+      </p>
+
+      <p className="mt-1 text-[13px] text-muted">
+        {mine
+          ? "It starts again when your improvement plan closes. Nothing on it is lost."
+          : "It starts again when the improvement plan closes, with its actions unchanged."}
+      </p>
+    </div>
+  );
+}
+
 // The date it arrived with sits beside the new one, so a stale deadline is visible.
 export function CarriedMarker({ action }) {
   if (!action.carriedTimes) return null;

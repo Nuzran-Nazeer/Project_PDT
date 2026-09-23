@@ -15,7 +15,11 @@ import {
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
-import { ClosureSummary, CarriedMarker } from "../../components/plans/PlanClosure";
+import {
+  ClosureSummary,
+  CarriedMarker,
+  SuspensionNotice,
+} from "../../components/plans/PlanClosure";
 import { ImprovementDetails } from "../../components/plans/ImprovementPlan";
 import { formatDate, toDateInput, todayInput } from "../../utils/dates";
 import {
@@ -231,6 +235,7 @@ export default function PlanPage() {
       )}
 
       <ClosureSummary plan={plan} />
+      <SuspensionNotice plan={plan} />
       <ImprovementDetails plan={plan} />
 
       <div className="grid gap-5">
@@ -474,7 +479,9 @@ export default function PlanPage() {
             <p className="text-sm text-muted">
               {plan.status === "closed"
                 ? "This plan has closed, so its actions can no longer be changed."
-                : "This plan has been shared, so its actions can no longer be changed."}
+                : plan.status === "suspended"
+                  ? "This plan is suspended, so its actions cannot be changed."
+                  : "This plan has been shared, so its actions can no longer be changed."}
             </p>
           </FormSection>
         )}
@@ -491,6 +498,11 @@ export default function PlanPage() {
           {plan.status === "closed" ? (
             <p className="text-sm text-muted">
               This plan closed on {formatDate(plan.closeDate)}.
+            </p>
+          ) : plan.status === "suspended" ? (
+            <p className="text-sm text-muted">
+              Shared on {formatDate(plan.sharedAt)}, and suspended while an improvement
+              plan runs.
             </p>
           ) : plan.status === "awaiting_approval" ? (
             <p className="text-sm text-muted">
@@ -640,7 +652,9 @@ export default function PlanPage() {
             <p className="mt-4 border-t border-line pt-4 text-[13px] text-muted">
               {plan.status === "closed"
                 ? "This plan has closed."
-                : `Check-ins open once ${plan.employee?.name} acknowledges the plan.`}
+                : plan.status === "suspended"
+                  ? "This plan is suspended while an improvement plan runs."
+                  : `Check-ins open once ${plan.employee?.name} acknowledges the plan.`}
             </p>
           )}
         </FormSection>

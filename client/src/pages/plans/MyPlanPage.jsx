@@ -4,6 +4,7 @@ import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormShell, FormSection } from "../../components/shells/FormShell";
 import { CheckInEntries } from "../../components/plans/CheckIns";
+import { SuspensionNotice } from "../../components/plans/PlanClosure";
 import EmployeeActions from "../../components/plans/EmployeeActions";
 
 // ⚠️ The competency behind an action never appears here and is not in the response. The
@@ -124,6 +125,8 @@ export default function MyPlanPage() {
       />
 
       <FormShell>
+        <SuspensionNotice plan={plan} mine />
+
         {plan.status === "closed" && (
           <p className="rounded-xl border border-line bg-raised p-4 text-sm text-muted">
             This plan closed on {formatDate(plan.closeDate)}.{" "}

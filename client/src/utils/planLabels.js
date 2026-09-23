@@ -26,6 +26,7 @@ const PLAN_STATE_LABELS = {
   owed: "No plan yet",
   draft: "Draft",
   shared: "Shared",
+  suspended: "Suspended",
 };
 
 // ⚠️ Held here rather than fetched, the same as the action states above: these are the
@@ -74,6 +75,7 @@ const PLAN_STATUS_LABELS = {
   approved: "Approved, not yet shared",
   awaiting_ack: "Shared, awaiting acknowledgement",
   active: "Active",
+  suspended: "Suspended",
   closed: "Closed",
 };
 
@@ -115,6 +117,7 @@ const WINDOW_STATE_LABELS = {
   open: "Open now",
   missed: "Missed",
   upcoming: "Upcoming",
+  suspended: "Suspended",
 };
 
 // The states an action can be moved to. Overdue is worked out when the plan is read and
@@ -157,6 +160,7 @@ export const PLAN_STATUS_TONE = {
   approved: "text-amber-700 dark:text-amber-400",
   awaiting_ack: "font-medium text-success",
   active: "font-medium text-success",
+  suspended: "text-amber-700 dark:text-amber-400",
   closed: "text-muted",
 };
 
@@ -164,6 +168,7 @@ export const PLAN_STATE_TONE = {
   owed: "text-amber-700 dark:text-amber-400",
   draft: "text-muted",
   shared: "font-medium text-success",
+  suspended: "text-amber-700 dark:text-amber-400",
 };
 
 export const CHECK_IN_OUTCOME_TONE = {
@@ -172,9 +177,11 @@ export const CHECK_IN_OUTCOME_TONE = {
   off_track: "text-danger",
 };
 
+// ⚠️ Suspended reads as neutral, not as a failure: the gap was the system's doing.
 export const WINDOW_STATE_TONE = {
   held: "text-success",
   open: "font-medium text-brand",
   missed: "text-amber-700 dark:text-amber-400",
   upcoming: "text-muted",
+  suspended: "text-muted",
 };
