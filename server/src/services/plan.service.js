@@ -1,5 +1,6 @@
 const Plan = require("../models/plan.model");
 const Review = require("../models/review.model");
+const Feedback = require("../models/feedback.model");
 const Cycle = require("../models/cycle.model");
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
@@ -17,6 +18,10 @@ const {
   CHECK_IN_WINDOW_DAYS,
   EXPECTED_CHECK_INS,
   PUBLISHED_STATES,
+  IMPROVEMENT_PLAN_TYPES,
+  IMPROVEMENT_MIN_DAYS,
+  IMPROVEMENT_MAX_DAYS,
+  IMPROVEMENT_TRIGGER_SCORE,
 } = require("../config/constants");
 
 // ⚠️ Every write here refuses in this service, not only on the route: the review must be
@@ -114,16 +119,19 @@ const asCheckIn = (checkIn, index) => ({
   by: asPerson(checkIn.byId),
 });
 
+// ⚠️ An improvement plan runs 30 to 90 days, so three windows counted off an appraisal period
+// say nothing about one. It carries what was held and no schedule at all.
 const checkInSummary = (plan, assessedTo, on) => {
   const held = plan.checkIns.length;
+  const expected = plan.type === "PIP" ? null : EXPECTED_CHECK_INS;
 
   return {
-    expected: EXPECTED_CHECK_INS,
+    expected,
     held,
-    remaining: Math.max(0, EXPECTED_CHECK_INS - held),
-    additional: Math.max(0, held - EXPECTED_CHECK_INS),
+    remaining: expected === null ? null : Math.max(0, expected - held),
+    additional: expected === null ? 0 : Math.max(0, held - expected),
     canRecord: plan.status === "active",
-    windows: checkInWindows(assessedTo, held, on),
+    windows: expected === null ? [] : checkInWindows(assessedTo, held, on),
     entries: plan.checkIns.map(asCheckIn),
   };
 };
@@ -181,6 +189,28 @@ const byStalest = (actions) =>
     (a, b) => (a.lastUpdatedAt?.getTime() || 0) - (b.lastUpdatedAt?.getTime() || 0),
   );
 
+// The dates and the case type, which only an improvement plan carries. ⚠️ Never reached from
+// the employee's projection, which is built field by field: the case type is HR's alone.
+const improvementOf = (plan, on) =>
+  plan.type !== "PIP"
+    ? null
+    : {
+        type: plan.improvementType,
+        forCompetency: plan.forCompetency,
+        durationDays: plan.durationDays,
+        endDate: plan.endDate,
+        daysRemaining: plan.endDate ? wholeDaysBetween(on, plan.endDate) : null,
+        approvedBy: asPerson(plan.approvedBy),
+        trigger: plan.trigger
+          ? {
+              source: plan.trigger.source,
+              reviewId: plan.trigger.reviewId ? String(plan.trigger.reviewId) : null,
+              planId: plan.trigger.planId ? String(plan.trigger.planId) : null,
+              checkInNumber: plan.trigger.checkInNumber,
+            }
+          : null,
+      };
+
 const asPlan = (plan, { competencies, assessedTo }, on = today()) => ({
   id: String(plan._id),
   type: plan.type,
@@ -199,6 +229,7 @@ const asPlan = (plan, { competencies, assessedTo }, on = today()) => ({
   checkIns: checkInSummary(plan, assessedTo, on),
   canEdit: plan.status === "draft",
   closure: closureOf(plan),
+  improvement: improvementOf(plan, on),
 });
 
 // How a closed plan ended, counted from the actions rather than stored twice.
@@ -215,6 +246,7 @@ const populated = (query) =>
   query
     .populate("userId", "name employeeId")
     .populate("createdBy", "name employeeId")
+    .populate("approvedBy", "name employeeId")
     .populate("actions.ownerId", "name employeeId")
     .populate("actions.progressNotes.byId", "name employeeId")
     .populate("checkIns.byId", "name employeeId");
@@ -234,6 +266,10 @@ const assertSupervisesToday = async (actorId, employeeId) => {
     throw new AppError("You do not supervise this person today", 403);
   }
 };
+
+// Open, for an improvement plan: one is running from the moment it is drafted, so a second
+// cannot be started beside it.
+const IMPROVEMENT_OPEN = ["draft", "awaiting_ack", "active"];
 
 const assertDraft = (plan) => {
   if (plan.status !== "draft") {
@@ -281,6 +317,16 @@ const teamPlans = async (actorId) => {
 
   const planFor = new Map(plans.map((plan) => [String(plan.reviewId), plan]));
 
+  // An open improvement plan is the supervisor's own work, so it is named here. ⚠️ The
+  // employee's pages carry nothing about it, and neither does anyone else's list.
+  const improvements = await Plan.find({
+    userId: { $in: team.map((member) => member.id) },
+    type: "PIP",
+    status: { $in: IMPROVEMENT_OPEN },
+  }).select("_id userId status");
+
+  const improvementFor = new Map(improvements.map((plan) => [String(plan.userId), plan]));
+
   return {
     on: today().toISOString().slice(0, 10),
     people: team
@@ -304,6 +350,12 @@ const teamPlans = async (actorId) => {
           // `owed` is the absence of a plan, not a stored state.
           state: plan ? (plan.status === "draft" ? "draft" : "shared") : "owed",
           actionCount: plan ? plan.actions.length : 0,
+          improvement: improvementFor.has(String(member.id))
+            ? {
+                id: String(improvementFor.get(String(member.id))._id),
+                status: improvementFor.get(String(member.id)).status,
+              }
+            : null,
         };
       })
       .filter(Boolean),
@@ -378,6 +430,165 @@ const startPlanFromReview = async (reviewId, actor) => {
   );
 };
 
+// ⚠️ The only dates in the system taken from the calendar. The day it is started and the
+// duration give the end date, and neither the start nor the end is ever typed.
+const windowFor = (durationDays) => {
+  const startDate = startOfDay(today());
+  return {
+    startDate,
+    endDate: new Date(startDate.getTime() + durationDays * DAY_MS),
+  };
+};
+
+// ⚠️ Only ever asked of an improvement plan. A development plan has no window of its own: its
+// dates come from the employee's cycle, and an action may sit anywhere in the year.
+const outsideWindow = (plan, date) =>
+  (plan.startDate && startOfDay(date) < startOfDay(plan.startDate)) ||
+  (plan.endDate && startOfDay(date) > startOfDay(plan.endDate));
+
+// ⚠️ Ratings only, and the record never leaves this function: nothing here may serve a
+// reviewer's identity. A supervisor review is attributed in any case, which is not the point.
+const lowlyScored = async (reviewId) => {
+  const doc = await Feedback.findOne({ reviewId, reviewerType: "supervisor" })
+    .select("ratings")
+    .sort({ submittedAt: -1 });
+
+  // A competency the supervisor declined counts neither way.
+  return (doc?.ratings || []).some(
+    (row) =>
+      !row.notObserved &&
+      typeof row.score === "number" &&
+      row.score <= IMPROVEMENT_TRIGGER_SCORE,
+  );
+};
+
+// ⚠️ One low competency, never an overall rating: nothing in the system stores one. Both the
+// raw and the adjusted figures belong to normalisation, and neither has ever been written.
+const triggerFromReview = async (reviewId, actor) => {
+  const review = await Review.findById(reviewId).select("_id userId status publishedAt");
+  if (!review) throw new AppError("Review not found", 404);
+
+  if (!isPublished(review)) {
+    throw new AppError(
+      "An improvement plan can only be started from a published result",
+      409,
+    );
+  }
+
+  await assertSupervisesToday(actor.id, review.userId);
+
+  if (!(await lowlyScored(review._id))) {
+    throw new AppError(
+      `An improvement plan can only be started where a competency was scored ${IMPROVEMENT_TRIGGER_SCORE} or below`,
+      409,
+    );
+  }
+
+  return {
+    userId: review.userId,
+    trigger: { source: "review", reviewId: review._id },
+  };
+};
+
+// A development-plan conversation that went off track, at any point in the year. ⚠️ Position
+// in the array is the check-in number; nothing stores one.
+const triggerFromCheckIn = async (planId, number, actor) => {
+  const plan = await Plan.findById(planId).select("userId type checkIns");
+  if (!plan || plan.type !== "PDP") throw new AppError("Plan not found", 404);
+
+  await assertSupervisesToday(actor.id, plan.userId);
+
+  const checkIn = plan.checkIns[Number(number) - 1];
+  if (!checkIn) throw new AppError("Check-in not found", 404);
+
+  if (checkIn.outcome !== "off_track") {
+    throw new AppError(
+      "An improvement plan can only be started from a check-in recorded as off track",
+      409,
+    );
+  }
+
+  return {
+    userId: plan.userId,
+    trigger: {
+      source: "check_in",
+      planId: plan._id,
+      checkInNumber: Number(number),
+    },
+  };
+};
+
+// Two entry points, one route: everything after creation is identical, so the trigger is
+// recorded and the plan behaves the same either way.
+const startImprovementPlan = async (body, actor) => {
+  const { improvementType, forCompetency, source } = body || {};
+  const durationDays = Number(body?.durationDays);
+
+  const missing = [];
+  if (!IMPROVEMENT_PLAN_TYPES.includes(improvementType)) missing.push("improvementType");
+  if (!String(forCompetency || "").trim()) missing.push("forCompetency");
+  if (
+    !Number.isInteger(durationDays) ||
+    durationDays < IMPROVEMENT_MIN_DAYS ||
+    durationDays > IMPROVEMENT_MAX_DAYS
+  ) {
+    missing.push("durationDays");
+  }
+
+  if (missing.length) {
+    const error = new AppError("This improvement plan is not complete", 400);
+    error.details = missing;
+    throw error;
+  }
+
+  const { userId, trigger } =
+    source === "check_in"
+      ? await triggerFromCheckIn(body.planId, body.checkInNumber, actor)
+      : await triggerFromReview(body?.reviewId, actor);
+
+  // The set the employee is assessed on today. An improvement plan is written against no
+  // review, so there is no earlier set to hold it to.
+  const context = await contextForReview({ userId });
+  if (!context.competencies.some((row) => row.key === forCompetency)) {
+    throw new AppError("That is not a competency this employee is assessed on", 400);
+  }
+
+  const open = await Plan.findOne({
+    userId,
+    type: "PIP",
+    status: { $in: IMPROVEMENT_OPEN },
+  }).select("_id");
+
+  if (open) {
+    throw new AppError("This person already has an improvement plan open", 409);
+  }
+
+  // ⚠️ `reviewId` stays null whatever started it. The unique index on it belongs to the
+  // development plan written against that same review, and a second record collides.
+  const created = await Plan.create({
+    userId,
+    type: "PIP",
+    status: "draft",
+    createdBy: actor.id,
+    improvementType,
+    forCompetency,
+    durationDays,
+    trigger,
+  });
+
+  await audit.record({
+    actorId: actor.id,
+    action: "improvement_plan_started",
+    outcome: "allowed",
+    subjectUserId: userId,
+    targetType: "plan",
+    targetId: created._id,
+    detail: "Started an improvement plan",
+  });
+
+  return asPlan(await populated(Plan.findById(created._id)), context);
+};
+
 // Loads a plan and refuses unless the actor supervises its employee today.
 const supervisorPlan = async (planId, actorId) => {
   const plan = await populated(Plan.findById(planId));
@@ -441,7 +652,10 @@ const assertActionComplete = (body, plan, competencies, actorId, action = null) 
 
 const contextForPlan = async (plan) => {
   const review = await Review.findById(plan.reviewId).select("userId snapshot cycleId");
-  return contextForReview(review || plan);
+
+  // An improvement plan is written against no review, so the wording is the set the employee
+  // is under today and there is no assessed period to count check-in windows from.
+  return contextForReview(review || { userId: plan.userId?._id || plan.userId });
 };
 
 const addAction = async (planId, actor, body) => {
@@ -506,9 +720,42 @@ const sharePlan = async (planId, actor) => {
     throw error;
   }
 
+  // ⚠️ An improvement plan's window opens on the day it is shared, so its dates are worked
+  // out here and its actions are measured against them for the first time.
+  if (plan.type === "PIP") {
+    plan.set(windowFor(plan.durationDays));
+
+    const outside = plan.actions.filter((action) =>
+      outsideWindow(plan, action.targetDate),
+    );
+
+    if (outside.length) {
+      const error = new AppError(
+        outside.length === 1
+          ? "One action has a target date outside the plan's own dates"
+          : `${outside.length} actions have target dates outside the plan's own dates`,
+        409,
+      );
+      error.details = outside.map((action) => String(action._id));
+      throw error;
+    }
+  }
+
   plan.status = "awaiting_ack";
   plan.sharedAt = new Date();
   await plan.save();
+
+  if (plan.type === "PIP") {
+    await audit.record({
+      actorId: actor.id,
+      action: "improvement_plan_shared",
+      outcome: "allowed",
+      subjectUserId: plan.userId._id,
+      targetType: "plan",
+      targetId: plan._id,
+      detail: "Shared an improvement plan with the employee",
+    });
+  }
 
   return asPlan(await populated(Plan.findById(plan._id)), await contextForPlan(plan));
 };
@@ -800,6 +1047,7 @@ module.exports = {
   acknowledgeMyPlan,
   addProgressNote,
   startPlanFromReview,
+  startImprovementPlan,
   getPlanForSupervisor,
   addAction,
   editAction,

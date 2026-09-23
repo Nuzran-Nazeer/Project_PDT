@@ -3,6 +3,7 @@ const {
   CHECK_IN_OUTCOMES,
   PLAN_ACTION_OPEN_STATUS,
   CARRY_FORWARD_REASONS,
+  IMPROVEMENT_TRIGGERS,
 } = require("../config/constants");
 
 // Request-shape checks only. Whether the review is published, whether the actor supervises
@@ -25,6 +26,31 @@ exports.validateReviewIdBody = (req, res, next) => {
   if (!OBJECT_ID_RE.test(String(req.body?.reviewId || ""))) {
     return next(new AppError("reviewId is not a valid reference", 400));
   }
+  next();
+};
+
+// ⚠️ Which reference the body needs depends on where the plan is being started from. Whether
+// the result was low enough, and whether the check-in went off track, are the service's.
+exports.validateImprovementSource = (req, res, next) => {
+  const { source, reviewId, planId, checkInNumber } = req.body || {};
+
+  if (!IMPROVEMENT_TRIGGERS.includes(source)) {
+    return next(new AppError("source is not a way to start an improvement plan", 400));
+  }
+
+  if (source === "review" && !OBJECT_ID_RE.test(String(reviewId || ""))) {
+    return next(new AppError("reviewId is not a valid reference", 400));
+  }
+
+  if (source === "check_in") {
+    if (!OBJECT_ID_RE.test(String(planId || ""))) {
+      return next(new AppError("planId is not a valid reference", 400));
+    }
+    if (!Number.isInteger(Number(checkInNumber)) || Number(checkInNumber) < 1) {
+      return next(new AppError("checkInNumber is not a check-in", 400));
+    }
+  }
+
   next();
 };
 

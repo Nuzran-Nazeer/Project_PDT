@@ -30,6 +30,10 @@ exports.startPlan = asyncHandler(async (req, res) => {
   res.status(201).json(await service.startPlanFromReview(req.body.reviewId, req.user));
 });
 
+exports.startImprovementPlan = asyncHandler(async (req, res) => {
+  res.status(201).json(await service.startImprovementPlan(req.body, req.user));
+});
+
 exports.getPlan = asyncHandler(async (req, res) => {
   res.json(await service.getPlanForSupervisor(req.params.id, req.user));
 });

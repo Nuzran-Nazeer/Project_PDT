@@ -18,6 +18,8 @@ const AUDIT_ACTIONS = [
   "colleague_list_decision",
   "history_edit",
   "plan_read",
+  "improvement_plan_started",
+  "improvement_plan_shared",
 ];
 const AUDIT_OUTCOMES = ["allowed", "refused"];
 
@@ -481,6 +483,19 @@ const PLAN_OUTCOMES = [
   "escalated",
 ];
 
+// Improvement plans. ⚠️ Their dates come from the calendar and nothing else: every
+// development-plan date derives from the employee's own cycle, so none of it is shared.
+const IMPROVEMENT_PLAN_TYPES = ["performance", "behaviour", "collaboration"];
+const IMPROVEMENT_MIN_DAYS = 30;
+const IMPROVEMENT_MAX_DAYS = 90;
+
+// One competency scored at or below this is enough to start a plan. ⚠️ Read from the
+// supervisor's own record: no overall rating is stored anywhere, so there is none to read.
+const IMPROVEMENT_TRIGGER_SCORE = 2;
+
+// Where a plan was started from. One route either way: everything after creation is identical.
+const IMPROVEMENT_TRIGGERS = ["review", "check_in"];
+
 const CARRY_FORWARD_REASONS = [
   "employee_capacity",
   "company_workload",
@@ -529,6 +544,11 @@ module.exports = {
   CHECK_IN_MONTH_OFFSETS,
   CHECK_IN_WINDOW_DAYS,
   PLAN_OUTCOMES,
+  IMPROVEMENT_PLAN_TYPES,
+  IMPROVEMENT_MIN_DAYS,
+  IMPROVEMENT_MAX_DAYS,
+  IMPROVEMENT_TRIGGER_SCORE,
+  IMPROVEMENT_TRIGGERS,
   CARRY_FORWARD_REASONS,
   CYCLE_STAGES,
   CYCLE_STATUS,

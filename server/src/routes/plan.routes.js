@@ -4,6 +4,7 @@ const {
   validatePlanId,
   validateActionId,
   validateReviewIdBody,
+  validateImprovementSource,
   validateAction,
   validateActionStatus,
   validateCheckIn,
@@ -35,6 +36,12 @@ router
   .get(protect, validateUserId, controller.getPlanForCoverage);
 
 router.route("/").post(protect, validateReviewIdBody, controller.startPlan);
+
+// Its own route, not a field on the one above: the two have different entry points, different
+// references in the body and different rules about who may start one.
+router
+  .route("/improvement")
+  .post(protect, validateImprovementSource, controller.startImprovementPlan);
 
 router.route("/:id").get(protect, validatePlanId, controller.getPlan);
 
