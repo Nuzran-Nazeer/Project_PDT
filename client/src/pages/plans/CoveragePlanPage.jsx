@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getPlanForCoverage } from "../../services/plans";
+import { getPlanForCoverage, getImprovementPlansForCoverage } from "../../services/plans";
 import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
-import { ClosureSummary, CarriedMarker } from "../../components/plans/PlanClosure";
+import {
+  ClosureSummary,
+  CarriedMarker,
+  SuspensionNotice,
+} from "../../components/plans/PlanClosure";
+import { ImprovementPlanSummary } from "../../components/plans/ImprovementPlan";
 import { categoryLabel, actionStatusLabel, daysSinceLabel } from "../../utils/planLabels";
 
-// HR's read of a plan within their coverage, the same view the supervisor gets.
+// HR's read of an employee's plans within their coverage, development and improvement.
 // ⚠️ Read only, and it offers no control that would suggest otherwise.
 
 function Row({ label, children }) {
@@ -24,6 +29,7 @@ export default function CoveragePlanPage() {
   const { id } = useParams();
 
   const [plan, setPlan] = useState(null);
+  const [improvement, setImprovement] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -33,6 +39,11 @@ export default function CoveragePlanPage() {
       .then((data) => !cancelled && setPlan(data))
       .catch((err) => !cancelled && setError(err.message));
 
+    // Refused where the employee has never had one, which is not an error on this page.
+    getImprovementPlansForCoverage(id)
+      .then((data) => !cancelled && setImprovement(data.plans))
+      .catch(() => {});
+
     return () => {
       cancelled = true;
     };
@@ -41,7 +52,7 @@ export default function CoveragePlanPage() {
   if (error) {
     return (
       <>
-        <PageHeader title="Development plan" backTo={`/employees/${id}`} />
+        <PageHeader title="Plans" backTo={`/employees/${id}`} />
         <p
           role="alert"
           className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
@@ -55,7 +66,7 @@ export default function CoveragePlanPage() {
   if (!plan) {
     return (
       <>
-        <PageHeader title="Development plan" backTo={`/employees/${id}`} />
+        <PageHeader title="Plans" backTo={`/employees/${id}`} />
         <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
           Loading…
         </p>
@@ -66,7 +77,7 @@ export default function CoveragePlanPage() {
   return (
     <>
       <PageHeader
-        title="Development plan"
+        title="Plans"
         context={[
           plan.employee?.name,
           plan.sharedAt && `Shared ${formatDate(plan.sharedAt)}`,
@@ -80,6 +91,7 @@ export default function CoveragePlanPage() {
       />
 
       <ClosureSummary plan={plan} />
+      <SuspensionNotice plan={plan} />
 
       <FormSection letter="A" title="Actions">
         <ul className="grid gap-3">
@@ -124,7 +136,7 @@ export default function CoveragePlanPage() {
       </FormSection>
 
       {/* Read only, the same as the actions above: this page offers no control. */}
-      <div className="mt-5">
+      <div className="mt-5 grid gap-5">
         <FormSection letter="B" title="Check-ins">
           <CheckInSchedule summary={plan.checkIns} />
 
@@ -132,6 +144,30 @@ export default function CoveragePlanPage() {
             <CheckInEntries entries={plan.checkIns?.entries} />
           </div>
         </FormSection>
+
+        {improvement.length > 0 && (
+          <FormSection
+            letter="C"
+            title="Improvement plans"
+            note="Open and closed, newest first."
+          >
+            <div className="grid gap-5">
+              {improvement.map((one) => (
+                <div key={one.id}>
+                  <ImprovementPlanSummary plan={one} />
+
+                  <div className="mt-4">
+                    <CheckInSchedule summary={one.checkIns} kind="meeting" />
+                  </div>
+
+                  <div className="mt-4">
+                    <CheckInEntries entries={one.checkIns?.entries} kind="meeting" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </FormSection>
+        )}
       </div>
     </>
   );

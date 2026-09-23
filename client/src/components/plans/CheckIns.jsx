@@ -9,11 +9,13 @@ import {
 // Shared by the supervisor, the employee and HR. ⚠️ Safe on all three: a check-in carries an
 // outcome about the plan, never a rating, a band or the competency an action came from.
 
-export function CheckInEntries({ entries }) {
+export function CheckInEntries({ entries, kind = "check-in" }) {
+  const noun = kind === "meeting" ? "Meeting" : "Check-in";
+
   if (!entries?.length) {
     return (
       <p className="rounded-lg border border-dashed border-line p-6 text-center text-sm text-muted">
-        No check-ins held yet.
+        No {kind === "meeting" ? "meetings" : "check-ins"} held yet.
       </p>
     );
   }
@@ -27,7 +29,9 @@ export function CheckInEntries({ entries }) {
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="font-medium text-ink">
-              {entry.additional ? "Additional check-in" : `Check-in ${entry.number}`}
+              {entry.additional
+                ? `Additional ${noun.toLowerCase()}`
+                : `${noun} ${entry.number}`}
               <span className="ml-2 font-normal text-muted">{formatDate(entry.at)}</span>
             </p>
 
@@ -53,11 +57,13 @@ export function CheckInEntries({ entries }) {
   );
 }
 
-export function CheckInSchedule({ summary }) {
+export function CheckInSchedule({ summary, kind = "check-in" }) {
   if (!summary) return null;
 
-  // ⚠️ An improvement plan has no schedule. The three windows are counted off an appraisal
-  // period, which a plan of 30 to 90 days does not have, so the server sends none.
+  const noun = kind === "meeting" ? "Meeting" : "Check-in";
+  const plural = kind === "meeting" ? "meetings" : "check-ins";
+
+  // An improvement plan has no dates until it is shared, so nothing is owed yet.
   if (summary.expected === null) {
     return (
       <p className="text-[13px] text-muted">
@@ -73,8 +79,12 @@ export function CheckInSchedule({ summary }) {
           {summary.held} of {summary.expected} held
         </span>
         {summary.remaining > 0 && ` · ${summary.remaining} remaining`}
-        {summary.additional > 0 && ` · ${summary.additional} additional beyond the three`}
+        {summary.additional > 0 && ` · ${summary.additional} additional`}
       </p>
+
+      {summary.held === 0 && (
+        <p className="mt-1 text-[13px] text-muted">No {plural} held yet.</p>
+      )}
 
       {summary.windows?.length > 0 && (
         <ul className="mt-3 grid gap-1.5">
@@ -83,9 +93,12 @@ export function CheckInSchedule({ summary }) {
               key={window.number}
               className="flex flex-wrap items-baseline gap-x-2 text-[13px] text-muted"
             >
-              <span className="font-medium text-ink">Check-in {window.number}</span>
+              <span className="font-medium text-ink">
+                {noun} {window.number}
+              </span>
               <span>
-                {formatDate(window.opensOn)} to {formatDate(window.dueOn)}
+                {formatDate(window.opensOn)} to{" "}
+                {formatDate(window.closesOn || window.dueOn)}
               </span>
               <span className={WINDOW_STATE_TONE[window.state] || "text-muted"}>
                 {windowStateLabel(window.state)}

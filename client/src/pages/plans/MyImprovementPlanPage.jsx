@@ -141,7 +141,7 @@ export default function MyImprovementPlanPage() {
             </FormSection>
 
             <FormSection letter="B" title="Meetings" note="Recorded by your supervisor.">
-              <CheckInEntries entries={open.checkIns} />
+              <CheckInEntries entries={open.checkIns} kind="meeting" />
             </FormSection>
 
             <FormSection letter="C" title="Record that you have read it">
