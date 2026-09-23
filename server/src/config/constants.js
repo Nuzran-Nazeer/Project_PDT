@@ -21,6 +21,7 @@ const AUDIT_ACTIONS = [
   "improvement_plan_started",
   "improvement_plan_decision",
   "improvement_plan_shared",
+  "improvement_plan_outcome",
 ];
 const AUDIT_OUTCOMES = ["allowed", "refused"];
 
@@ -509,6 +510,21 @@ const IMPROVEMENT_TRIGGERS = ["review", "check_in"];
 // A refusal carries a written reason and sends the plan back as a draft, as often as needed.
 const PLAN_APPROVAL_DECISIONS = ["approved", "refused"];
 
+// What the supervisor may record when an improvement plan reaches its end date. ⚠️ Only the
+// first two close it: extending moves the end date and escalating hands it to HR, and both
+// leave the plan running.
+const IMPROVEMENT_SUPERVISOR_OUTCOMES = [
+  "completed",
+  "not_completed",
+  "extended",
+  "escalated",
+];
+
+// What an officer may record on a plan the supervisor escalated. ⚠️ Escalation is terminal in
+// this system: what happens after it is an HR process outside the software, and nothing here
+// records or implies dismissal.
+const IMPROVEMENT_HR_OUTCOMES = ["completed", "not_completed"];
+
 const CARRY_FORWARD_REASONS = [
   "employee_capacity",
   "company_workload",
@@ -563,6 +579,8 @@ module.exports = {
   IMPROVEMENT_TRIGGER_SCORE,
   IMPROVEMENT_TRIGGERS,
   PLAN_APPROVAL_DECISIONS,
+  IMPROVEMENT_SUPERVISOR_OUTCOMES,
+  IMPROVEMENT_HR_OUTCOMES,
   CARRY_FORWARD_REASONS,
   CYCLE_STAGES,
   CYCLE_STATUS,

@@ -69,6 +69,22 @@ exports.validateDecision = (req, res, next) => {
   next();
 };
 
+// ⚠️ Which outcomes are on offer depends on who is asking, so the list is not checked here.
+// Whether the plan is active, already extended or already escalated is the service's too.
+exports.validateOutcome = (req, res, next) => {
+  const { note, days } = req.body || {};
+
+  if (!String(note || "").trim()) {
+    return next(new AppError("An outcome has to say what happened", 400));
+  }
+
+  if (days !== undefined && !Number.isInteger(Number(days))) {
+    return next(new AppError("days is not a number of days", 400));
+  }
+
+  next();
+};
+
 exports.validateNote = (req, res, next) => {
   if (!String(req.body?.note || "").trim()) {
     return next(new AppError("A progress note cannot be empty", 400));

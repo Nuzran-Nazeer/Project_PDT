@@ -112,6 +112,30 @@ const approvalSchema = new mongoose.Schema(
   { _id: false },
 );
 
+// The one extension an improvement plan may have, and the escalation that hands it to HR.
+// ⚠️ Both leave the plan active. Neither is a close, and `closeDate` stays null through them.
+const extensionSchema = new mongoose.Schema(
+  {
+    at: { type: Date, required: true },
+    byId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    reason: { type: String, required: true },
+    days: { type: Number, required: true },
+
+    // Kept so the added time is readable without recomputing it from the audit trail.
+    previousEndDate: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
+const escalationSchema = new mongoose.Schema(
+  {
+    at: { type: Date, required: true },
+    byId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    note: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const planSchema = new mongoose.Schema(
   {
     userId: {
@@ -138,6 +162,14 @@ const planSchema = new mongoose.Schema(
     // When it last went to HR, and what HR said. Nobody approves a development plan.
     submittedAt: { type: Date, default: null },
     approval: { type: approvalSchema, default: null },
+
+    // ⚠️ An escalated plan keeps running until an officer closes it, so `escalation` being set
+    // is what marks one, never the status. `outcome` is overwritten by that closing outcome.
+    extension: { type: extensionSchema, default: null },
+    escalation: { type: escalationSchema, default: null },
+
+    // Whoever recorded the closing outcome, which is the supervisor unless it was escalated.
+    closedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
     // The case type. Required when an improvement plan is created, read only by HR, and
     // nothing in the system branches on it.
