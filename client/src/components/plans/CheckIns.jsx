@@ -56,6 +56,16 @@ export function CheckInEntries({ entries }) {
 export function CheckInSchedule({ summary }) {
   if (!summary) return null;
 
+  // ⚠️ An improvement plan has no schedule. The three windows are counted off an appraisal
+  // period, which a plan of 30 to 90 days does not have, so the server sends none.
+  if (summary.expected === null) {
+    return (
+      <p className="text-[13px] text-muted">
+        <span className="font-medium text-ink">{summary.held} held</span>
+      </p>
+    );
+  }
+
   return (
     <>
       <p className="text-[13px] text-muted">
