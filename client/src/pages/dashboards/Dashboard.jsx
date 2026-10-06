@@ -11,6 +11,7 @@ import CycleCard from "../../components/dashboard/CycleCard";
 import StatTile from "../../components/dashboard/StatTile";
 import ActionRow from "../../components/dashboard/ActionRow";
 import MySupervisorPanel from "../../components/org/MySupervisorPanel";
+import HrWorkspace from "../../components/dashboard/HrWorkspace";
 
 // One dashboard for everybody; the sections come from dashboardSections.js.
 export default function Dashboard() {
@@ -38,7 +39,13 @@ export default function Dashboard() {
     <>
       <PageHeader title={overview.pageTitle} context={user?.designation} />
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
+      {groups.includes("hr") && <HrWorkspace groups={groups} />}
+
+      {groups.includes("hr") && (
+        <h2 className="mb-4 text-lg font-semibold">My personal workspace</h2>
+      )}
+
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
         <IdentityCard
           name={user?.name}
           roleLabel={overview.roleLabel}
@@ -53,7 +60,7 @@ export default function Dashboard() {
 
       {tiles.length > 0 && (
         <Section heading="Quick overview">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {tiles.map((tile) => (
               <StatTile key={tile.label} {...tile} />
             ))}
@@ -76,7 +83,7 @@ export default function Dashboard() {
             key={group}
             heading={index === 0 ? headings.primaryHeading : headings.secondaryHeading}
           >
-            <div className="grid gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {tabs.map((tab) => (
                 <ActionRow key={tab.id} tab={tab} status={rowStatus(tab.id, team)} />
               ))}

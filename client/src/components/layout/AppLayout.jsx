@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { sectionGroupsFor } from "../../utils/dashboardSections";
@@ -21,6 +21,7 @@ function storedCollapsed() {
 }
 
 export default function AppLayout() {
+  const { pathname } = useLocation();
   const { user, signOut, isSupervisor, sessionReady } = useAuth();
   const isWide = useMediaQuery(WIDE);
 
@@ -94,7 +95,7 @@ export default function AppLayout() {
                     {user.employeeId}
                   </span>
                 </span>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand text-[12px] font-bold text-white">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary text-[12px] font-bold text-ink">
                   {initials(user.name)}
                 </span>
               </span>
@@ -124,11 +125,20 @@ export default function AppLayout() {
         {/* ⚠️ The breakpoints are arithmetic: content is capped at 1180, so the mirrored
             padding fits only above 1180 + 2 x rail (1660 open, 1308 collapsed). */}
         <main
-          className={`min-w-0 flex-1 transition-[padding] duration-200 ${
+          className={`relative isolate min-w-0 flex-1 transition-[padding] duration-200 ${
             collapsed ? "min-[1308px]:pr-16" : "min-[1660px]:pr-60"
           }`}
         >
-          <div className="mx-auto w-full max-w-[1180px] px-6 py-8 sm:px-10">
+          {pathname === "/dashboard" && (
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none fixed inset-x-0 bottom-0 top-16 -z-10 overflow-hidden ${collapsed ? "md:left-16" : "md:left-60"}`}
+            >
+              <div className="blob-float-1 absolute -left-48 -top-36 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle_at_30%_30%,var(--color-brand),transparent_70%)] opacity-15 blur-2xl dark:opacity-20" />
+              <div className="blob-float-2 absolute -right-56 top-[55vh] h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle_at_60%_60%,var(--color-brand),transparent_70%)] opacity-15 blur-2xl dark:opacity-20" />
+            </div>
+          )}
+          <div className="relative mx-auto w-full max-w-[1450px] px-4 py-6 sm:px-8 sm:py-8">
             <Outlet />
           </div>
         </main>

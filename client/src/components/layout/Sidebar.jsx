@@ -85,13 +85,13 @@ function SidebarLink({ tab, narrow, onNavigate }) {
       // As well as the label, never instead of it: `title` never reaches a touch device.
       title={narrow ? tab.label : undefined}
       className={({ isActive }) =>
-        `flex items-center gap-3 border-l-2 py-2.5 text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand ${
+        `mx-3 my-1 flex items-center gap-3 rounded-r-lg border-l-2 py-2.5 text-[13px] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${
           narrow ? "justify-center px-0" : "px-4"
         } ${
           isActive
             ? // Not `bg-surface`: an active item would read as a notch cut out of the sidebar.
-              "border-brand bg-brand/10 font-medium text-ink"
-            : "border-transparent text-muted hover:text-ink"
+              "border-brand bg-secondary font-semibold text-ink"
+            : "border-transparent text-muted hover:bg-secondary hover:text-ink"
         }`
       }
     >

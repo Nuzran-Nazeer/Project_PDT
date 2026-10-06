@@ -3,7 +3,7 @@ import Icon from "../common/Icon";
 export default function IdentityCard({ name, roleLabel, employeeId }) {
   return (
     <div className="flex h-full items-center gap-6 rounded-xl border border-line bg-raised p-7">
-      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand text-xl font-bold text-white">
+      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-secondary text-xl font-bold text-ink">
         {initials(name)}
       </span>
 

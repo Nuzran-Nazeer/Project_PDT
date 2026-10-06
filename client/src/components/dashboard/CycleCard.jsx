@@ -4,11 +4,14 @@ import { formatDate } from "../../utils/dates";
 // ⚠️ No progress bar: nothing measures a proportion completed yet.
 
 const STAGE_LABELS = {
+  draft: "Draft",
   open: "Open",
   collecting: "Collecting",
   supervisor_review: "Supervisor review",
   normalising: "Normalising",
   published: "Published",
+  closed: "Closed",
+  cancelled: "Cancelled",
 };
 
 export default function CycleCard({ cycle, parGroup, loading }) {
@@ -39,9 +42,9 @@ export default function CycleCard({ cycle, parGroup, loading }) {
   }
 
   return (
-    <div className="flex h-full flex-col justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 dark:bg-emerald-500/[0.08]">
+    <div className="flex h-full flex-col justify-center rounded-xl border border-line bg-raised p-5">
       <div className="flex flex-wrap items-center gap-4">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-secondary text-muted">
           <Icon name="target" className="h-5 w-5" />
         </span>
 
@@ -56,11 +59,41 @@ export default function CycleCard({ cycle, parGroup, loading }) {
 
         <div className="shrink-0">
           <p className="text-[13px] text-muted">Stage</p>
-          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+          <p className="text-sm font-semibold text-ink">
             {STAGE_LABELS[cycle.status] || cycle.status}
           </p>
         </div>
       </div>
+      {cycle.status === "cancelled" ? (
+        <p className="mt-4 text-sm text-danger">This cycle was cancelled.</p>
+      ) : (
+        <ol aria-label="Appraisal stage sequence" className="mt-5 flex gap-1">
+          {Object.entries(STAGE_LABELS)
+            .filter(([stage]) => stage !== "cancelled")
+            .map(([stage, label]) => (
+              <li
+                key={stage}
+                aria-current={cycle.status === stage ? "step" : undefined}
+                className="min-w-0 flex-1"
+              >
+                <span
+                  className={
+                    "mb-2 block h-1 rounded-full " +
+                    (cycle.status === stage ? "bg-brand" : "bg-secondary")
+                  }
+                />
+                <span
+                  className={
+                    "block break-words text-[9px] " +
+                    (cycle.status === stage ? "font-semibold text-ink" : "text-muted")
+                  }
+                >
+                  {label}
+                </span>
+              </li>
+            ))}
+        </ol>
+      )}
     </div>
   );
 }
