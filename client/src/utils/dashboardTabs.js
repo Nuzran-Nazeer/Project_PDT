@@ -87,7 +87,7 @@ export const TABS_BY_GROUP = {
       icon: "chart",
       title: "Rating distribution",
       description: "Company wide spread, with no names behind any figure",
-      built: false,
+      built: true,
     },
     {
       section: "Company",
@@ -97,7 +97,7 @@ export const TABS_BY_GROUP = {
       icon: "trend",
       title: "Plan progress",
       description: "How development actions are moving across the company",
-      built: false,
+      built: true,
     },
     {
       section: "Company",
@@ -107,7 +107,7 @@ export const TABS_BY_GROUP = {
       icon: "key",
       title: "Audit counts",
       description: "How often identities were revealed, as counts only",
-      built: false,
+      built: true,
     },
     {
       section: "People data",

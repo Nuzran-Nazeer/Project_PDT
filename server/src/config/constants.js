@@ -239,6 +239,10 @@ const PEER_REVIEWS_TARGET = 8;
 const PEER_REVIEWS_MINIMUM = 5;
 const PEER_REVIEWS_SMALL_POOL = 3;
 
+// No aggregate is shown for a group smaller than this: below it, a figure plus knowing a few of
+// the people in it gives away the rest.
+const AGGREGATE_FLOOR = 5;
+
 // Per reviewer, per cycle year across all three groups, and per unit or project.
 const REVIEW_LOAD_CEILING = 10;
 const REVIEW_LOAD_PER_SOURCE = 5;
@@ -609,6 +613,7 @@ module.exports = {
   PEER_REVIEWS_TARGET,
   PEER_REVIEWS_MINIMUM,
   PEER_REVIEWS_SMALL_POOL,
+  AGGREGATE_FLOOR,
   REVIEW_LOAD_CEILING,
   REVIEW_LOAD_PER_SOURCE,
   LIST_CHANGE_TYPES,

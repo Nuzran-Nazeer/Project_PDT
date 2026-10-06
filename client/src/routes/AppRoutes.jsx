@@ -44,6 +44,9 @@ import ImprovementQueuePage from "../pages/plans/ImprovementQueuePage";
 import OpenEscalationsPage from "../pages/plans/OpenEscalationsPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
 import MonitoringPage from "../pages/oversight/MonitoringPage";
+import RatingDistributionPage from "../pages/reports/RatingDistributionPage";
+import PlanProgressPage from "../pages/reports/PlanProgressPage";
+import AuditCountsPage from "../pages/reports/AuditCountsPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // ⚠️ Every gate here hides rather than protects: the real check is on the server.
@@ -70,6 +73,9 @@ const TAB_PAGES = {
   "improvement-escalations": OpenEscalationsPage,
   "audit-trail": AuditTrailPage,
   monitoring: MonitoringPage,
+  "rating-distribution": RatingDistributionPage,
+  "plan-progress": PlanProgressPage,
+  "audit-counts": AuditCountsPage,
 
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
