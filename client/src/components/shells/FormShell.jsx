@@ -6,15 +6,16 @@ export function FormShell({ children }) {
 
 export function FormSection({ letter, title, note, children }) {
   return (
-    <section className="rounded-xl border border-line bg-raised p-5">
-      <h2 className="text-[15px] font-semibold text-ink">
-        {letter && <span className="mr-2 text-muted">{letter}</span>}
-        {title}
-      </h2>
+    <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-raised">
+      <div className="border-b border-line px-5 py-5 sm:px-6">
+        <h2 className="text-base font-semibold text-ink">
+          {letter && <span className="mr-2 text-muted">{letter}</span>}
+          {title}
+        </h2>
 
-      {note && <p className="mt-1.5 max-w-prose text-[13px] text-muted">{note}</p>}
-
-      <div className="mt-4">{children}</div>
+        {note && <p className="mt-1.5 max-w-prose text-[13px] text-muted">{note}</p>}
+      </div>
+      <div className="p-5 sm:p-6">{children}</div>
     </section>
   );
 }

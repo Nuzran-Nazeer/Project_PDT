@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { listFlags, markFlagReviewed } from "../../services/monitoring";
 import { formatDateTime } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
@@ -23,10 +24,8 @@ const TYPE_RULES = {
     "A unit, leadership or coverage date set inside a cycle that is being worked on.",
 };
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 const selectClass =
   "rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
@@ -84,7 +83,7 @@ export default function MonitoringPage() {
         A flag stays open until it is marked reviewed with a note.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="workflow-toolbar">
         <label htmlFor="status" className="sr-only">
           Which flags
         </label>
@@ -110,26 +109,19 @@ export default function MonitoringPage() {
       </div>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
+        <WorkflowNotice>
           {status === "reviewed"
             ? "Nothing has been marked reviewed yet."
             : status === "all"
               ? "Nothing has been flagged. The checks do not reach back before they were built."
               : "Nothing is open."}
-        </p>
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">

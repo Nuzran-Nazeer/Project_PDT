@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { listSummaryChecks } from "../../services/reviews";
 import { formatDate } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
@@ -41,22 +42,15 @@ export default function SummariesToCheckPage() {
       </p>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : !data ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
+        <WorkflowNotice>
           No summary is waiting for a check within your coverage.
-        </p>
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">

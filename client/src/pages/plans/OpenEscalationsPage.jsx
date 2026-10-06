@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getOpenEscalations, closeEscalatedPlan } from "../../services/plans";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { ImprovementPlanSummary } from "../../components/plans/ImprovementPlan";
@@ -53,7 +54,15 @@ export default function OpenEscalationsPage() {
 
   return (
     <>
-      <PageHeader title="Open escalations" backTo="/dashboard" />
+      <PageHeader
+        title="Open escalations"
+        context={
+          plans && !error
+            ? `${plans.length} awaiting an outcome within your coverage`
+            : "Resolve escalated improvement plans"
+        }
+        backTo="/dashboard"
+      />
 
       <p className="mb-6 max-w-prose text-sm text-muted">
         A supervisor has escalated these plans. Each stays open until you record how it
@@ -61,24 +70,19 @@ export default function OpenEscalationsPage() {
       </p>
 
       {error && (
-        <p
-          role="alert"
-          className="mb-5 rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error" className="mb-5">
           {error}
-        </p>
+        </WorkflowNotice>
       )}
 
       {!plans ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        error ? null : (
+          <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
+        )
       ) : plans.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nothing is waiting on you.
-        </p>
+        <WorkflowNotice>No plans are waiting on you.</WorkflowNotice>
       ) : (
-        <div className="grid gap-5">
+        <div className="grid min-w-0 grid-cols-1 gap-5">
           {plans.map((plan) => (
             <FormSection
               key={plan.id}
@@ -150,7 +154,7 @@ export default function OpenEscalationsPage() {
                       !formFor(plan.id).note.trim()
                     }
                     onClick={() => close(plan)}
-                    className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    className="workflow-primary"
                   >
                     Close this plan
                   </button>

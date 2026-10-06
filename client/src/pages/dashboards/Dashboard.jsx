@@ -13,6 +13,14 @@ import ActionRow from "../../components/dashboard/ActionRow";
 import MySupervisorPanel from "../../components/org/MySupervisorPanel";
 import HrWorkspace from "../../components/dashboard/HrWorkspace";
 
+const WORKSPACE_CONTEXT = {
+  oversight: "Review operational queues and oversee appraisal activity.",
+  hr: "Manage appraisal cycles and review work within your coverage.",
+  leadership: "Explore company reports and organisational records.",
+  supervisor: "Review your team and follow their development actions.",
+  employee: "Your appraisal, assigned feedback and development plans.",
+};
+
 // One dashboard for everybody; the sections come from dashboardSections.js.
 export default function Dashboard() {
   const { user, isSupervisor, sessionReady } = useAuth();
@@ -37,7 +45,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader title={overview.pageTitle} context={user?.designation} />
+      <PageHeader title={overview.pageTitle} context={WORKSPACE_CONTEXT[primary]} />
 
       {groups.includes("hr") && <HrWorkspace groups={groups} />}
 
@@ -83,7 +91,7 @@ export default function Dashboard() {
             key={group}
             heading={index === 0 ? headings.primaryHeading : headings.secondaryHeading}
           >
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {tabs.map((tab) => (
                 <ActionRow key={tab.id} tab={tab} status={rowStatus(tab.id, team)} />
               ))}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { listAudit } from "../../services/audit";
 import { formatDate, formatDateTime } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
@@ -86,7 +87,7 @@ export default function AuditTrailPage() {
         Newest first. Nothing can be changed or removed, and no entry names a colleague.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="workflow-toolbar">
         <label htmlFor="action" className="sr-only">
           Action
         </label>
@@ -127,24 +128,17 @@ export default function AuditTrailPage() {
       </div>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
+        <WorkflowNotice>
           {action || outcome
             ? "No entry matches that filter."
             : "Nothing has been recorded yet. The trail does not reach back before it was built."}
-        </p>
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
