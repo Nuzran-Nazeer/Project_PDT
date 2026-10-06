@@ -1,4 +1,11 @@
 const AppError = require("../utils/AppError");
+const {
+  CHECK_IN_OUTCOMES,
+  PLAN_ACTION_OPEN_STATUS,
+  CARRY_FORWARD_REASONS,
+  IMPROVEMENT_TRIGGERS,
+  PLAN_APPROVAL_DECISIONS,
+} = require("../config/constants");
 
 // Request-shape checks only. Whether the review is published, whether the actor supervises
 // the employee today and whether a competency belongs to that review are decided in the service.
@@ -14,10 +21,73 @@ const validateId = (param, label) => (req, res, next) => {
 
 exports.validatePlanId = validateId("id", "id");
 exports.validateActionId = validateId("actionId", "actionId");
+exports.validateUserId = validateId("userId", "userId");
 
 exports.validateReviewIdBody = (req, res, next) => {
   if (!OBJECT_ID_RE.test(String(req.body?.reviewId || ""))) {
     return next(new AppError("reviewId is not a valid reference", 400));
+  }
+  next();
+};
+
+// ⚠️ Which reference the body needs depends on where the plan is being started from. Whether
+// the result was low enough, and whether the check-in went off track, are the service's.
+exports.validateImprovementSource = (req, res, next) => {
+  const { source, reviewId, planId, checkInNumber } = req.body || {};
+
+  if (!IMPROVEMENT_TRIGGERS.includes(source)) {
+    return next(new AppError("source is not a way to start an improvement plan", 400));
+  }
+
+  if (source === "review" && !OBJECT_ID_RE.test(String(reviewId || ""))) {
+    return next(new AppError("reviewId is not a valid reference", 400));
+  }
+
+  if (source === "check_in") {
+    if (!OBJECT_ID_RE.test(String(planId || ""))) {
+      return next(new AppError("planId is not a valid reference", 400));
+    }
+    if (!Number.isInteger(Number(checkInNumber)) || Number(checkInNumber) < 1) {
+      return next(new AppError("checkInNumber is not a check-in", 400));
+    }
+  }
+
+  next();
+};
+
+exports.validateDecision = (req, res, next) => {
+  const { decision, reason } = req.body || {};
+
+  if (!PLAN_APPROVAL_DECISIONS.includes(decision)) {
+    return next(new AppError("decision is not a decision", 400));
+  }
+
+  if (decision === "refused" && !String(reason || "").trim()) {
+    return next(new AppError("Sending a plan back has to say why", 400));
+  }
+
+  next();
+};
+
+// ⚠️ Which outcomes are on offer depends on who is asking, so the list is not checked here.
+// Whether the plan is active, already extended or already escalated is the service's too.
+exports.validateOutcome = (req, res, next) => {
+  const { note, days } = req.body || {};
+
+  if (!String(note || "").trim()) {
+    return next(new AppError("An outcome has to say what happened", 400));
+  }
+
+  if (days !== undefined && !Number.isInteger(Number(days))) {
+    return next(new AppError("days is not a number of days", 400));
+  }
+
+  next();
+};
+
+exports.validateNote = (req, res, next) => {
+  if (!String(req.body?.note || "").trim()) {
+    return next(new AppError("A progress note cannot be empty", 400));
   }
   next();
 };
@@ -27,6 +97,39 @@ exports.validateReviewIdBody = (req, res, next) => {
 exports.validateAction = (req, res, next) => {
   if (req.body?.ownerId && !OBJECT_ID_RE.test(String(req.body.ownerId))) {
     return next(new AppError("ownerId is not a valid reference", 400));
+  }
+
+  // Whether this action needs one at all depends on where it came from, so the service asks.
+  const { carryReason } = req.body || {};
+  if (carryReason && !CARRY_FORWARD_REASONS.includes(carryReason)) {
+    return next(new AppError("That is not a carry-forward reason", 400));
+  }
+
+  next();
+};
+
+// ⚠️ Shape only. Whether the plan is active, whether the date is in the future and whether it
+// falls before the employee agreed to the plan are all rules about the record, so the service
+// decides them.
+exports.validateCheckIn = (req, res, next) => {
+  const { outcome, at } = req.body || {};
+
+  if (outcome !== undefined && !CHECK_IN_OUTCOMES.includes(outcome)) {
+    return next(new AppError("That is not a check-in outcome", 400));
+  }
+
+  if (at !== undefined && Number.isNaN(new Date(at).getTime())) {
+    return next(new AppError("at is not a valid date", 400));
+  }
+
+  next();
+};
+
+// `overdue` and `carried_forward` are absent on purpose: one is worked out when a plan is
+// read and the other is written when a plan closes. Neither is a state anyone moves to.
+exports.validateActionStatus = (req, res, next) => {
+  if (!PLAN_ACTION_OPEN_STATUS.includes(req.body?.status)) {
+    return next(new AppError("That is not a state an action can be moved to", 400));
   }
   next();
 };

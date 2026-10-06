@@ -17,6 +17,11 @@ const AUDIT_ACTIONS = [
   "cycle_cancellation",
   "colleague_list_decision",
   "history_edit",
+  "plan_read",
+  "improvement_plan_started",
+  "improvement_plan_decision",
+  "improvement_plan_shared",
+  "improvement_plan_outcome",
 ];
 const AUDIT_OUTCOMES = ["allowed", "refused"];
 
@@ -67,6 +72,7 @@ const AUDIT_TARGETS = [
   "unitLead",
   "projectAssignment",
   "hrCoverage",
+  "plan",
 ];
 const ROLES = [...GRANTABLE_ROLES, ...DERIVED_ROLES];
 
@@ -232,6 +238,10 @@ const PEER_REVIEWS_TARGET = 8;
 // is no colleague section at all.
 const PEER_REVIEWS_MINIMUM = 5;
 const PEER_REVIEWS_SMALL_POOL = 3;
+
+// No aggregate is shown for a group smaller than this: below it, a figure plus knowing a few of
+// the people in it gives away the rest.
+const AGGREGATE_FLOOR = 5;
 
 // Per reviewer, per cycle year across all three groups, and per unit or project.
 const REVIEW_LOAD_CEILING = 10;
@@ -429,7 +439,19 @@ const PLAN_TYPES = ["PDP", "PIP"];
 
 // ⚠️ The employee's acknowledgement is what moves a plan to active. Nobody approves a
 // development plan, so `awaiting_ack` is owned by the employee and not by a reviewer.
-const PLAN_STATUS = ["draft", "awaiting_ack", "active", "closed"];
+// ⚠️ The two approval states belong to an improvement plan alone, so a check written as
+// "not draft means shared" is wrong.
+// ⚠️ `suspended` belongs to a development plan alone: it is frozen while an improvement plan
+// runs. A check written as "not active means finished" is wrong too.
+const PLAN_STATUS = [
+  "draft",
+  "awaiting_approval",
+  "approved",
+  "awaiting_ack",
+  "active",
+  "suspended",
+  "closed",
+];
 
 // Required on every action, so the spread of courses against real work is readable.
 const PLAN_ACTION_CATEGORIES = [
@@ -463,6 +485,22 @@ const CHECK_IN_OUTCOMES = ["on_track", "at_risk", "off_track"];
 // beyond these are allowed and shown as additional.
 const EXPECTED_CHECK_INS = 3;
 
+// Months after the end of the assessed period at which each check-in falls due, so a group
+// ending 30 April is due in August, December and the following April. ⚠️ Counted from that
+// date and never the calendar: groups are set by joining month, so two employees differ.
+const CHECK_IN_MONTH_OFFSETS = [4, 8, 12];
+
+// Each due date is the last day of a week the two of them can place the conversation in.
+const CHECK_IN_WINDOW_DAYS = 7;
+
+// An improvement plan's meetings, which are its check-ins on a schedule of its own. ⚠️ Monthly
+// from the plan's own start date, so a 30-day plan owes one and a 90-day plan three. The three
+// roughly quarterly windows of a development plan say nothing about 30 to 90 days.
+const MEETING_INTERVAL_DAYS = 30;
+
+// A meeting counts against a due date if it lands this many days either side of it.
+const MEETING_WINDOW_DAYS = 7;
+
 const PLAN_OUTCOMES = [
   "completed",
   "carried_forward",
@@ -470,6 +508,37 @@ const PLAN_OUTCOMES = [
   "extended",
   "escalated",
 ];
+
+// Improvement plans. ⚠️ Their dates come from the calendar and nothing else: every
+// development-plan date derives from the employee's own cycle, so none of it is shared.
+const IMPROVEMENT_PLAN_TYPES = ["performance", "behaviour", "collaboration"];
+const IMPROVEMENT_MIN_DAYS = 30;
+const IMPROVEMENT_MAX_DAYS = 90;
+
+// One competency scored at or below this is enough to start a plan. ⚠️ Read from the
+// supervisor's own record: no overall rating is stored anywhere, so there is none to read.
+const IMPROVEMENT_TRIGGER_SCORE = 2;
+
+// Where a plan was started from. One route either way: everything after creation is identical.
+const IMPROVEMENT_TRIGGERS = ["review", "check_in"];
+
+// A refusal carries a written reason and sends the plan back as a draft, as often as needed.
+const PLAN_APPROVAL_DECISIONS = ["approved", "refused"];
+
+// What the supervisor may record when an improvement plan reaches its end date. ⚠️ Only the
+// first two close it: extending moves the end date and escalating hands it to HR, and both
+// leave the plan running.
+const IMPROVEMENT_SUPERVISOR_OUTCOMES = [
+  "completed",
+  "not_completed",
+  "extended",
+  "escalated",
+];
+
+// What an officer may record on a plan the supervisor escalated. ⚠️ Escalation is terminal in
+// this system: what happens after it is an HR process outside the software, and nothing here
+// records or implies dismissal.
+const IMPROVEMENT_HR_OUTCOMES = ["completed", "not_completed"];
 
 const CARRY_FORWARD_REASONS = [
   "employee_capacity",
@@ -516,7 +585,19 @@ module.exports = {
   PLAN_ACTION_OPEN_STATUS,
   CHECK_IN_OUTCOMES,
   EXPECTED_CHECK_INS,
+  CHECK_IN_MONTH_OFFSETS,
+  CHECK_IN_WINDOW_DAYS,
+  MEETING_INTERVAL_DAYS,
+  MEETING_WINDOW_DAYS,
   PLAN_OUTCOMES,
+  IMPROVEMENT_PLAN_TYPES,
+  IMPROVEMENT_MIN_DAYS,
+  IMPROVEMENT_MAX_DAYS,
+  IMPROVEMENT_TRIGGER_SCORE,
+  IMPROVEMENT_TRIGGERS,
+  PLAN_APPROVAL_DECISIONS,
+  IMPROVEMENT_SUPERVISOR_OUTCOMES,
+  IMPROVEMENT_HR_OUTCOMES,
   CARRY_FORWARD_REASONS,
   CYCLE_STAGES,
   CYCLE_STATUS,
@@ -532,6 +613,7 @@ module.exports = {
   PEER_REVIEWS_TARGET,
   PEER_REVIEWS_MINIMUM,
   PEER_REVIEWS_SMALL_POOL,
+  AGGREGATE_FLOOR,
   REVIEW_LOAD_CEILING,
   REVIEW_LOAD_PER_SOURCE,
   LIST_CHANGE_TYPES,

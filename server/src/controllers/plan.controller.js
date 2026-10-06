@@ -8,8 +8,66 @@ exports.listTeamPlans = asyncHandler(async (req, res) => {
   res.json(await service.teamPlans(req.user.id));
 });
 
+exports.getPlanForCoverage = asyncHandler(async (req, res) => {
+  res.json(await service.getPlanForCoverage(req.params.userId, req.user));
+});
+
+exports.getMyPlan = asyncHandler(async (req, res) => {
+  res.json(await service.myPlan(req.user.id));
+});
+
+exports.acknowledgeMyPlan = asyncHandler(async (req, res) => {
+  res.json(await service.acknowledgeMyPlan(req.user.id));
+});
+
+exports.getMyImprovementPlans = asyncHandler(async (req, res) => {
+  res.json(await service.myImprovementPlans(req.user.id));
+});
+
+exports.acknowledgeMyImprovementPlan = asyncHandler(async (req, res) => {
+  res.json(await service.acknowledgeMyImprovementPlan(req.user.id));
+});
+
+exports.addProgressNote = asyncHandler(async (req, res) => {
+  res
+    .status(201)
+    .json(await service.addProgressNote(req.user.id, req.params.actionId, req.body));
+});
+
 exports.startPlan = asyncHandler(async (req, res) => {
   res.status(201).json(await service.startPlanFromReview(req.body.reviewId, req.user));
+});
+
+exports.startImprovementPlan = asyncHandler(async (req, res) => {
+  res.status(201).json(await service.startImprovementPlan(req.body, req.user));
+});
+
+exports.listImprovementQueue = asyncHandler(async (req, res) => {
+  res.json(await service.improvementQueue(req.user));
+});
+
+exports.submitForApproval = asyncHandler(async (req, res) => {
+  res.json(await service.submitForApproval(req.params.id, req.user));
+});
+
+exports.decideImprovementPlan = asyncHandler(async (req, res) => {
+  res.json(await service.decideImprovementPlan(req.params.id, req.user, req.body));
+});
+
+exports.listOpenEscalations = asyncHandler(async (req, res) => {
+  res.json(await service.openEscalations(req.user));
+});
+
+exports.getImprovementPlansForCoverage = asyncHandler(async (req, res) => {
+  res.json(await service.improvementPlansForCoverage(req.params.userId, req.user));
+});
+
+exports.recordImprovementOutcome = asyncHandler(async (req, res) => {
+  res.json(await service.recordImprovementOutcome(req.params.id, req.user, req.body));
+});
+
+exports.closeEscalatedPlan = asyncHandler(async (req, res) => {
+  res.json(await service.closeEscalatedPlan(req.params.id, req.user, req.body));
 });
 
 exports.getPlan = asyncHandler(async (req, res) => {
@@ -32,4 +90,14 @@ exports.removeAction = asyncHandler(async (req, res) => {
 
 exports.sharePlan = asyncHandler(async (req, res) => {
   res.json(await service.sharePlan(req.params.id, req.user));
+});
+
+exports.recordCheckIn = asyncHandler(async (req, res) => {
+  res.status(201).json(await service.recordCheckIn(req.params.id, req.user, req.body));
+});
+
+exports.setActionStatus = asyncHandler(async (req, res) => {
+  res.json(
+    await service.setActionStatus(req.params.id, req.params.actionId, req.user, req.body),
+  );
 });

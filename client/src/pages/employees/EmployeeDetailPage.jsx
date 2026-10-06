@@ -102,6 +102,14 @@ export default function EmployeeDetailPage() {
 
         <div className="ml-auto flex items-center gap-3">
           <StatusBadge status={person.status} />
+          {canAssign && (
+            <Link
+              to={`/employees/${person._id}/plan`}
+              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-brand"
+            >
+              Development plan
+            </Link>
+          )}
           {canManage && (
             <Link
               to={`/employees/${person._id}/edit`}

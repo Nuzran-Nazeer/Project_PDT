@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import {
   getPlan,
@@ -7,15 +7,37 @@ import {
   editAction,
   removeAction,
   sharePlan,
+  submitForApproval,
+  recordImprovementOutcome,
+  recordCheckIn,
+  setActionStatus,
 } from "../../services/plans";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
-import { formatDate, toDateInput } from "../../utils/dates";
-import { categoryLabel, actionStatusLabel } from "../../utils/planLabels";
+import { CheckInEntries, CheckInSchedule } from "../../components/plans/CheckIns";
+import {
+  ClosureSummary,
+  CarriedMarker,
+  SuspensionNotice,
+} from "../../components/plans/PlanClosure";
+import { ImprovementDetails } from "../../components/plans/ImprovementPlan";
+import { formatDate, toDateInput, todayInput } from "../../utils/dates";
+import {
+  categoryLabel,
+  actionStatusLabel,
+  checkInOutcomeLabel,
+  daysSinceLabel,
+  carryReasonLabel,
+  planStatusLabel,
+  outcomeChoiceLabel,
+  IMPROVEMENT_SUPERVISOR_OUTCOMES,
+  CHECK_IN_OUTCOMES,
+  CARRY_FORWARD_REASONS,
+  TRACKABLE_STATUSES,
+} from "../../utils/planLabels";
 
-// The supervisor's view: every action shows the competency it came from and who owns it.
-// ⚠️ This is the only view that carries the competency. The employee's own page and the
-// response behind it never do.
+// The supervisor's view of both kinds of plan. ⚠️ This is the only view that carries the
+// competency. The employee's own page and the response behind it never do.
 
 const EMPTY = {
   description: "",
@@ -24,10 +46,16 @@ const EMPTY = {
   ownerId: "",
   targetDate: "",
   successCriteria: "",
+  carryReason: "",
 };
+
+const EMPTY_CHECK_IN = { at: "", outcome: "", note: "" };
+
+const EMPTY_OUTCOME = { outcome: "", note: "", days: "" };
 
 export default function PlanPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, constants } = useAuth();
 
   const [plan, setPlan] = useState(null);
@@ -35,6 +63,8 @@ export default function PlanPage() {
   const [missing, setMissing] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
+  const [checkIn, setCheckIn] = useState({ ...EMPTY_CHECK_IN, at: todayInput() });
+  const [ending, setEnding] = useState(EMPTY_OUTCOME);
   const [busy, setBusy] = useState(false);
 
   const categories = constants?.planActionCategories || [];
@@ -80,6 +110,46 @@ export default function PlanPage() {
     return run(() => (editingId ? editAction(id, editingId, form) : addAction(id, form)));
   };
 
+  const submitCheckIn = (event) => {
+    event.preventDefault();
+    return run(async () => {
+      const saved = await recordCheckIn(id, checkIn);
+      setCheckIn({ ...EMPTY_CHECK_IN, at: todayInput() });
+      return saved;
+    });
+  };
+
+  const submitOutcome = async (event) => {
+    event.preventDefault();
+
+    setBusy(true);
+    setError("");
+    setMissing([]);
+
+    try {
+      const saved = await recordImprovementOutcome(id, {
+        outcome: ending.outcome,
+        note: ending.note,
+        ...(ending.outcome === "extended" ? { days: Number(ending.days) } : {}),
+      });
+
+      // ⚠️ A closed improvement plan is no longer the supervisor's to read, so staying here
+      // would leave them on a page the next request refuses.
+      if (saved.status === "closed") {
+        navigate("/team-plans");
+        return;
+      }
+
+      setPlan(saved);
+      setEnding(EMPTY_OUTCOME);
+    } catch (err) {
+      setError(err.message);
+      setMissing(err.details || []);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startEditing = (action) => {
     setEditingId(action.id);
     setMissing([]);
@@ -90,6 +160,7 @@ export default function PlanPage() {
       ownerId: action.owner?.id || "",
       targetDate: toDateInput(action.targetDate),
       successCriteria: action.successCriteria,
+      carryReason: action.carryReason || "",
     });
   };
 
@@ -115,6 +186,20 @@ export default function PlanPage() {
     );
   }
 
+  const isImprovement = plan.type === "PIP";
+  const meetingKind = isImprovement ? "meeting" : "check-in";
+  const tracking = plan.status === "active";
+  const canRecordCheckIn = plan.checkIns?.canRecord;
+
+  // Only an action that arrived from a closed plan is ever asked for a carry reason.
+  const editing = plan.actions.find((action) => action.id === editingId);
+  const owing = plan.actions.filter((action) => action.owes);
+
+  // A conversation that went off track is the second way into an improvement plan.
+  const offTrack = (plan.checkIns?.entries || []).filter(
+    (entry) => entry.outcome === "off_track",
+  );
+
   const owners = [
     { id: plan.employee?.id, name: `${plan.employee?.name} (the employee)` },
     { id: user?._id, name: `${user?.name} (you)` },
@@ -123,10 +208,11 @@ export default function PlanPage() {
   return (
     <>
       <PageHeader
-        title={`${plan.employee?.name}'s development plan`}
+        title={`${plan.employee?.name}'s ${isImprovement ? "improvement" : "development"} plan`}
         context={[
-          plan.status === "draft" ? "Draft" : "Shared, awaiting acknowledgement",
+          planStatusLabel(plan.status),
           plan.sharedAt && `shared ${formatDate(plan.sharedAt)}`,
+          plan.acknowledgedAt && `acknowledged ${formatDate(plan.acknowledgedAt)}`,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -147,6 +233,10 @@ export default function PlanPage() {
           {error}
         </p>
       )}
+
+      <ClosureSummary plan={plan} />
+      <SuspensionNotice plan={plan} />
+      <ImprovementDetails plan={plan} />
 
       <div className="grid gap-5">
         <FormSection
@@ -169,13 +259,44 @@ export default function PlanPage() {
                     <Row label="From competency">{action.competencyName}</Row>
                     <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
                     <Row label="Target date">{formatDate(action.targetDate)}</Row>
-                    <Row label="State">{actionStatusLabel(action.status)}</Row>
+                    <Row label="State">
+                      {actionStatusLabel(action.status)}
+                      {daysSinceLabel(action.daysSinceChange) &&
+                        ` · ${daysSinceLabel(action.daysSinceChange)}`}
+                    </Row>
                   </dl>
 
                   <p className="mt-3 text-[13px] text-muted">
                     <span className="font-medium text-ink">Success criterion: </span>
                     {action.successCriteria}
                   </p>
+
+                  <CarriedMarker action={action} />
+
+                  {action.owes && (
+                    <p className="mt-2 text-[13px] text-danger">
+                      Still needs {owedLabel(action.owes)}.
+                    </p>
+                  )}
+
+                  {tracking && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                      <span className="text-[13px] font-medium text-ink">Move to</span>
+                      {TRACKABLE_STATUSES.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={busy || action.status === status}
+                          onClick={() =>
+                            run(() => setActionStatus(id, action.id, status))
+                          }
+                          className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-[13px] text-muted transition-colors hover:text-brand disabled:cursor-default disabled:border-brand disabled:text-brand disabled:opacity-100"
+                        >
+                          {actionStatusLabel(status)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {plan.canEdit && (
                     <div className="mt-3 flex gap-3">
@@ -274,7 +395,16 @@ export default function PlanPage() {
                   </select>
                 </Field>
 
-                <Field label="Target date" name="targetDate" missing={missing}>
+                <Field
+                  label="Target date"
+                  name="targetDate"
+                  missing={missing}
+                  hint={
+                    editing?.carriedTargetDate
+                      ? `It arrived due ${formatDate(editing.carriedTargetDate)} and needs a new date.`
+                      : undefined
+                  }
+                >
                   <input
                     id="targetDate"
                     type="date"
@@ -283,6 +413,29 @@ export default function PlanPage() {
                     className={inputClass(missing, "targetDate")}
                   />
                 </Field>
+
+                {editing?.carriedTimes > 0 && (
+                  <Field
+                    label="Why it was not finished"
+                    name="carryReason"
+                    missing={missing}
+                    hint="Recorded against the action. The employee never sees it."
+                  >
+                    <select
+                      id="carryReason"
+                      value={form.carryReason}
+                      onChange={(e) => setForm({ ...form, carryReason: e.target.value })}
+                      className={inputClass(missing, "carryReason")}
+                    >
+                      <option value="">Choose a reason</option>
+                      {CARRY_FORWARD_REASONS.map((key) => (
+                        <option key={key} value={key}>
+                          {carryReasonLabel(key)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
               </div>
 
               <Field
@@ -324,26 +477,80 @@ export default function PlanPage() {
         ) : (
           <FormSection letter="B" title="Actions">
             <p className="text-sm text-muted">
-              This plan has been shared, so its actions can no longer be changed.
+              {plan.status === "closed"
+                ? "This plan has closed, so its actions can no longer be changed."
+                : plan.status === "suspended"
+                  ? "This plan is suspended, so its actions cannot be changed."
+                  : "This plan has been shared, so its actions can no longer be changed."}
             </p>
           </FormSection>
         )}
 
         <FormSection
           letter="C"
-          title="Share the plan"
-          note="Sharing sends it to the employee. Their acknowledgement is what makes it active."
+          title={isImprovement ? "Approval and sharing" : "Share the plan"}
+          note={
+            isImprovement
+              ? "HR approves it before the employee sees anything."
+              : "Sharing sends it to the employee. Their acknowledgement is what makes it active."
+          }
         >
-          {plan.status !== "draft" ? (
+          {plan.status === "closed" ? (
+            <p className="text-sm text-muted">
+              This plan closed on {formatDate(plan.closeDate)}.
+            </p>
+          ) : plan.status === "suspended" ? (
+            <p className="text-sm text-muted">
+              Shared on {formatDate(plan.sharedAt)}, and suspended while an improvement
+              plan runs.
+            </p>
+          ) : plan.status === "awaiting_approval" ? (
+            <p className="text-sm text-muted">
+              With HR for a decision. Nothing about it reaches {plan.employee?.name} yet,
+              and its actions cannot be changed while it is there.
+            </p>
+          ) : isImprovement && plan.status === "draft" ? (
+            <>
+              <button
+                type="button"
+                disabled={busy || plan.actions.length === 0}
+                onClick={() => run(() => submitForApproval(id))}
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Send to HR
+              </button>
+
+              {plan.actions.length === 0 && (
+                <p className="mt-3 text-[13px] text-muted">
+                  Add at least one action first.
+                </p>
+              )}
+            </>
+          ) : plan.status === "approved" ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => sharePlan(id))}
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+              >
+                Share with {plan.employee?.name}
+              </button>
+
+              <p className="mt-3 text-[13px] text-muted">
+                The start and end dates are set the moment you share it.
+              </p>
+            </>
+          ) : plan.status !== "draft" ? (
             <p className="text-sm text-muted">
               Shared on {formatDate(plan.sharedAt)}. Waiting for {plan.employee?.name}.
             </p>
           ) : (
             <>
-              {/* Hides the way in, never protects it: the server refuses an empty plan too. */}
+              {/* Hides the way in, never protects it: the server refuses both of these too. */}
               <button
                 type="button"
-                disabled={busy || plan.actions.length === 0}
+                disabled={busy || plan.actions.length === 0 || owing.length > 0}
                 onClick={() => run(() => sharePlan(id))}
                 className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -355,13 +562,240 @@ export default function PlanPage() {
                   Add at least one action first.
                 </p>
               )}
+
+              {owing.length > 0 && (
+                <p className="mt-3 text-[13px] text-muted">
+                  {owing.length === 1
+                    ? "One action carried forward still needs a reason and a new target date."
+                    : `${owing.length} actions carried forward still need a reason and a new target date.`}
+                </p>
+              )}
             </>
           )}
         </FormSection>
+
+        <FormSection letter="D" title={isImprovement ? "Meetings" : "Check-ins"}>
+          <CheckInSchedule summary={plan.checkIns} kind={meetingKind} />
+
+          <div className="mt-4">
+            <CheckInEntries entries={plan.checkIns?.entries} kind={meetingKind} />
+          </div>
+
+          {canRecordCheckIn ? (
+            <form
+              onSubmit={submitCheckIn}
+              className="mt-4 grid gap-4 border-t border-line pt-4"
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Date of the conversation"
+                  name="at"
+                  missing={missing}
+                  hint="The day you spoke, which may not be today."
+                >
+                  <input
+                    id="at"
+                    type="date"
+                    max={todayInput()}
+                    value={checkIn.at}
+                    onChange={(e) => setCheckIn({ ...checkIn, at: e.target.value })}
+                    className={inputClass(missing, "at")}
+                  />
+                </Field>
+
+                <Field label="Outcome" name="outcome" missing={missing}>
+                  <select
+                    id="outcome"
+                    value={checkIn.outcome}
+                    onChange={(e) => setCheckIn({ ...checkIn, outcome: e.target.value })}
+                    className={inputClass(missing, "outcome")}
+                  >
+                    <option value="">Choose an outcome</option>
+                    {CHECK_IN_OUTCOMES.map((key) => (
+                      <option key={key} value={key}>
+                        {checkInOutcomeLabel(key)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+
+              <Field
+                label="Note"
+                name="note"
+                missing={missing}
+                hint="What was discussed. This cannot be changed once recorded."
+              >
+                <textarea
+                  id="note"
+                  rows={3}
+                  value={checkIn.note}
+                  onChange={(e) => setCheckIn({ ...checkIn, note: e.target.value })}
+                  className={inputClass(missing, "note")}
+                />
+              </Field>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {busy
+                    ? "Recording…"
+                    : `Record the ${isImprovement ? "meeting" : "check-in"}`}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className="mt-4 border-t border-line pt-4 text-[13px] text-muted">
+              {plan.status === "closed"
+                ? "This plan has closed."
+                : plan.status === "suspended"
+                  ? "This plan is suspended while an improvement plan runs."
+                  : `Check-ins open once ${plan.employee?.name} acknowledges the plan.`}
+            </p>
+          )}
+        </FormSection>
+
+        {isImprovement && plan.improvement?.canClose && (
+          <FormSection
+            letter="E"
+            title="End the plan"
+            note="Completing or not completing it closes it. Extending and escalating do not."
+          >
+            <form onSubmit={submitOutcome} className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Outcome" name="outcome" missing={missing}>
+                  <select
+                    id="outcome"
+                    value={ending.outcome}
+                    onChange={(e) => setEnding({ ...ending, outcome: e.target.value })}
+                    className={inputClass(missing, "outcome")}
+                  >
+                    <option value="">Choose an outcome</option>
+                    {IMPROVEMENT_SUPERVISOR_OUTCOMES.map((key) => (
+                      <option
+                        key={key}
+                        value={key}
+                        disabled={key === "extended" && !plan.improvement.canExtend}
+                      >
+                        {outcomeChoiceLabel(key)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                {ending.outcome === "extended" && (
+                  <Field
+                    label="Extra days"
+                    name="days"
+                    missing={missing}
+                    hint="30 to 90, counted from today."
+                  >
+                    <input
+                      id="days"
+                      type="number"
+                      min={30}
+                      max={90}
+                      value={ending.days}
+                      onChange={(e) => setEnding({ ...ending, days: e.target.value })}
+                      className={inputClass(missing, "days")}
+                    />
+                  </Field>
+                )}
+              </div>
+
+              <Field
+                label="What happened"
+                name="note"
+                missing={missing}
+                hint={
+                  ending.outcome === "escalated"
+                    ? "HR reads this, and they decide how the plan ends from here."
+                    : "Recorded against the plan and shown to the employee."
+                }
+              >
+                <textarea
+                  id="note"
+                  rows={3}
+                  value={ending.note}
+                  onChange={(e) => setEnding({ ...ending, note: e.target.value })}
+                  className={inputClass(missing, "note")}
+                />
+              </Field>
+
+              {!plan.improvement.canExtend && (
+                <p className="text-[13px] text-muted">
+                  This plan has already been extended once.
+                </p>
+              )}
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={busy || !ending.outcome || !ending.note.trim()}
+                  className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? "Recording…" : "Record the outcome"}
+                </button>
+              </div>
+            </form>
+          </FormSection>
+        )}
+
+        {isImprovement && plan.improvement?.escalation && (
+          <FormSection letter="E" title="End the plan">
+            <p className="text-sm text-muted">
+              This plan has been escalated, so HR records how it ends.
+            </p>
+          </FormSection>
+        )}
+
+        {/* ⚠️ Only on a development plan, and never on the employee's page or HR's read.
+            An improvement plan is not started from another improvement plan. */}
+        {!isImprovement && (
+          <FormSection
+            letter="E"
+            title="Improvement plan"
+            note="A formal route for a serious concern. HR approves it before the employee sees it."
+          >
+            <Link
+              to={`/team-plans/${id}/improvement`}
+              className="text-sm text-brand transition-colors hover:underline"
+            >
+              Start one from the published result
+            </Link>
+
+            {offTrack.length > 0 && (
+              <ul className="mt-3 grid gap-2 border-t border-line pt-3">
+                {offTrack.map((entry) => (
+                  <li key={entry.number} className="text-[13px]">
+                    <Link
+                      to={`/team-plans/${id}/improvement?checkIn=${entry.number}`}
+                      className="text-brand transition-colors hover:underline"
+                    >
+                      Start one from check-in {entry.number}
+                    </Link>
+                    <span className="text-muted"> · {formatDate(entry.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+        )}
       </div>
     </>
   );
 }
+
+// The server names what a carried action is short of: one of these, or both.
+const OWED_LABELS = {
+  carryReason: "a reason",
+  targetDate: "a new target date",
+};
+
+const owedLabel = (owes) => owes.map((key) => OWED_LABELS[key] || key).join(" and ");
 
 const inputClass = (missing, name) =>
   `w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${

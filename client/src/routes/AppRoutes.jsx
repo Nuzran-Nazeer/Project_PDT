@@ -36,8 +36,17 @@ import SummaryCheckPage from "../pages/checks/SummaryCheckPage";
 import ReviewerIdentityPage from "../pages/identity/ReviewerIdentityPage";
 import TeamPlansPage from "../pages/plans/TeamPlansPage";
 import PlanPage from "../pages/plans/PlanPage";
+import MyPlanPage from "../pages/plans/MyPlanPage";
+import MyImprovementPlanPage from "../pages/plans/MyImprovementPlanPage";
+import CoveragePlanPage from "../pages/plans/CoveragePlanPage";
+import StartImprovementPlanPage from "../pages/plans/StartImprovementPlanPage";
+import ImprovementQueuePage from "../pages/plans/ImprovementQueuePage";
+import OpenEscalationsPage from "../pages/plans/OpenEscalationsPage";
 import AuditTrailPage from "../pages/oversight/AuditTrailPage";
 import MonitoringPage from "../pages/oversight/MonitoringPage";
+import RatingDistributionPage from "../pages/reports/RatingDistributionPage";
+import PlanProgressPage from "../pages/reports/PlanProgressPage";
+import AuditCountsPage from "../pages/reports/AuditCountsPage";
 import { TABS_BY_GROUP } from "../utils/dashboardTabs";
 
 // ⚠️ Every gate here hides rather than protects: the real check is on the server.
@@ -60,12 +69,19 @@ const TAB_PAGES = {
   "summaries-to-check": SummariesToCheckPage,
   "reviewer-identity": ReviewerIdentityPage,
   "team-plans": TeamPlansPage,
+  "improvement-approvals": ImprovementQueuePage,
+  "improvement-escalations": OpenEscalationsPage,
   "audit-trail": AuditTrailPage,
   monitoring: MonitoringPage,
+  "rating-distribution": RatingDistributionPage,
+  "plan-progress": PlanProgressPage,
+  "audit-counts": AuditCountsPage,
 
   "my-self-assessment": SelfAssessmentPage,
   "feedback-i-owe": FeedbackOwedPage,
   "my-result": MyResultPage,
+  "my-development-plan": MyPlanPage,
+  "my-improvement-plan": MyImprovementPlanPage,
 };
 
 function AppRoutes() {
@@ -153,6 +169,10 @@ function AppRoutes() {
             <Route path="/my-team/:id/review" element={<SupervisorReviewFormPage />} />
             <Route path="/my-team/:id/normalisation" element={<NormalisationShell />} />
             <Route path="/team-plans/:id" element={<PlanPage />} />
+            <Route
+              path="/team-plans/:id/improvement"
+              element={<StartImprovementPlanPage />}
+            />
           </Route>
 
           {/* HR too: HR decides and draws, and confirms for somebody nobody supervises. */}
@@ -167,6 +187,10 @@ function AppRoutes() {
           <Route element={<ProtectedRoute allow={["hr", "head_of_hr", "leadership"]} />}>
             <Route path="/employees" element={<EmployeeListPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+          </Route>
+          {/* Not leadership: they reach an employee record but never their plan. */}
+          <Route element={<ProtectedRoute allow={["hr", "head_of_hr"]} />}>
+            <Route path="/employees/:id/plan" element={<CoveragePlanPage />} />
           </Route>
           <Route element={<ProtectedRoute allow={["hr"]} />}>
             <Route path="/employees/new" element={<EmployeeFormPage />} />

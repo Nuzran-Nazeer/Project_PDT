@@ -13,6 +13,7 @@ const ACTION_LABELS = {
   cycle_cancellation: "Cycle cancelled",
   colleague_list_decision: "Colleague list decision",
   history_edit: "History record edit",
+  plan_read: "Development plan read",
 };
 
 const selectClass =
