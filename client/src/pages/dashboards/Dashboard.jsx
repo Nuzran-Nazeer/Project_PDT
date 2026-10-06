@@ -66,6 +66,41 @@ function RoleWorkspace({ groups }) {
   const visible = tabs.slice(page * 6, (page + 1) * 6);
   return (
     <div className="space-y-6">
+      <div
+        className={`grid items-start gap-6 ${groups.includes("supervisor") ? "lg:grid-cols-2" : ""}`}
+      >
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
+          >
+            Appraisal cycle: {error}
+          </p>
+        ) : (
+          <CycleCard cycle={cycle} parGroup={parGroup} loading={loading} />
+        )}
+        {groups.includes("supervisor") && (
+          <section className="rounded-xl border border-line bg-raised p-5">
+            <h2 className="text-base font-semibold">Team overview</h2>
+            {teamError ? (
+              <p role="alert" className="mt-3 text-sm text-danger">
+                {teamError}
+              </p>
+            ) : (
+              <p
+                role={teamLoading ? "status" : undefined}
+                className="mt-3 text-sm text-muted"
+              >
+                {teamLoading
+                  ? "Loading team…"
+                  : team
+                    ? `${team.total} ${team.total === 1 ? "person" : "people"} you supervise`
+                    : "No team information available."}
+              </p>
+            )}
+          </section>
+        )}
+      </div>
       <section className="overflow-hidden rounded-xl border border-line bg-raised">
         <div className="border-b border-line p-5">
           <h2 className="text-base font-semibold">Your workspace</h2>
@@ -123,41 +158,6 @@ function RoleWorkspace({ groups }) {
           </div>
         )}
       </section>
-      <div
-        className={`grid items-start gap-6 ${groups.includes("supervisor") ? "lg:grid-cols-2" : ""}`}
-      >
-        {error ? (
-          <p
-            role="alert"
-            className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-          >
-            Appraisal cycle: {error}
-          </p>
-        ) : (
-          <CycleCard cycle={cycle} parGroup={parGroup} loading={loading} />
-        )}
-        {groups.includes("supervisor") && (
-          <section className="rounded-xl border border-line bg-raised p-5">
-            <h2 className="text-base font-semibold">Team overview</h2>
-            {teamError ? (
-              <p role="alert" className="mt-3 text-sm text-danger">
-                {teamError}
-              </p>
-            ) : (
-              <p
-                role={teamLoading ? "status" : undefined}
-                className="mt-3 text-sm text-muted"
-              >
-                {teamLoading
-                  ? "Loading team…"
-                  : team
-                    ? `${team.total} ${team.total === 1 ? "person" : "people"} you supervise`
-                    : "No team information available."}
-              </p>
-            )}
-          </section>
-        )}
-      </div>
     </div>
   );
 }
