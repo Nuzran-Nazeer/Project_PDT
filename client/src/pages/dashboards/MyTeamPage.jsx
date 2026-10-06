@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useTeam } from "../../hooks/useTeam";
@@ -30,26 +31,19 @@ export default function MyTeamPage() {
       )}
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : people.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {!isSupervisor
             ? "You do not lead a unit, so nobody reports to you."
             : leads.length === 0
               ? "You do not lead a unit at the moment."
               : "Nobody belongs to the unit you lead at the moment."}
-        </p>
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
@@ -89,7 +83,7 @@ export default function MyTeamPage() {
                   <td className="px-4 py-3">
                     <Link
                       to={`/my-team/${person.id}`}
-                      className="text-sm text-brand transition-colors hover:underline"
+                      className="text-sm text-ink transition-colors hover:underline"
                     >
                       View
                     </Link>

@@ -1,20 +1,21 @@
 import { Link } from "react-router-dom";
 
 export function FormShell({ children }) {
-  return <div className="grid gap-5">{children}</div>;
+  return <div className="grid min-w-0 grid-cols-1 gap-5">{children}</div>;
 }
 
 export function FormSection({ letter, title, note, children }) {
   return (
-    <section className="rounded-xl border border-line bg-raised p-5">
-      <h2 className="text-[15px] font-semibold text-ink">
-        {letter && <span className="mr-2 text-muted">{letter}</span>}
-        {title}
-      </h2>
+    <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-raised">
+      <div className="border-b border-line px-5 py-5 sm:px-6">
+        <h2 className="text-base font-semibold text-ink">
+          {letter && <span className="mr-2 text-muted">{letter}</span>}
+          {title}
+        </h2>
 
-      {note && <p className="mt-1.5 max-w-prose text-[13px] text-muted">{note}</p>}
-
-      <div className="mt-4">{children}</div>
+        {note && <p className="mt-1.5 max-w-prose text-[13px] text-muted">{note}</p>}
+      </div>
+      <div className="p-5 sm:p-6">{children}</div>
     </section>
   );
 }
@@ -42,7 +43,7 @@ export function FormActions({ backTo, backLabel }) {
         {backTo && (
           <Link
             to={backTo}
-            className="text-sm text-muted transition-colors hover:text-brand"
+            className="text-sm text-muted transition-colors hover:text-ink"
           >
             {backLabel || "Back"}
           </Link>

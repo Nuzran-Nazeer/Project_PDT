@@ -229,18 +229,17 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
-  const primaryClass =
-    "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-  const secondaryClass =
-    "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand";
+  const primaryClass = "workflow-primary";
+  const secondaryClass = "workflow-secondary";
   const rowButtonClass =
-    "cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+    "cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
   const tabClass = (active) =>
     `cursor-pointer rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
-      active ? "bg-brand/10 text-brand" : "text-muted hover:text-brand"
+      active
+        ? "border-b-2 border-brand bg-secondary text-ink"
+        : "border-b-2 border-transparent text-muted hover:text-ink"
     }`;
 
   const awaitingPeriod = periodMode && !appliedPeriod;
@@ -282,7 +281,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
         >
           <p className="text-[13px] text-muted">Both dates are included.</p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="periodFrom">
                 First day
@@ -360,7 +359,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
           onSubmit={submitAssign}
           className="mt-4 rounded-xl border border-line bg-surface p-4"
         >
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className={labelClass} htmlFor="assignUserId">
                 Who is joining
@@ -488,7 +487,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
 
                   {/* Over a period the flag sits on each stretch instead. */}
                   {!periodMode && member.isTeamLead && (
-                    <span className="rounded-lg border border-brand/40 px-2 py-0.5 text-[12px] text-brand">
+                    <span className="rounded-lg border border-brand/40 px-2 py-0.5 text-[12px] text-ink">
                       Team lead
                     </span>
                   )}
@@ -527,7 +526,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
                       {/* ⚠️ `to` is the first day not covered. */}
                       {period.to ? ` to ${formatDate(lastDayOf(period.to))}` : " onwards"}
                       {period.isTeamLead && (
-                        <span className="text-brand"> · team lead</span>
+                        <span className="text-ink"> · team lead</span>
                       )}
                     </li>
                   ))}
@@ -562,8 +561,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
 
                     {rowAction.kind === "lead" && (
                       <p className="mt-3 text-[13px] text-muted">
-                        Whoever leads the team now stops on that date and stays on the
-                        project. Their term is kept, not overwritten.
+                        The current lead stops on that date and stays on the project.
                       </p>
                     )}
 

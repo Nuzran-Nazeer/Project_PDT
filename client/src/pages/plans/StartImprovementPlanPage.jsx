@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getPlan, startImprovementPlan } from "../../services/plans";
@@ -73,22 +74,13 @@ export default function StartImprovementPlanPage() {
     return (
       <>
         <PageHeader title="Start an improvement plan" backTo="/team-plans" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       </>
     );
   }
 
   if (!plan) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   const checkIn = checkInNumber
@@ -106,7 +98,7 @@ export default function StartImprovementPlanPage() {
 
       <Link
         to={`/team-plans/${id}`}
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to the development plan
       </Link>
@@ -120,7 +112,7 @@ export default function StartImprovementPlanPage() {
         </p>
       )}
 
-      <div className="grid gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         {checkIn && (
           <FormSection letter="A" title="What this follows">
             <p className="text-sm text-ink">
@@ -138,8 +130,8 @@ export default function StartImprovementPlanPage() {
           title="The plan"
           note="HR approves it before it reaches the employee."
         >
-          <form onSubmit={submit} className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <form onSubmit={submit} className="grid min-w-0 grid-cols-1 gap-4">
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Type" name="improvementType" missing={missing}>
                 <select
                   id="improvementType"
@@ -196,11 +188,7 @@ export default function StartImprovementPlanPage() {
             </div>
 
             <div>
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
-              >
+              <button type="submit" disabled={busy} className="workflow-primary">
                 {busy ? "Starting…" : "Start the plan"}
               </button>
             </div>

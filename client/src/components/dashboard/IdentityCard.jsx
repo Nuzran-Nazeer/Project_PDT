@@ -1,23 +1,31 @@
 import Icon from "../common/Icon";
 
-export default function IdentityCard({ name, roleLabel, employeeId }) {
+export default function IdentityCard({ name, roleLabel, employeeId, wide = false }) {
   return (
-    <div className="flex h-full items-center gap-6 rounded-xl border border-line bg-raised p-7">
-      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand text-xl font-bold text-white">
+    <div
+      className={`flex h-full flex-wrap items-center gap-4 rounded-xl border border-line bg-raised p-5 sm:gap-6 sm:p-7 ${wide ? "" : "flex-nowrap"}`}
+    >
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-secondary text-xl font-bold text-ink sm:h-16 sm:w-16">
         {initials(name)}
       </span>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-2xl font-semibold tracking-tight text-ink">
           {greeting()}, {name}
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {roleLabel && <Chip icon="briefcase">{roleLabel}</Chip>}
-          {employeeId && <Chip icon="user">{employeeId}</Chip>}
-          <Chip icon="calendar">{today()}</Chip>
+          {!wide && employeeId && <Chip icon="user">{employeeId}</Chip>}
+          {!wide && <Chip icon="calendar">{today()}</Chip>}
         </div>
       </div>
+      {wide && (
+        <div className="flex w-full flex-wrap items-center gap-2 border-t border-line pt-4 md:w-auto md:flex-col md:items-end md:gap-3 md:border-t-0 md:border-l md:pl-6 md:pt-0">
+          <Chip icon="calendar">{today()}</Chip>
+          {employeeId && <Chip icon="user">{employeeId}</Chip>}
+        </div>
+      )}
     </div>
   );
 }

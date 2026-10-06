@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../../components/layout/PageHeader";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { listCycles } from "../../services/cycles";
 import { getCycleLists } from "../../services/reviewerLists";
 import { stateLabel } from "../../utils/reviewerListStates";
@@ -80,7 +81,7 @@ export default function ChooseReviewersPage() {
         <Notice>No cycle has reached collecting yet.</Notice>
       ) : (
         <>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="workflow-toolbar">
             <label htmlFor="cycle" className="text-[13px] font-semibold text-ink">
               Cycle
             </label>
@@ -88,7 +89,7 @@ export default function ChooseReviewersPage() {
               id="cycle"
               value={cycleId}
               onChange={(e) => setChosenId(e.target.value)}
-              className="rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="workflow-field"
             >
               {cycles.map((c) => (
                 <option key={c._id} value={c._id}>
@@ -119,7 +120,7 @@ export default function ChooseReviewersPage() {
               {groups.length === 0 ? (
                 <Notice>This cycle has no reviews.</Notice>
               ) : (
-                <div className="mt-4 grid gap-6">
+                <div className="mt-4 grid min-w-0 grid-cols-1 gap-6">
                   {groups.map((group) => (
                     <Group key={group.supervisor?.id || "none"} group={group} />
                   ))}
@@ -141,7 +142,7 @@ function Group({ group }) {
           ? `Supervised by ${group.supervisor.name}`
           : "Nobody supervises them, so HR covering them confirms the list"}
       </h2>
-      <div className="overflow-x-auto">
+      <div className="workflow-table border-0 rounded-none">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left">
@@ -166,7 +167,7 @@ function Group({ group }) {
                       <Link
                         to={`/reviewer-lists/${row.reviewId}`}
                         state={{ from: "/choose-reviewers" }}
-                        className="text-sm text-brand transition-colors hover:underline"
+                        className="text-sm text-ink transition-colors hover:underline"
                       >
                         Open
                       </Link>
@@ -186,9 +187,9 @@ function Group({ group }) {
 
 function Notice({ children, tone = "text-muted" }) {
   return (
-    <p className={`rounded-xl border border-line bg-raised p-5 text-sm ${tone}`}>
+    <WorkflowNotice tone={tone === "text-danger" ? "error" : "empty"}>
       {children}
-    </p>
+    </WorkflowNotice>
   );
 }
 

@@ -187,13 +187,10 @@ export default function CyclesPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
-  const primaryClass =
-    "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-  const secondaryClass =
-    "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+  const primaryClass = "workflow-primary";
+  const secondaryClass = "workflow-secondary";
 
   return (
     <>
@@ -201,7 +198,7 @@ export default function CyclesPage() {
         title="Appraisal cycles"
         context={
           canManage
-            ? "One run of the review process for one appraisal group. Everything else hangs off it."
+            ? "One run of the review process for one appraisal group."
             : "One run of the review process for one appraisal group. Only HR can change these."
         }
       />
@@ -230,11 +227,10 @@ export default function CyclesPage() {
           </h2>
 
           <p className="mt-2 max-w-prose text-[13px] text-muted">
-            Created as a draft. Opening it starts the 30 days in which it can be
-            cancelled.
+            Created as a draft. Opening it starts the 30 days it can be cancelled in.
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="parGroup">
                 Appraisal group
@@ -318,7 +314,7 @@ export default function CyclesPage() {
         </form>
       )}
 
-      <div className="mt-8 grid gap-3">
+      <div className="mt-8 grid min-w-0 grid-cols-1 gap-3">
         {loading ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : cycles.length === 0 ? (
@@ -342,7 +338,7 @@ export default function CyclesPage() {
 
                   <span
                     className={`rounded-lg border px-2.5 py-1 text-[12px] ${
-                      STAGE_TONE[cycle.status] || "border-brand/40 text-brand"
+                      STAGE_TONE[cycle.status] || "border-brand/40 text-ink"
                     }`}
                   >
                     {STAGE_LABELS[cycle.status] || cycle.status}
@@ -437,10 +433,7 @@ export default function CyclesPage() {
                       Publish every result in this cycle?
                     </p>
                     <p className="mt-2 max-w-prose text-[13px] text-muted">
-                      Everyone in the {cycle.parGroup} group whose review is ready
-                      receives their result at the same time, and it cannot be taken back.
-                      A review that is not ready is left waiting, named, and can be
-                      published on its own once it catches up.
+                      Publishes everyone ready. It cannot be undone; the rest wait.
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-3">
@@ -507,8 +500,7 @@ export default function CyclesPage() {
                     />
 
                     <p className="mt-2 text-[13px] text-muted">
-                      A cycle can only be cancelled within 30 days of opening, and never
-                      once it has moved past open. It is never deleted.
+                      Only within 30 days of opening, and never once past open.
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-3">
@@ -586,7 +578,7 @@ function MoveOutcome({ outcome }) {
       </p>
 
       {waiting.length > 0 && (
-        <ul className="mt-2 grid gap-1 text-ink">
+        <ul className="mt-2 grid min-w-0 grid-cols-1 gap-1 text-ink">
           {waiting.map((item) => (
             <li key={item.reviewId}>
               <span className="font-medium">{item.employee?.name}</span>

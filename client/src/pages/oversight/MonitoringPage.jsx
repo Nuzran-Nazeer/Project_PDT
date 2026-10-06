@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { listFlags, markFlagReviewed } from "../../services/monitoring";
 import { formatDateTime } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
@@ -23,12 +24,9 @@ const TYPE_RULES = {
     "A unit, leadership or coverage date set inside a cycle that is being worked on.",
 };
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const selectClass =
-  "rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
+const selectClass = "workflow-field";
 
 export default function MonitoringPage() {
   const { user } = useAuth();
@@ -81,12 +79,10 @@ export default function MonitoringPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        What the trail raised on its own, so that misuse is found without reading the whole
-        log. A flag stays open until it is marked reviewed with a note, and marking one
-        reviewed hides nothing: anything that happens afterwards opens a new one.
+        A flag stays open until it is marked reviewed with a note.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="workflow-toolbar">
         <label htmlFor="status" className="sr-only">
           Which flags
         </label>
@@ -112,26 +108,19 @@ export default function MonitoringPage() {
       </div>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
+        <WorkflowNotice>
           {status === "reviewed"
             ? "Nothing has been marked reviewed yet."
             : status === "all"
-              ? "Nothing has been flagged. The checks start from the day they were built and do not reach back."
-              : "Nothing is open. Anything raised from now on appears here."}
-        </p>
+              ? "Nothing has been flagged. The checks do not reach back before they were built."
+              : "Nothing is open."}
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
@@ -191,14 +180,18 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
         onClick={onToggle}
         className="cursor-pointer border-b border-line last:border-0 hover:bg-surface"
       >
-        <td className="px-4 py-3 whitespace-nowrap text-muted">{formatDateTime(flag.raisedAt)}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-muted">
+          {formatDateTime(flag.raisedAt)}
+        </td>
 
         <td className="px-4 py-3 font-medium text-ink">
           {TYPE_LABELS[flag.type] || flag.type}
         </td>
 
         <td className="px-4 py-3">
-          <span className="text-ink">{flag.officerId?.name || "No longer on record"}</span>
+          <span className="text-ink">
+            {flag.officerId?.name || "No longer on record"}
+          </span>
           {flag.officerId?.employeeId && (
             <span className="mt-0.5 block text-[12px] text-muted">
               {flag.officerId.employeeId}
@@ -207,7 +200,9 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
         </td>
 
         <td className="px-4 py-3 whitespace-nowrap text-muted">
-          {flag.cycleId ? `${flag.cycleId.parGroup} ${flag.cycleId.year}` : "None resolved"}
+          {flag.cycleId
+            ? `${flag.cycleId.parGroup} ${flag.cycleId.year}`
+            : "None resolved"}
         </td>
 
         {/* Only the reveal flag counts up to a line; the other two are incidents. */}
@@ -240,12 +235,16 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
               e.stopPropagation();
               onToggle();
             }}
-            className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <span className="sr-only">{expanded ? "Hide details" : "Show details"}</span>
             <Icon
               name="chevron"
-              className={expanded ? "h-4 w-4 rotate-90 transition-transform" : "h-4 w-4 transition-transform"}
+              className={
+                expanded
+                  ? "h-4 w-4 rotate-90 transition-transform"
+                  : "h-4 w-4 transition-transform"
+              }
             />
           </button>
         </td>
@@ -255,7 +254,9 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
         <tr id={panelId} className="border-b border-line last:border-0">
           <td colSpan={7} className="bg-surface px-4 py-4">
             <p className="max-w-prose text-sm text-ink">{flag.detail}</p>
-            <p className="mt-1 max-w-prose text-[13px] text-muted">{TYPE_RULES[flag.type]}</p>
+            <p className="mt-1 max-w-prose text-[13px] text-muted">
+              {TYPE_RULES[flag.type]}
+            </p>
             <p className="mt-2 text-[12px] text-muted">
               Last seen {formatDateTime(flag.lastEventAt)}
             </p>
@@ -300,7 +301,7 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="What you checked, and what it turned out to be."
-                  className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 />
 
                 {error && (

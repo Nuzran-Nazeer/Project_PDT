@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
@@ -43,11 +44,7 @@ export default function CollectedResponsePage() {
   }, [reviewId]);
 
   if (teamLoading) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   const backTo = person ? `/my-team/${id}` : "/my-team";
@@ -61,22 +58,13 @@ export default function CollectedResponsePage() {
     return (
       <>
         <PageHeader title="Colleague feedback" backTo={backTo} />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {problem}
-        </p>
+        <WorkflowNotice tone="error">{problem}</WorkflowNotice>
       </>
     );
   }
 
   if (!collected) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   const item = collected.released
@@ -87,11 +75,11 @@ export default function CollectedResponsePage() {
     return (
       <>
         <PageHeader title="Colleague feedback" backTo={backTo} />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {collected.released
             ? "That response is not in the released batch."
             : "Nothing is released yet."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -102,7 +90,7 @@ export default function CollectedResponsePage() {
 
       <FormShell>
         <FormSection letter="A" title="Competency ratings" note="As they answered them.">
-          <div className="grid gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-4">
             {(collected.competencies || []).map((competency) => (
               <CompetencyRatingField
                 key={competency.key}
@@ -115,7 +103,7 @@ export default function CollectedResponsePage() {
         </FormSection>
 
         <FormSection letter="B" title="In their own words">
-          <div className="grid gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3">
             <TextAreaField
               id="strengths"
               label="One strength worth keeping"

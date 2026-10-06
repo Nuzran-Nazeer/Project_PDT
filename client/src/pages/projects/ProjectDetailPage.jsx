@@ -63,8 +63,7 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
 
   const closed = Boolean(project?.endDate);
@@ -91,7 +90,7 @@ export default function ProjectDetailPage() {
 
       <Link
         to="/projects"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
       >
         <Icon name="arrowLeft" className="h-4 w-4" />
         Back to projects
@@ -124,8 +123,7 @@ export default function ProjectDetailPage() {
                     <div>
                       <p className="text-sm font-medium text-ink">Close this project</p>
                       <p className="mt-1 text-[13px] text-muted">
-                        Everyone still on it is taken off on the same date. Nothing is
-                        deleted, and who worked on it stays readable.
+                        Everyone still on it is taken off on the same date.
                       </p>
                     </div>
                     <button
@@ -139,8 +137,7 @@ export default function ProjectDetailPage() {
                 ) : (
                   <div>
                     <p className="text-sm text-ink">
-                      Close <strong>{project.name}</strong>? Every assignment still open
-                      on that date ends with it, and the record of who was on it is kept.
+                      Close <strong>{project.name}</strong>? Open assignments end too.
                     </p>
 
                     <div className="mt-4 max-w-xs">

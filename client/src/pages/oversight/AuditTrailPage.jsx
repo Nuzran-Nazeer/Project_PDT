@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { listAudit } from "../../services/audit";
 import { formatDate, formatDateTime } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
@@ -16,10 +17,9 @@ const ACTION_LABELS = {
   plan_read: "Development plan read",
 };
 
-const selectClass =
-  "rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const selectClass = "workflow-field";
 const pagerClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50";
+  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function AuditTrailPage() {
   const { user } = useAuth();
@@ -83,13 +83,10 @@ export default function AuditTrailPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        Every identity reveal, cycle cancellation, decision on a colleague list and edit
-        to a dated record, newest first. A refused reveal is recorded alongside an allowed
-        one. Nothing here can be changed or removed by anyone, which is what makes it
-        worth reading. No entry names a colleague who gave feedback.
+        Newest first. Nothing can be changed or removed, and no entry names a colleague.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="workflow-toolbar">
         <label htmlFor="action" className="sr-only">
           Action
         </label>
@@ -130,24 +127,17 @@ export default function AuditTrailPage() {
       </div>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
+        <WorkflowNotice>
           {action || outcome
             ? "No entry matches that filter."
-            : "Nothing has been recorded yet. The trail starts from the day it was built and does not reach back."}
-        </p>
+            : "Nothing has been recorded yet. The trail does not reach back before it was built."}
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">

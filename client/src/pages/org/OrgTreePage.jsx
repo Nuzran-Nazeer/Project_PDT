@@ -196,13 +196,10 @@ export default function OrgTreePage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
-  const primaryClass =
-    "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-  const secondaryClass =
-    "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+  const primaryClass = "workflow-primary";
+  const secondaryClass = "workflow-secondary";
 
   return (
     <section>
@@ -211,7 +208,7 @@ export default function OrgTreePage() {
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Organisation</h1>
           <p className="mt-1 text-muted">
             {canManage
-              ? "The company as a tree of units. Supervision is read from its shape."
+              ? "The company as a tree of units."
               : isOfficer
                 ? "The company as a tree of units. You can add sub-units inside the units you cover; only the Head of HR can change the rest."
                 : "The company as a tree of units. Only the Head of HR can change it."}
@@ -259,7 +256,7 @@ export default function OrgTreePage() {
           )}
         </div>
       ) : (
-        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
+        <div className="mt-6 grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
           <div className="rounded-xl border border-line bg-raised p-2">
             <UnitTree units={units} selectedId={selected?._id} onSelect={select} />
           </div>
@@ -329,8 +326,7 @@ export default function OrgTreePage() {
                     <p id="type" className="text-sm text-ink">
                       sub-unit
                       <span className="block text-[13px] text-muted">
-                        HR officers add sub-units only. Units are created by the Head of
-                        HR.
+                        HR officers add sub-units only. The Head of HR creates units.
                       </span>
                     </p>
                   ) : (

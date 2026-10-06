@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
@@ -61,23 +62,16 @@ export default function TeamMemberPage() {
     : [];
 
   if (loading) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   if (error || !person) {
     return (
       <>
         <PageHeader title="Team member" backTo="/my-team" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error">
           {error || "That person is not in the team you lead today."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -93,12 +87,12 @@ export default function TeamMemberPage() {
 
       <Link
         to="/my-team"
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to my team
       </Link>
 
-      <div className="grid gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         <FormSection letter="A" title="Their self-assessment">
           {assessmentError ? (
             <p role="alert" className="text-[13px] text-danger">
@@ -150,17 +144,13 @@ export default function TeamMemberPage() {
 
           {person.sentBack && (
             <p className="mt-3 max-w-prose text-[13px] font-medium text-amber-700 dark:text-amber-400">
-              HR has sent your colleague summary back. The reason is at the top of the
-              form.
+              HR sent your colleague summary back. The reason is at the top of the form.
             </p>
           )}
 
           {/* Hides the way in, never protects it: the server refuses the form with a 409. */}
           {readiness && readiness.state !== "waiting" ? (
-            <Link
-              to={`/my-team/${person.id}/review`}
-              className="mt-4 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-            >
+            <Link to={`/my-team/${person.id}/review`} className="workflow-primary mt-4">
               {person.sentBack
                 ? "Revise your review"
                 : REVIEW_LINK[readiness.state] || "Supervisor review"}
@@ -183,7 +173,7 @@ export default function TeamMemberPage() {
           >
             <Link
               to="/team-plans"
-              className="inline-block rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-surface"
+              className="inline-block rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface"
             >
               Go to team plans
             </Link>

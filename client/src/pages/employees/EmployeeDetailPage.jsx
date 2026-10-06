@@ -76,7 +76,7 @@ export default function EmployeeDetailPage() {
         <button
           type="button"
           onClick={() => navigate("/employees")}
-          className="mt-4 cursor-pointer text-sm font-medium text-brand hover:underline"
+          className="mt-4 cursor-pointer text-sm font-medium text-ink hover:underline"
         >
           Back to employees
         </button>
@@ -86,7 +86,7 @@ export default function EmployeeDetailPage() {
 
   return (
     <section>
-      <Link to="/employees" className="text-[13px] text-muted hover:text-brand">
+      <Link to="/employees" className="text-[13px] text-muted hover:text-ink">
         ← Employees
       </Link>
 
@@ -105,7 +105,7 @@ export default function EmployeeDetailPage() {
           {canAssign && (
             <Link
               to={`/employees/${person._id}/plan`}
-              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-brand"
+              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-ink"
             >
               Development plan
             </Link>
@@ -113,7 +113,7 @@ export default function EmployeeDetailPage() {
           {canManage && (
             <Link
               to={`/employees/${person._id}/edit`}
-              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-brand"
+              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-ink"
             >
               Edit
             </Link>
@@ -168,7 +168,7 @@ export default function EmployeeDetailPage() {
         <Row
           label="Appraisal group"
           value={person.parGroup}
-          note="Set once from the joined date. Moving it would change which cycle this person's history belongs to."
+          note="Set once from the joined date."
         />
         <Row label="Roles" value={(person.roles || []).join(", ")} />
       </dl>
@@ -205,11 +205,7 @@ export default function EmployeeDetailPage() {
           ) : (
             <div>
               <p className="text-sm text-ink">
-                Deactivate <strong>{person.name}</strong>? They will not be able to sign
-                in, and their unit membership and any unit they lead are closed on the
-                date below. The record is kept, because it is part of their appraisal
-                history, and HR can set the account back to active later, though that
-                returns them with no unit rather than reopening the old membership.
+                Deactivate <strong>{person.name}</strong>? Memberships close on that date.
               </p>
 
               <div className="mt-4 max-w-xs">
@@ -225,7 +221,7 @@ export default function EmployeeDetailPage() {
                   type="date"
                   value={lastWorkingDay}
                   onChange={(e) => setLastWorkingDay(e.target.value)}
-                  className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none"
+                  className="workflow-field w-full"
                 />
               </div>
 

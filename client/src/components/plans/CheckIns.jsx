@@ -21,7 +21,7 @@ export function CheckInEntries({ entries, kind = "check-in" }) {
   }
 
   return (
-    <ul className="grid gap-3">
+    <ul className="grid min-w-0 grid-cols-1 gap-3">
       {entries.map((entry) => (
         <li
           key={`${entry.number}-${entry.at}`}
@@ -87,7 +87,7 @@ export function CheckInSchedule({ summary, kind = "check-in" }) {
       )}
 
       {summary.windows?.length > 0 && (
-        <ul className="mt-3 grid gap-1.5">
+        <ul className="mt-3 grid min-w-0 grid-cols-1 gap-1.5">
           {summary.windows.map((window) => (
             <li
               key={window.number}

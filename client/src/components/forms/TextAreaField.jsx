@@ -18,7 +18,7 @@ export default function TextAreaField({
     return (
       <div className={className}>
         <p className="text-[13px] font-medium text-ink">{label}</p>
-        <p className="mt-1 max-w-prose whitespace-pre-wrap text-[13px] text-muted">
+        <p className="mt-2 max-w-prose whitespace-pre-wrap rounded-lg border border-line bg-secondary/40 p-3 text-[13px] leading-relaxed text-ink">
           {value || "Nothing written."}
         </p>
       </div>
@@ -45,7 +45,7 @@ export default function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
-        className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
+        className="workflow-field w-full"
       />
 
       {error && (

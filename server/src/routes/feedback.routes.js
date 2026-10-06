@@ -51,12 +51,9 @@ router
   .route("/supervisor/:reviewId/submit")
   .put(protect, validateReviewId, validateAnswers, controller.submitSupervisorReview);
 
-// ⚠️ Addressed by the random label, not by the record's id: the id is never served for
-// confidential feedback, so this route only reaches what the officer was already shown.
-// POST, not GET: a reveal carries a written reason and is not a repeatable read.
-// ⚠️ The one role gate in this file. The service checks the role again and is the real
-// rule, but it runs inside the block that writes the audit entry: without the gate, anyone with
-// a login can put a permanent row and a monitoring flag in the record that proves confidentiality.
+// ⚠️ Addressed by the random label, never the id, which is not served for confidential
+// feedback. POST because a reveal writes a reason and is not a repeatable read.
+// ⚠️ Without this gate any login can write a permanent row into the confidentiality record.
 router
   .route("/collected/:reviewId/:label/reveal")
   .post(protect, authorize("hr", "head_of_hr"), validateReveal, controller.revealAuthor);

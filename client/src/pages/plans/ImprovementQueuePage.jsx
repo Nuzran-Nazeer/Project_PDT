@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getImprovementQueue, decidePlan } from "../../services/plans";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import { ImprovementPlanSummary } from "../../components/plans/ImprovementPlan";
@@ -48,7 +49,15 @@ export default function ImprovementQueuePage() {
 
   return (
     <>
-      <PageHeader title="Improvement plans to decide" backTo="/dashboard" />
+      <PageHeader
+        title="Improvement plans to decide"
+        context={
+          plans && !error
+            ? `${plans.length} awaiting a decision within your coverage`
+            : "Review plans within your HR coverage"
+        }
+        backTo="/dashboard"
+      />
 
       <p className="mb-6 max-w-prose text-sm text-muted">
         A plan reaches the employee only after an officer approves it. Sending one back
@@ -56,24 +65,19 @@ export default function ImprovementQueuePage() {
       </p>
 
       {error && (
-        <p
-          role="alert"
-          className="mb-5 rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error" className="mb-5">
           {error}
-        </p>
+        </WorkflowNotice>
       )}
 
       {!plans ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        error ? null : (
+          <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
+        )
       ) : plans.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nothing is waiting on you.
-        </p>
+        <WorkflowNotice>No plans are waiting on you.</WorkflowNotice>
       ) : (
-        <div className="grid gap-5">
+        <div className="grid min-w-0 grid-cols-1 gap-5">
           {plans.map((plan) => (
             <FormSection
               key={plan.id}
@@ -103,7 +107,7 @@ export default function ImprovementQueuePage() {
                     type="button"
                     disabled={busy === plan.id}
                     onClick={() => decide(plan, "approved")}
-                    className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+                    className="workflow-primary"
                   >
                     Approve
                   </button>
@@ -113,7 +117,7 @@ export default function ImprovementQueuePage() {
                     type="button"
                     disabled={busy === plan.id || !(reasons[plan.id] || "").trim()}
                     onClick={() => decide(plan, "refused")}
-                    className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-danger transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                    className="workflow-secondary"
                   >
                     Send it back
                   </button>

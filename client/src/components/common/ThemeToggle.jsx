@@ -45,7 +45,7 @@ export default function ThemeToggle({ className = "" }) {
       // What the button does, not what the theme currently is.
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-line bg-raised text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${className}`}
+      className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-line bg-raised text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${className}`}
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
     </button>

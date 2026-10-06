@@ -28,7 +28,7 @@ function CopyButton({ value, label }) {
     <button
       type="button"
       onClick={handleClick}
-      className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-brand"
+      className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-ink"
     >
       {state || label}
     </button>
@@ -76,7 +76,7 @@ export default function InvitePanel({ person, onIssued }) {
             type="button"
             onClick={handleGenerate}
             disabled={working}
-            className="mt-4 cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+            className="workflow-primary mt-4"
           >
             {working ? "Generating…" : buttonLabel}
           </button>
@@ -98,8 +98,7 @@ export default function InvitePanel({ person, onIssued }) {
             role="status"
             className="rounded-lg border border-brand/40 bg-brand/10 px-3 py-2.5 text-[13px] text-ink"
           >
-            Copy this before leaving the page: it cannot be shown again. If it is lost,
-            generate a new one.
+            Copy this now: it cannot be shown again. If it is lost, generate a new one.
           </p>
 
           <div className="mt-4">

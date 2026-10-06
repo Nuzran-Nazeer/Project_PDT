@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { getMyPlan, acknowledgeMyPlan, addProgressNote } from "../../services/plans";
 import { formatDate } from "../../utils/dates";
@@ -10,10 +11,8 @@ import EmployeeActions from "../../components/plans/EmployeeActions";
 // ⚠️ The competency behind an action never appears here and is not in the response. The
 // supervisor's page is the only view that carries it.
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 
 // ⚠️ Says what happens to the work, never why an action went unfinished: that reason is
 // recorded for the supervisor and HR alone.
@@ -80,12 +79,7 @@ export default function MyPlanPage() {
   if (loadError) {
     return (
       <Shell>
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {loadError}
-        </p>
+        <WorkflowNotice tone="error">{loadError}</WorkflowNotice>
       </Shell>
     );
   }
@@ -93,9 +87,7 @@ export default function MyPlanPage() {
   if (!plan) {
     return (
       <Shell>
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       </Shell>
     );
   }
@@ -103,9 +95,9 @@ export default function MyPlanPage() {
   if (plan.state !== "plan") {
     return (
       <Shell>
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {NOTHING_TO_READ[plan.state] || NOTHING_TO_READ.no_review}
-        </p>
+        </WorkflowNotice>
       </Shell>
     );
   }

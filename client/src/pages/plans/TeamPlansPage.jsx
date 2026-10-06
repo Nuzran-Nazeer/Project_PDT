@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -62,8 +63,7 @@ export default function TeamPlansPage() {
       />
 
       <p className="mb-6 max-w-prose text-sm text-muted">
-        A development plan turns a published review into work. Each action is tied to a
-        competency the review highlighted, which the employee never sees.
+        Each action is tied to a competency, which the employee never sees.
       </p>
 
       {error && (
@@ -76,15 +76,11 @@ export default function TeamPlansPage() {
       )}
 
       {!people ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : people.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nobody you supervise has a published review yet, so there is no plan to write.
-        </p>
+        <WorkflowNotice>Nobody you supervise has a published review yet.</WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
@@ -134,7 +130,7 @@ export default function TeamPlansPage() {
                       type="button"
                       onClick={() => open(person)}
                       disabled={starting === person.id}
-                      className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-brand transition-colors hover:bg-surface disabled:opacity-60"
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-surface disabled:opacity-60"
                     >
                       {starting === person.id
                         ? "Opening…"

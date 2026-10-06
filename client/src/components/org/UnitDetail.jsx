@@ -252,8 +252,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
 
   return (
@@ -295,7 +294,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 <button
                   type="button"
                   onClick={startAppoint}
-                  className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   {lead ? "Change lead" : "Appoint a lead"}
                 </button>
@@ -322,7 +321,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 onSubmit={handleAppoint}
                 className="mt-4 rounded-xl border border-line bg-surface p-4"
               >
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label htmlFor="userId" className={labelClass}>
                       Who leads it
@@ -384,8 +383,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
                 {!candidateError && candidates.length === 0 && (
                   <p className="mt-3 text-[13px] text-muted">
-                    Nobody was in {parent?.name || "the unit above"} on that date, so
-                    there is nobody who can lead this unit yet.
+                    Nobody was in {parent?.name || "the unit above"} on that date.
                   </p>
                 )}
 
@@ -399,17 +397,13 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
-                  >
+                  <button type="submit" disabled={saving} className="workflow-primary">
                     {saving ? "Saving…" : "Appoint"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setAppointing(false)}
-                    className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand"
+                    className="workflow-secondary"
                   >
                     Cancel
                   </button>
@@ -425,8 +419,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
             {/* Each role is resolved on its own. */}
             <p className="mt-2 text-[13px] text-muted">
-              Covers this unit and everything beneath it, unless a sub-unit has its own
-              officer for that role.
+              Covers this unit and everything beneath it, unless a sub-unit has its own.
             </p>
 
             {["primary", "backup"].map((role) => {
@@ -444,7 +437,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                       <button
                         type="button"
                         onClick={() => startAssignCoverage(role)}
-                        className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                        className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         {holder && !inheritedFrom
                           ? `Change ${label.toLowerCase()}`
@@ -469,8 +462,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                     </p>
                   ) : (
                     <p className="mt-1.5 text-sm text-muted">
-                      Nobody covers this unit as {label.toLowerCase()}, here or in any
-                      unit above it.
+                      No {label.toLowerCase()} covers this unit or any unit above it.
                     </p>
                   )}
 
@@ -479,7 +471,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                       onSubmit={handleCoverageSubmit}
                       className="mt-3 rounded-xl border border-line bg-surface p-4"
                     >
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                           <label htmlFor="coverageUserId" className={labelClass}>
                             Who covers it
@@ -543,8 +535,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
                       {!coverageCandidateError && coverageCandidates.length === 0 && (
                         <p className="mt-3 text-[13px] text-muted">
-                          Nobody holds the HR officer or Head of HR role yet, so there is
-                          nobody who can cover this unit.
+                          Nobody holds the HR officer or Head of HR role yet.
                         </p>
                       )}
 
@@ -561,14 +552,14 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                         <button
                           type="submit"
                           disabled={coverageSaving}
-                          className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+                          className="workflow-primary"
                         >
                           {coverageSaving ? "Saving…" : "Assign"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setAssigningRole(null)}
-                          className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand"
+                          className="workflow-secondary"
                         >
                           Cancel
                         </button>
@@ -587,8 +578,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
 
             {members.length === 0 ? (
               <p className="mt-2 text-sm text-muted">
-                Nobody is in this unit today. People are placed from their own employee
-                record.
+                Nobody is in this unit today. People are placed from their own record.
               </p>
             ) : (
               <ul className="mt-2 divide-y divide-line rounded-xl border border-line">
@@ -621,8 +611,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                   <div>
                     <p className="text-sm font-medium text-ink">Discontinue this unit</p>
                     <p className="mt-1 text-[13px] text-muted">
-                      It stays in the tree, marked closed. Its members have to be moved
-                      somewhere else first.
+                      Its members have to be moved somewhere else first.
                     </p>
                   </div>
                   <button
@@ -636,9 +625,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
               ) : (
                 <div>
                   <p className="text-sm text-ink">
-                    Discontinue <strong>{unit.name}</strong>? Nothing is deleted: it stays
-                    in the tree marked closed, and whoever leads it has their term closed
-                    on the same date.
+                    Discontinue <strong>{unit.name}</strong>? Its lead's term ends too.
                   </p>
 
                   <div className="mt-4 max-w-xs">

@@ -23,7 +23,7 @@ export function ImprovementDetails({ plan }) {
         {planStatusLabel(plan.status)}
       </p>
 
-      <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
+      <dl className="mt-3 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
         <Row label="Type">{improvementTypeLabel(detail.type)}</Row>
         <Row label="Raised over">{competency?.name || detail.forCompetency}</Row>
         <Row label="Length">{detail.durationDays} days</Row>
@@ -84,7 +84,7 @@ export function ImprovementPlanSummary({ plan }) {
     <>
       <ImprovementDetails plan={plan} />
 
-      <ul className="grid gap-3">
+      <ul className="grid min-w-0 grid-cols-1 gap-3">
         {plan.actions.map((action) => (
           <li key={action.id} className="rounded-lg border border-line p-4 text-sm">
             <p className="font-medium text-ink">{action.description}</p>

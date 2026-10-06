@@ -40,10 +40,9 @@ const pendingSendBack = (review, supervisorDoc) => {
 const stageAtOrPast = (cycle, stage) =>
   CYCLE_STAGES.indexOf(cycle?.status) >= CYCLE_STAGES.indexOf(stage);
 
-// What a review still needs before normalisation can work from it, or null when it is ready:
-// the supervisor's review settled, and the summary cleared where there is a colleague section.
-// ⚠️ A sent-back review reads as waiting on the check, not the supervisor, although its
-// record is a draft: what is being waited on is the outcome of the check.
+// What a review still needs before normalisation, or null when it is ready.
+// ⚠️ A sent-back review reads as waiting on the check, not the supervisor, although its record
+// is a draft: what is being waited on is the outcome of the check.
 const normalisationReadiness = ({ review, supervisorDoc, colleagueSection }) => {
   if (pendingSendBack(review, supervisorDoc)) {
     return {

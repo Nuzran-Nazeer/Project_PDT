@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { listSummaryChecks } from "../../services/reviews";
 import { formatDate } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import Icon from "../../components/common/Icon";
 
@@ -37,28 +38,19 @@ export default function SummariesToCheckPage() {
       />
 
       <p className="mb-4 max-w-prose text-sm text-muted">
-        Each supervisor's summary of colleague feedback, compared against the responses it
-        was written from, before the review enters normalisation. A summary is listed once
-        the supervisor's review has settled.
+        Listed once the supervisor's review settles.
       </p>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : !data ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-10 text-center text-muted">
+        <WorkflowNotice>
           No summary is waiting for a check within your coverage.
-        </p>
+        </WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
@@ -107,7 +99,7 @@ export default function SummariesToCheckPage() {
                   <td className="px-4 py-3">
                     <Link
                       to={`/summaries-to-check/${item.reviewId}`}
-                      className="text-sm text-brand transition-colors hover:underline"
+                      className="text-sm text-ink transition-colors hover:underline"
                     >
                       Open
                     </Link>

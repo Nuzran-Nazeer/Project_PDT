@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { clearSummary, getSummaryCheck, sendBackSummary } from "../../services/reviews";
 import { formatDateTime } from "../../utils/dates";
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import PageHeader from "../../components/layout/PageHeader";
 import { FormSection } from "../../components/shells/FormShell";
 import CompetencyRatingField from "../../components/forms/CompetencyRatingField";
@@ -21,7 +22,7 @@ const STATE_TEXT = {
   not_submitted: "The supervisor's review has not been submitted yet.",
   in_window:
     "The supervisor's review was submitted less than five hours ago and may still change.",
-  no_section: "This review has no colleague section, so there is nothing to check.",
+  no_section: "This review has no colleague section.",
 };
 
 const ACTION_LABEL = { cleared: "Cleared", sent_back: "Sent back" };
@@ -35,10 +36,8 @@ const valueFor = (item, key) => {
   };
 };
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 
 export default function SummaryCheckPage() {
   const { reviewId } = useParams();
@@ -112,7 +111,7 @@ export default function SummaryCheckPage() {
 
       <Link
         to="/summaries-to-check"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
       >
         <Icon name="arrowLeft" className="h-4 w-4" />
         Back to summaries to check
@@ -124,12 +123,7 @@ export default function SummaryCheckPage() {
     return (
       <>
         {header}
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {loadError}
-        </p>
+        <WorkflowNotice tone="error">{loadError}</WorkflowNotice>
       </>
     );
   }
@@ -138,9 +132,7 @@ export default function SummaryCheckPage() {
     return (
       <>
         {header}
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading...</WorkflowNotice>
       </>
     );
   }
@@ -177,8 +169,8 @@ export default function SummaryCheckPage() {
         </p>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="grid content-start gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 content-start gap-5">
           <FormSection
             title="The supervisor's summary"
             note="The only part of the colleague feedback the employee will read."
@@ -187,7 +179,7 @@ export default function SummaryCheckPage() {
               <p className="rounded-lg border border-dashed border-line p-4 text-[13px] text-muted">
                 {review.reason === "in_window"
                   ? "Submitted less than five hours ago and may still change. It is shown once it settles."
-                  : "Not submitted yet. What is written and not sent is the supervisor's."}
+                  : "Not submitted yet."}
               </p>
             ) : summaryEmpty ? (
               <p className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-[13px] text-amber-700 dark:text-amber-400">
@@ -260,11 +252,10 @@ export default function SummaryCheckPage() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="The supervisor reads this at the top of their reopened review."
-                className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               />
               <p className="mt-2 max-w-prose text-[13px] text-muted">
-                The whole review reopens, not just the summary. It is checked again once
-                resubmitted and settled.
+                The whole review reopens, not just the summary.
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 <button
@@ -393,7 +384,7 @@ function Responses({ responses }) {
           </div>
 
           <details className="mt-3">
-            <summary className="cursor-pointer text-[13px] text-muted hover:text-brand">
+            <summary className="cursor-pointer text-[13px] text-muted hover:text-ink">
               Ratings and evidence
             </summary>
             <div className="mt-3 grid gap-3">

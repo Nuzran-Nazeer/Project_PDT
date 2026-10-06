@@ -41,7 +41,7 @@ export default function PlanProgressPage() {
       {error ? (
         <Notice tone="danger">{error}</Notice>
       ) : loading ? (
-        <Notice>Loading…</Notice>
+        <Notice tone="loading">Loading…</Notice>
       ) : !data.cycle ? (
         <Notice>No cycle has published results yet.</Notice>
       ) : (
@@ -54,7 +54,7 @@ export default function PlanProgressPage() {
               : "No check-in point has passed yet for this cycle, so no action can be behind one."}
           </p>
 
-          <div className="grid gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-4">
             {data.groups.map((group) =>
               group.suppressed ? (
                 <SuppressedCard key={group.key} name={group.name} floor={data.floor} />

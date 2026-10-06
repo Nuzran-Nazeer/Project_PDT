@@ -56,8 +56,7 @@ export default function EmployeeListPage() {
     );
   }, [items, search]);
 
-  const inputClass =
-    "rounded-lg border border-line bg-raised px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field";
 
   return (
     <section>
@@ -73,23 +72,20 @@ export default function EmployeeListPage() {
         </div>
 
         {canManage && (
-          <Link
-            to="/employees/new"
-            className="ml-auto rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          >
+          <Link to="/employees/new" className="workflow-primary ml-auto">
             New employee
           </Link>
         )}
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="workflow-toolbar mt-6">
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search name, email, username or ID"
           aria-label="Search employees"
-          className={`${inputClass} min-w-[260px] flex-1`}
+          className={`${inputClass} min-w-0 flex-1 basis-60`}
         />
         <select
           value={status}
@@ -114,7 +110,7 @@ export default function EmployeeListPage() {
         </p>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-raised">
+      <div className="workflow-table mt-6">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-line text-[13px] text-muted">
             <tr>
@@ -149,7 +145,7 @@ export default function EmployeeListPage() {
                   <td className="px-4 py-3">
                     <Link
                       to={`/employees/${person._id}`}
-                      className="font-medium text-ink hover:text-brand"
+                      className="font-medium text-ink hover:text-ink"
                     >
                       {person.name}
                     </Link>
@@ -178,8 +174,7 @@ export default function EmployeeListPage() {
       </div>
 
       <p className="mt-3 text-[13px] text-muted">
-        A person&apos;s unit is on their own record, as dated history. Who covers a unit
-        is on its page under Organisation.
+        Units are on each person&apos;s record. Coverage is under Organisation.
       </p>
     </section>
   );

@@ -2,7 +2,7 @@ const LABELS = {
   active: { text: "Active", className: "border-success/40 bg-success/10 text-success" },
   invited: {
     text: "Awaiting activation",
-    className: "border-brand/40 bg-brand/10 text-brand",
+    className: "border-line bg-secondary text-ink",
   },
   inactive: { text: "Deactivated", className: "border-line bg-surface text-muted" },
 };

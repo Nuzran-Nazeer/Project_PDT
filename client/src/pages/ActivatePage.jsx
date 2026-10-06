@@ -123,12 +123,11 @@ export default function ActivatePage() {
               {formError}
             </p>
             <p className="mt-4 text-[13px] text-muted">
-              A code works once and expires after seven days. Ask HR to send a new invite,
-              then open the link in that email.
+              A code works once and expires after seven days. Ask HR for a new invite.
             </p>
             <Link
               to="/login"
-              className="mt-6 block w-full cursor-pointer rounded-lg border border-line py-3 text-center text-sm font-semibold text-ink transition-colors hover:text-brand"
+              className="mt-6 block w-full cursor-pointer rounded-lg border border-line py-3 text-center text-sm font-semibold text-ink transition-colors hover:text-ink"
             >
               Go to sign in
             </Link>
@@ -143,8 +142,7 @@ export default function ActivatePage() {
               <div>
                 {linkWasMangled && (
                   <p className="mb-4 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-muted">
-                    That link looks incomplete. Some email apps cut long links in half.
-                    Paste the whole code from your invite email instead.
+                    That link is incomplete. Paste the full code from your invite email.
                   </p>
                 )}
 
@@ -194,7 +192,7 @@ export default function ActivatePage() {
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 cursor-pointer text-muted hover:text-brand"
+                  className="absolute right-3 cursor-pointer text-muted hover:text-ink"
                 >
                   <EyeIcon open={showPassword} />
                 </button>
@@ -243,7 +241,7 @@ export default function ActivatePage() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Setting up…" : "Set password and continue"}
             </button>

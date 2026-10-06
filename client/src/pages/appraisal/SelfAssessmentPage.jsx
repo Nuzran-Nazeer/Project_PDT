@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -61,31 +62,23 @@ export default function SelfAssessmentPage() {
       />
 
       {loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : !cycle ? (
         <div className="rounded-xl border border-dashed border-line p-10 text-center">
           <p className="text-ink">No cycle to assess against</p>
           <p className="mx-auto mt-2 max-w-prose text-sm text-muted">
             {user?.parGroup
               ? `The ${user.parGroup} group has no cycle running at the moment.`
-              : "You are not in an appraisal group, so no cycle applies to you."}
+              : "You are not in an appraisal group."}
           </p>
         </div>
       ) : !record.reviewId ? (
         <div className="rounded-xl border border-dashed border-line p-10 text-center">
           <p className="text-ink">Nothing to assess yet</p>
           <p className="mx-auto mt-2 max-w-prose text-sm text-muted">
-            The {cycle.parGroup} {cycle.year} cycle is running, but you have no review in
-            it.
+            The {cycle.parGroup} {cycle.year} cycle is running, but you have no review.
           </p>
         </div>
       ) : (
@@ -94,7 +87,7 @@ export default function SelfAssessmentPage() {
             <h2 className="font-semibold text-ink">
               {cycle.parGroup} group · {cycle.year}
             </h2>
-            <span className="rounded-lg border border-brand/40 px-2.5 py-1 text-[12px] text-brand">
+            <span className="rounded-lg border border-brand/40 px-2.5 py-1 text-[12px] text-ink">
               {cycle.status.replace(/_/g, " ")}
             </span>
           </div>
@@ -105,10 +98,7 @@ export default function SelfAssessmentPage() {
               `It asks about ${record.competencies.length} competencies for ${user?.jobFamily}, and a short reflection.`}
           </p>
 
-          <Link
-            to="/my-self-assessment/form"
-            className="mt-4 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          >
+          <Link to="/my-self-assessment/form" className="workflow-primary mt-4">
             {state.action}
           </Link>
         </div>

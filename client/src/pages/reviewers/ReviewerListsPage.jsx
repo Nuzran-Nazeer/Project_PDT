@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../../components/layout/PageHeader";
@@ -34,22 +35,13 @@ export default function ReviewerListsPage() {
       />
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : !data ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nobody reports to you at the moment.
-        </p>
+        <WorkflowNotice>Nobody reports to you at the moment.</WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
@@ -79,7 +71,7 @@ export default function ReviewerListsPage() {
                       {item.reviewId ? (
                         <Link
                           to={`/reviewer-lists/${item.reviewId}`}
-                          className="text-sm text-brand transition-colors hover:underline"
+                          className="text-sm text-ink transition-colors hover:underline"
                         >
                           Open
                         </Link>

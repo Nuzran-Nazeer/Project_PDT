@@ -41,9 +41,8 @@ exports.assertMayActOnEmployee = async (
 
   const day = toDay(on, "date");
 
-  // ⚠️ These three refusals reach only somebody who is not entitled — an officer who covers the
-  // person never sees them — so naming the employee or their unit would hand an out-of-scope
-  // account real names and unit shapes to map, the way "Review not found" elsewhere refuses to.
+  // ⚠️ These refusals reach only somebody not entitled, so naming the employee or their unit
+  // would hand an out-of-scope account real names and unit shapes to map.
   const membership = await membershipOn(employeeId, day);
   if (!membership) {
     if (allowUnplaced) return;
@@ -69,11 +68,9 @@ exports.assertMayActOnEmployee = async (
   }
 };
 
-// ⚠️ Not coverage, but the same question: what may this actor do. Granting an unrestricted role
-// is how an officer escapes coverage altogether, so it is checked wherever roles are written.
-// Taking one away is guarded too — demoting the Head of HR is how their oversight is removed.
-// The comparison is against what the person already holds, so resending an unchanged list is
-// not a grant and an ordinary edit to a leadership-holder's record still goes through.
+// ⚠️ Granting an unrestricted role is how an officer escapes coverage, and removing one is how
+// the Head of HR's oversight goes, so both are checked wherever roles are written. The comparison
+// is against what the person already holds: resending an unchanged list is not a grant.
 exports.assertMayGrantRoles = (actor, roles, currentRoles = []) => {
   if (roles === undefined) return;
   if (holds(actor, UNRESTRICTED_ROLE)) return;
@@ -177,10 +174,9 @@ exports.coveredUnitIds = async (actor, on = new Date()) => {
   return covered;
 };
 
-// A predicate built once per request: resolving coverage per person repeats the tree walk.
-// `asHr` ignores Leadership, for lists that carry review state rather than a roster.
-// `includeUnplaced` is the roster rule (somebody in no unit is shown so they can be found);
-// a list of reviews passes false, matching the per-person check, which refuses them.
+// Built once per request: resolving coverage per person repeats the tree walk. `asHr` ignores
+// Leadership, for lists carrying review state rather than a roster. `includeUnplaced` is the
+// roster rule; a list of reviews passes false, matching the per-person check, which refuses them.
 exports.readScopeFor = async (
   actor,
   { on = new Date(), asHr = false, includeUnplaced = true } = {},

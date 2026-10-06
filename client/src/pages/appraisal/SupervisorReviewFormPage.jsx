@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
@@ -60,6 +61,7 @@ export default function SupervisorReviewFormPage() {
   const { team, loading: teamLoading } = useTeam();
 
   const person = (team?.team || []).find((member) => member.id === id);
+  const whose = person ? `${person.name}'s` : "the employee's";
   const reviewId = person?.reviewId || null;
 
   const [record, setRecord] = useState(null);
@@ -177,11 +179,7 @@ export default function SupervisorReviewFormPage() {
   const backTo = person ? `/my-team/${person.id}` : "/my-team";
 
   if (loading) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   const header = (
@@ -195,7 +193,7 @@ export default function SupervisorReviewFormPage() {
 
       <Link
         to={backTo}
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to {person ? person.name : "my team"}
       </Link>
@@ -206,11 +204,11 @@ export default function SupervisorReviewFormPage() {
     return (
       <>
         {header}
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {person
             ? `No review exists for ${person.name} yet.`
             : "That person is not in the team you lead today."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -231,12 +229,9 @@ export default function SupervisorReviewFormPage() {
     return (
       <>
         {header}
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error">
           {loadError || "That review could not be loaded."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -251,7 +246,7 @@ export default function SupervisorReviewFormPage() {
         title="Competency ratings"
         note={editable ? "Every rating needs written evidence." : "As you answered them."}
       >
-        <div className="grid gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4">
           {(record.competencies || []).map((competency) => (
             <CompetencyRatingField
               key={competency.key}
@@ -283,7 +278,7 @@ export default function SupervisorReviewFormPage() {
       </FormSection>
 
       <FormSection letter="C" title="Cycle summary">
-        <div className="grid gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3">
           {editable ? (
             <>
               <TextAreaField
@@ -338,22 +333,17 @@ export default function SupervisorReviewFormPage() {
               type="button"
               disabled={saving}
               onClick={onSaveDraft}
-              className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
+              className="workflow-secondary"
             >
               {saving ? "Saving…" : "Save as draft"}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <button type="submit" disabled={saving} className="workflow-primary">
               {saving ? "Submitting…" : record.submittedAt ? "Update" : "Submit"}
             </button>
           </div>
 
           <p className="mt-3 max-w-prose text-[13px] text-muted">
-            A submitted review can still be corrected for <strong>five hours</strong>{" "}
-            before it locks.
+            Correctable for <strong>five hours</strong> after submitting.
           </p>
         </div>
       )}
@@ -382,8 +372,7 @@ export default function SupervisorReviewFormPage() {
             {record.sentBack.reason}
           </p>
           <p className="mt-2 max-w-prose text-muted">
-            Your whole review is open again. Revise the colleague summary, then submit it
-            for a fresh check.
+            Your whole review is open again. Revise the summary, then submit it again.
           </p>
         </div>
       )}
@@ -397,8 +386,7 @@ export default function SupervisorReviewFormPage() {
             Published {formatDate(record.publishedAt)}.
           </p>
           <p className="mt-1 max-w-prose text-muted">
-            This is now part of {person ? `${person.name}'s` : "the employee's"} record
-            and cannot be changed. What you wrote is below, as it was published.
+            This is now part of {whose} record and cannot be changed.
           </p>
         </div>
       ) : (

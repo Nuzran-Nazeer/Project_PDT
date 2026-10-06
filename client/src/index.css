@@ -8,16 +8,23 @@
 /* Semantic tokens: `bg-surface` is right in both themes and `bg-slate-800` is not.
  * These values are the light theme. */
 @theme {
-  --color-brand: oklch(0.5 0.1 258);
-  --color-brand-hover: oklch(0.44 0.11 258);
+  --color-brand: #ff8a1f;
+  --color-brand-hover: #ed7b12;
+  --color-brand-ink: #171717;
+  --color-secondary: #ededed;
+  --color-chart-1: #dedede;
+  --color-chart-2: #b0b0b0;
+  --color-chart-3: #858585;
+  --color-chart-4: #5b5b5b;
+  --color-chart-5: #303030;
 
-  --color-surface: oklch(0.985 0.002 258);
+  --color-surface: #f5f5f5;
   --color-raised: oklch(1 0 0);
 
-  --color-line: oklch(0.9 0.006 258);
+  --color-line: #dedede;
 
-  --color-ink: oklch(0.26 0.012 258);
-  --color-muted: oklch(0.52 0.014 258);
+  --color-ink: #242424;
+  --color-muted: #666666;
 
   --color-danger: oklch(0.55 0.19 25);
   --color-success: oklch(0.55 0.13 155);
@@ -26,16 +33,23 @@
 /* Unlayered on purpose: @theme emits into a layer, and unlayered CSS always beats
  * layered CSS. Brand goes lighter: a mid-tone that reads on white lacks contrast on dark. */
 :root.dark {
-  --color-brand: oklch(0.7 0.11 258);
-  --color-brand-hover: oklch(0.78 0.1 258);
+  --color-brand: #ff942e;
+  --color-brand-hover: #ffa64e;
+  --color-brand-ink: #101010;
+  --color-secondary: #202020;
+  --color-chart-1: #444444;
+  --color-chart-2: #666666;
+  --color-chart-3: #8a8a8a;
+  --color-chart-4: #b0b0b0;
+  --color-chart-5: #dedede;
 
-  --color-surface: oklch(0.19 0.011 258);
-  --color-raised: oklch(0.235 0.013 258);
+  --color-surface: #080808;
+  --color-raised: #141414;
 
-  --color-line: oklch(0.33 0.014 258);
+  --color-line: #303030;
 
-  --color-ink: oklch(0.95 0.005 258);
-  --color-muted: oklch(0.68 0.012 258);
+  --color-ink: #f5f5f5;
+  --color-muted: #b0b0b0;
 
   --color-danger: oklch(0.7 0.15 25);
   --color-success: oklch(0.72 0.12 155);
@@ -68,8 +82,55 @@
     color: var(--color-ink);
   }
 
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
   #root {
     min-height: 100svh;
+  }
+}
+
+.bg-brand.text-white {
+  color: var(--color-brand-ink);
+}
+
+@layer components {
+  .workflow-field {
+    @apply min-w-0 max-w-full rounded-lg border border-line bg-raised px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-muted focus:outline-2 focus:outline-offset-2 focus:outline-ink disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .workflow-primary {
+    @apply cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .workflow-secondary {
+    @apply cursor-pointer rounded-lg border border-line bg-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .workflow-table {
+    @apply relative min-w-0 overflow-x-auto rounded-xl border border-line bg-raised;
+  }
+
+  .workflow-table thead {
+    @apply bg-secondary;
+  }
+
+  .workflow-table th {
+    @apply whitespace-nowrap py-4;
+  }
+
+  .workflow-table td {
+    @apply py-4;
+  }
+
+  .workflow-table tbody tr {
+    @apply transition-colors hover:bg-secondary/50;
+  }
+
+  .workflow-toolbar {
+    @apply mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-raised p-4;
   }
 }
 

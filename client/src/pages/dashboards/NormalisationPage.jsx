@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { Link } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
 import PageHeader from "../../components/layout/PageHeader";
@@ -24,22 +25,13 @@ export default function NormalisationPage() {
       <PageHeader title="Normalisation" backTo="/dashboard" />
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : people.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nobody reports to you at the moment.
-        </p>
+        <WorkflowNotice>Nobody reports to you at the moment.</WorkflowNotice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
@@ -86,7 +78,7 @@ function Row({ person }) {
         {state?.open ? (
           <Link
             to={`/my-team/${person.id}/normalisation`}
-            className="text-sm text-brand transition-colors hover:underline"
+            className="text-sm text-ink transition-colors hover:underline"
           >
             Open
           </Link>

@@ -45,6 +45,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
   }, [userId, reloadKey]);
 
   const current = records.find((record) => !record.to) || null;
+  const currentUnitName = current?.unitId?.name || "the current unit";
   const past = records.filter((record) => record.to);
 
   // Discontinued and current units are left out: the server refuses either.
@@ -105,8 +106,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
 
   return (
@@ -117,7 +117,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
           <button
             type="button"
             onClick={startMove}
-            className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {current ? "Move to another unit" : "Place in a unit"}
           </button>
@@ -153,7 +153,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
               onSubmit={handleSubmit}
               className="mt-4 rounded-xl border border-line bg-surface p-4"
             >
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="unitId" className={labelClass}>
                     {current ? "Move to" : "Place in"}
@@ -199,9 +199,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
 
               {current && (
                 <p className="mt-3 text-[13px] text-muted">
-                  The stint in {current.unitId?.name || "the current unit"} ends on that
-                  date and the new one begins the same day, so there is no gap and no
-                  overlap.
+                  The stint in {currentUnitName} ends and the new one begins that day.
                 </p>
               )}
 
@@ -215,17 +213,13 @@ export default function UnitHistoryPanel({ person, canAssign }) {
               )}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                <button type="submit" disabled={saving} className="workflow-primary">
                   {saving ? "Saving…" : current ? "Move" : "Place"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setMoving(false)}
-                  className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand"
+                  className="workflow-secondary"
                 >
                   Cancel
                 </button>
