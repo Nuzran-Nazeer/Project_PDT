@@ -1,37 +1,123 @@
-# Project_PDT
+﻿# Performance & Development Tracker
 
-Performance & Development Tracker — a web app for running appraisal (PAR) cycles, 360 feedback and development plans.
+Performance & Development Tracker (PDT) is a web application for managing staff performance appraisal (PAR) cycles, colleague feedback and development plans. Employees complete assessments and track agreed actions, supervisors review their teams, and HR manages the appraisal process.
 
-MERN stack: Node · Express · MongoDB (Atlas) · React · Vite · Tailwind.
+## Hosted application
+
+The application is available at [project-pdt.vercel.app](https://project-pdt.vercel.app/). The client and server are hosted separately on Vercel, with the React client connecting to the Express API.
+
+## Features
+
+- Appraisal cycles with staged transitions, publication and cancellation.
+- Self-assessments, assigned colleague feedback and supervisor reviews.
+- Colleague reviewer selection, supervisor list confirmation and HR decisions.
+- Summary checks before publication, followed by employee result acknowledgement.
+- Development plans with actions, progress notes and check-ins.
+- Improvement plans with HR approval, outcome recording and escalation handling.
+- Employee records, organisational units, dated memberships, HR coverage and project assignments.
+- Role-specific dashboards, monitoring flags, audit trails and company reports.
+- Light and dark themes, a collapsible sidebar and mobile navigation.
+
+Reviewer confidentiality is central to the application. Ordinary feedback views do not expose reviewer identities. Identity reveals require authorised HR access and a written reason, and are recorded in the audit trail. The server enforces HR coverage and reporting-line restrictions independently of what the interface displays.
+
+## Technology
+
+| Layer          | Stack                                                  |
+| -------------- | ------------------------------------------------------ |
+| Frontend       | React, React Router, Vite, Tailwind CSS                |
+| Backend        | Node.js, Express, Mongoose                             |
+| Database       | MongoDB Atlas                                          |
+| Authentication | JSON Web Tokens and bcrypt                             |
+| Validation     | Yup on the client and request validators on the server |
+| Browser tests  | Playwright                                             |
 
 ## Running locally
 
-You need two terminals — the server and the client run separately.
+Install Node.js and npm, and have access to a configured MongoDB database. Run the server and client in separate terminals from the repository root.
 
 ### Server
 
-```
+```sh
 cd server
 npm install
-cp .env.example .env   # then fill in real values — ask a teammate for MONGO_URI
+```
+
+Copy `server/.env.example` to `server/.env` and set:
+
+- `MONGO_URI`: the MongoDB connection string, including the intended database name.
+- `JWT_SECRET`: the secret used to sign authentication tokens.
+- `JWT_EXPIRES_IN`: the token lifetime.
+- `PORT`: the API port, defaulting to `5000`.
+- `CLIENT_URL`: the frontend address, normally `http://localhost:5173`.
+
+```sh
 npm run dev
 ```
 
-Runs on `http://localhost:5000` (or whatever `PORT` is set to in `.env`).
+The API runs at `http://localhost:5000/api` with the default configuration.
 
 ### Client
 
-```
+```sh
 cd client
 npm install
+```
+
+Copy `client/.env.example` to `client/.env`. Set `VITE_API_URL` to the API address, normally `http://localhost:5000/api`.
+
+```sh
 npm run dev
 ```
 
-Runs on `http://localhost:5173` by default — Vite will print the actual URL.
+Vite prints the frontend address, normally `http://localhost:5173`. If the port changes, update the server's `CLIENT_URL` to match.
+
+There is no public registration endpoint. Sign in with an existing account or activate an account invited by HR. An empty database needs an initial account provisioned separately.
 
 ## Project structure
 
-- `server/` — Express API. Layered as `routes` → `controllers` → `services` → `models`, with `middleware` and `validators` alongside.
-- `client/` — React app (Vite + Tailwind).
+```text
+client/
+  src/
+    components/   Shared layout, forms and workflow components
+    hooks/        Authentication, cycle and team hooks
+    pages/        Dashboards and workflow screens
+    services/     API calls
+    utils/        Navigation metadata, labels and formatting
+server/
+  src/
+    routes/       API endpoints
+    controllers/  Request and response handling
+    services/     Business rules and access checks
+    models/       Mongoose models
+    middleware/   Authentication, authorisation and identity protection
+    validators/   Request validation
+tests/
+  pages/          Playwright page objects
+  tests/          Browser tests
+```
 
-See `Docs/` (one level up, in the `PPPM` folder) for the full design record — architecture, data model, and decisions.
+## Checks
+
+Frontend lint and production build:
+
+```sh
+cd client
+npm run lint
+npm run build
+```
+
+Backend lint, formatting and application load check:
+
+```sh
+cd server
+npm test
+```
+
+Browser tests require the test configuration described in `tests/.env.example`. The Playwright configuration starts a separate API and frontend and targets the `qa` database.
+
+```sh
+cd tests
+npm install
+npx playwright install chromium
+npm test
+```
