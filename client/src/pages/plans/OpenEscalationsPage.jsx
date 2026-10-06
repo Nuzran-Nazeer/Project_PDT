@@ -91,8 +91,8 @@ export default function OpenEscalationsPage() {
             >
               <ImprovementPlanSummary plan={plan} />
 
-              <div className="mt-4 grid gap-4 border-t border-line pt-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 border-t border-line pt-4">
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label
                       htmlFor={`outcome-${plan.id}`}

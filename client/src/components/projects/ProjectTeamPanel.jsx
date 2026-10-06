@@ -229,13 +229,10 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
-  const primaryClass =
-    "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-  const secondaryClass =
-    "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand";
+  const primaryClass = "workflow-primary";
+  const secondaryClass = "workflow-secondary";
   const rowButtonClass =
     "cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
   const tabClass = (active) =>
@@ -282,7 +279,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
         >
           <p className="text-[13px] text-muted">Both dates are included.</p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="periodFrom">
                 First day
@@ -360,7 +357,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
           onSubmit={submitAssign}
           className="mt-4 rounded-xl border border-line bg-surface p-4"
         >
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className={labelClass} htmlFor="assignUserId">
                 Who is joining

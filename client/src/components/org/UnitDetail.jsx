@@ -252,8 +252,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
 
   return (
@@ -322,7 +321,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 onSubmit={handleAppoint}
                 className="mt-4 rounded-xl border border-line bg-surface p-4"
               >
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label htmlFor="userId" className={labelClass}>
                       Who leads it
@@ -398,17 +397,13 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
-                  >
+                  <button type="submit" disabled={saving} className="workflow-primary">
                     {saving ? "Saving…" : "Appoint"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setAppointing(false)}
-                    className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand"
+                    className="workflow-secondary"
                   >
                     Cancel
                   </button>
@@ -476,7 +471,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                       onSubmit={handleCoverageSubmit}
                       className="mt-3 rounded-xl border border-line bg-surface p-4"
                     >
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                           <label htmlFor="coverageUserId" className={labelClass}>
                             Who covers it
@@ -557,14 +552,14 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                         <button
                           type="submit"
                           disabled={coverageSaving}
-                          className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+                          className="workflow-primary"
                         >
                           {coverageSaving ? "Saving…" : "Assign"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setAssigningRole(null)}
-                          className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand"
+                          className="workflow-secondary"
                         >
                           Cancel
                         </button>

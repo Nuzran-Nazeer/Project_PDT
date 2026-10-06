@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { acknowledgeMyResult, getMyResult } from "../../services/reviews";
@@ -8,10 +9,8 @@ import { FormShell, FormSection } from "../../components/shells/FormShell";
 // ⚠️ Three things never reach this page: a reviewer, how many responded, and any score.
 // The colleague part is the supervisor's written summary and nothing else.
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 
 // No reason is given for a withdrawal, here or anywhere the employee can reach.
 const NOTHING_PUBLISHED = {
@@ -73,12 +72,7 @@ export default function MyResultPage() {
     return (
       <>
         <PageHeader title="My result" backTo="/dashboard" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {loadError}
-        </p>
+        <WorkflowNotice tone="error">{loadError}</WorkflowNotice>
       </>
     );
   }
@@ -87,9 +81,7 @@ export default function MyResultPage() {
     return (
       <>
         <PageHeader title="My result" backTo="/dashboard" />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       </>
     );
   }
@@ -130,7 +122,7 @@ export default function MyResultPage() {
             supervisor ? `Written by ${supervisor.name}.` : "Written by your supervisor."
           }
         >
-          <div className="grid gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-4">
             {(supervisorReview.competencies || []).map((competency) => {
               const rating = ratingFor(competency.key);
               return (

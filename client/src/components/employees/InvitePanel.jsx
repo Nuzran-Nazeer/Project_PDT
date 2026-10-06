@@ -76,7 +76,7 @@ export default function InvitePanel({ person, onIssued }) {
             type="button"
             onClick={handleGenerate}
             disabled={working}
-            className="mt-4 cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+            className="workflow-primary mt-4"
           >
             {working ? "Generating…" : buttonLabel}
           </button>

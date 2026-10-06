@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
@@ -61,11 +62,7 @@ export default function TeamMemberPage() {
     : [];
 
   if (loading) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   if (error || !person) {
@@ -98,7 +95,7 @@ export default function TeamMemberPage() {
         ← Back to my team
       </Link>
 
-      <div className="grid gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         <FormSection letter="A" title="Their self-assessment">
           {assessmentError ? (
             <p role="alert" className="text-[13px] text-danger">
@@ -156,10 +153,7 @@ export default function TeamMemberPage() {
 
           {/* Hides the way in, never protects it: the server refuses the form with a 409. */}
           {readiness && readiness.state !== "waiting" ? (
-            <Link
-              to={`/my-team/${person.id}/review`}
-              className="mt-4 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-            >
+            <Link to={`/my-team/${person.id}/review`} className="workflow-primary mt-4">
               {person.sentBack
                 ? "Revise your review"
                 : REVIEW_LINK[readiness.state] || "Supervisor review"}

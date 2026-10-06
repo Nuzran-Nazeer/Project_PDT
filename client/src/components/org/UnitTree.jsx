@@ -38,12 +38,13 @@ export default function UnitTree({ units, selectedId, onSelect }) {
               <button
                 type="button"
                 onClick={() => onSelect(unit)}
-                className={`flex w-full items-baseline justify-between gap-4 rounded-md px-2.5 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${levelClass(
+                aria-pressed={selected}
+                className={`flex w-full items-baseline justify-between gap-4 rounded-r-lg border-l-2 px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${levelClass(
                   depth,
                 )} ${
                   selected
-                    ? "bg-brand/10 text-brand"
-                    : "text-ink hover:bg-surface hover:text-brand"
+                    ? "border-brand bg-secondary text-ink"
+                    : "border-transparent text-ink hover:bg-secondary"
                 }`}
               >
                 <span
@@ -52,9 +53,7 @@ export default function UnitTree({ units, selectedId, onSelect }) {
                   {unit.name}
                 </span>
                 <span
-                  className={`shrink-0 text-[10px] font-medium uppercase tracking-wider ${
-                    selected ? "text-brand/70" : "text-muted"
-                  }`}
+                  className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted"
                 >
                   {unit.active === false ? "closed" : unit.type}
                 </span>

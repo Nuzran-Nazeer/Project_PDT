@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -164,11 +165,7 @@ export default function SelfAssessmentFormPage() {
   };
 
   if (loading) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   if (loadError || !record) {
@@ -211,7 +208,7 @@ export default function SelfAssessmentFormPage() {
         title="Cycle context"
         note="Read-only, filled by the system."
       >
-        <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+        <dl className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
           <Fact label="Employee ID" value={user?.employeeId} />
           <Fact label="Designation" value={user?.designation} />
           <Fact label="Job family" value={user?.jobFamily} />
@@ -242,7 +239,7 @@ export default function SelfAssessmentFormPage() {
             : "As you answered them."
         }
       >
-        <div className="grid gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4">
           {(record.competencies || []).map((competency) => (
             <CompetencyRatingField
               key={competency.key}
@@ -257,7 +254,7 @@ export default function SelfAssessmentFormPage() {
       </FormSection>
 
       <FormSection letter="D" title="Reflection">
-        <div className="grid gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3">
           <TextAreaField
             id="strengths"
             label="Biggest achievement this cycle"
@@ -299,15 +296,11 @@ export default function SelfAssessmentFormPage() {
               type="button"
               disabled={saving}
               onClick={onSaveDraft}
-              className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
+              className="workflow-secondary"
             >
               {saving ? "Saving…" : "Save as draft"}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <button type="submit" disabled={saving} className="workflow-primary">
               {saving ? "Submitting…" : record.submittedAt ? "Update" : "Submit"}
             </button>
           </div>

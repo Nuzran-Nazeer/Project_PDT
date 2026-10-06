@@ -5,10 +5,8 @@ import { categoryLabel, actionStatusLabel, daysSinceLabel } from "../../utils/pl
 // The employee's own view of their actions, on either kind of plan. ⚠️ The competency behind
 // an action never appears here and is not in the response that feeds it.
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 
 export default function EmployeeActions({
   actions,
@@ -34,12 +32,12 @@ export default function EmployeeActions({
         </p>
       )}
 
-      <ul className="grid gap-3">
+      <ul className="grid min-w-0 grid-cols-1 gap-3">
         {actions.map((action) => (
           <li key={action.id} className="rounded-lg border border-line p-4 text-sm">
             <p className="font-medium text-ink">{action.description}</p>
 
-            <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
+            <dl className="mt-3 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
               <Row label="Category">{categoryLabel(action.category)}</Row>
               <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
               <Row label="Target date">{formatDate(action.targetDate)}</Row>
@@ -56,7 +54,7 @@ export default function EmployeeActions({
             </p>
 
             {action.progressNotes.length > 0 && (
-              <ul className="mt-3 grid gap-2 border-t border-line pt-3">
+              <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2 border-t border-line pt-3">
                 {action.progressNotes.map((note, i) => (
                   <li key={i} className="text-[13px] text-muted">
                     <span className="whitespace-pre-line">{note.note}</span>
@@ -79,7 +77,7 @@ export default function EmployeeActions({
                     rows={3}
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
-                    className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    className="workflow-field w-full"
                   />
                   <div className="mt-2 flex flex-wrap gap-3">
                     <button

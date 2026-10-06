@@ -107,13 +107,10 @@ export default function ProjectsPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
-  const primaryClass =
-    "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-  const secondaryClass =
-    "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+  const primaryClass = "workflow-primary";
+  const secondaryClass = "workflow-secondary";
 
   return (
     <>
@@ -144,7 +141,7 @@ export default function ProjectsPage() {
             The lead is assigned from the start date automatically.
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="name">
                 Name

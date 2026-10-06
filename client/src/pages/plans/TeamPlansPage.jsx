@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -75,15 +76,13 @@ export default function TeamPlansPage() {
       )}
 
       {!people ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : people.length === 0 ? (
         <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
           Nobody you supervise has a published review yet.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">

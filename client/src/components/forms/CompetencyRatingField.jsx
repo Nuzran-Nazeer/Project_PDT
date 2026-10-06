@@ -41,7 +41,7 @@ export default function CompetencyRatingField({
 
   if (readOnly) {
     return (
-      <div className="rounded-lg border border-line p-4">
+      <div className="rounded-xl border border-line bg-secondary/40 p-4 sm:p-5">
         <p className="font-medium text-ink">{competency.name}</p>
 
         <p className="mt-2 text-[13px] text-ink">{answerText(value)}</p>
@@ -56,7 +56,7 @@ export default function CompetencyRatingField({
   }
 
   return (
-    <div className="rounded-lg border border-line p-4">
+    <div className="rounded-xl border border-line bg-secondary/40 p-4 sm:p-5">
       <p className="font-medium text-ink">{competency.name}</p>
       <p className="mt-1 max-w-prose text-[13px] text-muted">
         {prompt ? prompt(competency) : competency.definition}
@@ -125,7 +125,7 @@ function Choice({ name, value, chosen, onChoose, disabled, dashed, children }) {
   const border = dashed ? "border-dashed border-line" : "border-line";
 
   return (
-    <label className={disabled ? "cursor-not-allowed" : "cursor-pointer"}>
+    <label className={`relative ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
       <input
         type="radio"
         name={name}
@@ -136,7 +136,7 @@ function Choice({ name, value, chosen, onChoose, disabled, dashed, children }) {
         className="peer sr-only"
       />
       <span
-        className={`inline-block rounded-lg border px-2.5 py-1.5 text-[12px] text-muted transition-colors hover:text-ink peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:text-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand peer-disabled:opacity-60 ${border}`}
+        className={`inline-block rounded-lg border bg-raised px-3 py-2 text-[12px] text-muted transition-colors hover:bg-secondary hover:text-ink peer-checked:border-brand peer-checked:bg-secondary peer-checked:font-semibold peer-checked:text-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:opacity-60 ${border}`}
       >
         {children}
       </span>

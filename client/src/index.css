@@ -87,6 +87,10 @@
 }
 
 @layer components {
+  .workflow-field {
+    @apply min-w-0 max-w-full rounded-lg border border-line bg-raised px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-muted focus:outline-2 focus:outline-offset-2 focus:outline-ink disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
   .workflow-primary {
     @apply cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50;
   }

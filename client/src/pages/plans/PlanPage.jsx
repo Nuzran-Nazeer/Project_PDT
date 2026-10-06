@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -168,22 +169,13 @@ export default function PlanPage() {
     return (
       <>
         <PageHeader title="Development plan" backTo="/team-plans" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       </>
     );
   }
 
   if (!plan) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   const isImprovement = plan.type === "PIP";
@@ -238,7 +230,7 @@ export default function PlanPage() {
       <SuspensionNotice plan={plan} />
       <ImprovementDetails plan={plan} />
 
-      <div className="grid gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         <FormSection
           letter="A"
           title="Actions"
@@ -249,12 +241,12 @@ export default function PlanPage() {
               No actions yet. A plan with no actions cannot be shared.
             </p>
           ) : (
-            <ul className="grid gap-3">
+            <ul className="grid min-w-0 grid-cols-1 gap-3">
               {plan.actions.map((action) => (
                 <li key={action.id} className="rounded-lg border border-line p-4 text-sm">
                   <p className="font-medium text-ink">{action.description}</p>
 
-                  <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
+                  <dl className="mt-3 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
                     <Row label="Category">{categoryLabel(action.category)}</Row>
                     <Row label="From competency">{action.competencyName}</Row>
                     <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
@@ -325,7 +317,7 @@ export default function PlanPage() {
 
         {plan.canEdit ? (
           <FormSection letter="B" title={editingId ? "Edit an action" : "Add an action"}>
-            <form onSubmit={submit} className="grid gap-4">
+            <form onSubmit={submit} className="grid min-w-0 grid-cols-1 gap-4">
               <Field
                 label="What they will do"
                 name="description"
@@ -341,7 +333,7 @@ export default function PlanPage() {
                 />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Category" name="category" missing={missing}>
                   <select
                     id="category"
@@ -454,11 +446,7 @@ export default function PlanPage() {
               </Field>
 
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
-                >
+                <button type="submit" disabled={busy} className="workflow-primary">
                   {editingId ? "Save the action" : "Add the action"}
                 </button>
 
@@ -515,7 +503,7 @@ export default function PlanPage() {
                 type="button"
                 disabled={busy || plan.actions.length === 0}
                 onClick={() => run(() => submitForApproval(id))}
-                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="workflow-primary"
               >
                 Send to HR
               </button>
@@ -532,7 +520,7 @@ export default function PlanPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => run(() => sharePlan(id))}
-                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+                className="workflow-primary"
               >
                 Share with {plan.employee?.name}
               </button>
@@ -552,7 +540,7 @@ export default function PlanPage() {
                 type="button"
                 disabled={busy || plan.actions.length === 0 || owing.length > 0}
                 onClick={() => run(() => sharePlan(id))}
-                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="workflow-primary"
               >
                 Share with {plan.employee?.name}
               </button>
@@ -584,9 +572,9 @@ export default function PlanPage() {
           {canRecordCheckIn ? (
             <form
               onSubmit={submitCheckIn}
-              className="mt-4 grid gap-4 border-t border-line pt-4"
+              className="mt-4 grid min-w-0 grid-cols-1 gap-4 border-t border-line pt-4"
             >
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
                   label="Date of the conversation"
                   name="at"
@@ -636,11 +624,7 @@ export default function PlanPage() {
               </Field>
 
               <div>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
-                >
+                <button type="submit" disabled={busy} className="workflow-primary">
                   {busy
                     ? "Recording…"
                     : `Record the ${isImprovement ? "meeting" : "check-in"}`}
@@ -664,8 +648,8 @@ export default function PlanPage() {
             title="End the plan"
             note="Completing or not completing it closes it. Extending and escalating do not."
           >
-            <form onSubmit={submitOutcome} className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={submitOutcome} className="grid min-w-0 grid-cols-1 gap-4">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Outcome" name="outcome" missing={missing}>
                   <select
                     id="outcome"
@@ -735,7 +719,7 @@ export default function PlanPage() {
                 <button
                   type="submit"
                   disabled={busy || !ending.outcome || !ending.note.trim()}
-                  className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="workflow-primary"
                 >
                   {busy ? "Recording…" : "Record the outcome"}
                 </button>
@@ -768,7 +752,7 @@ export default function PlanPage() {
             </Link>
 
             {offTrack.length > 0 && (
-              <ul className="mt-3 grid gap-2 border-t border-line pt-3">
+              <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2 border-t border-line pt-3">
                 {offTrack.map((entry) => (
                   <li key={entry.number} className="text-[13px]">
                     <Link

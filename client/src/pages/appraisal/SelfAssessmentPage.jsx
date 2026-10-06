@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -61,16 +62,9 @@ export default function SelfAssessmentPage() {
       />
 
       {loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : !cycle ? (
         <div className="rounded-xl border border-dashed border-line p-10 text-center">
           <p className="text-ink">No cycle to assess against</p>
@@ -104,10 +98,7 @@ export default function SelfAssessmentPage() {
               `It asks about ${record.competencies.length} competencies for ${user?.jobFamily}, and a short reflection.`}
           </p>
 
-          <Link
-            to="/my-self-assessment/form"
-            className="mt-4 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          >
+          <Link to="/my-self-assessment/form" className="workflow-primary mt-4">
             {state.action}
           </Link>
         </div>

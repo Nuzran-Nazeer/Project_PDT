@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTeam } from "../../hooks/useTeam";
@@ -178,11 +179,7 @@ export default function SupervisorReviewFormPage() {
   const backTo = person ? `/my-team/${person.id}` : "/my-team";
 
   if (loading) {
-    return (
-      <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-        Loading…
-      </p>
-    );
+    return <WorkflowNotice tone="loading">Loading…</WorkflowNotice>;
   }
 
   const header = (
@@ -252,7 +249,7 @@ export default function SupervisorReviewFormPage() {
         title="Competency ratings"
         note={editable ? "Every rating needs written evidence." : "As you answered them."}
       >
-        <div className="grid gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4">
           {(record.competencies || []).map((competency) => (
             <CompetencyRatingField
               key={competency.key}
@@ -284,7 +281,7 @@ export default function SupervisorReviewFormPage() {
       </FormSection>
 
       <FormSection letter="C" title="Cycle summary">
-        <div className="grid gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3">
           {editable ? (
             <>
               <TextAreaField
@@ -339,15 +336,11 @@ export default function SupervisorReviewFormPage() {
               type="button"
               disabled={saving}
               onClick={onSaveDraft}
-              className="cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
+              className="workflow-secondary"
             >
               {saving ? "Saving…" : "Save as draft"}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <button type="submit" disabled={saving} className="workflow-primary">
               {saving ? "Submitting…" : record.submittedAt ? "Update" : "Submit"}
             </button>
           </div>

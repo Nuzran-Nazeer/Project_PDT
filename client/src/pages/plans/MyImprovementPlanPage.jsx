@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import {
   getMyImprovementPlans,
@@ -15,10 +16,8 @@ import { planOutcomeLabel, daysRemainingLabel } from "../../utils/planLabels";
 // neither does the response behind it. Closed plans stay here, which is the one page whose
 // access outlasts the plan.
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 
 function Shell({ children }) {
   return (
@@ -73,12 +72,7 @@ export default function MyImprovementPlanPage() {
   if (loadError) {
     return (
       <Shell>
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {loadError}
-        </p>
+        <WorkflowNotice tone="error">{loadError}</WorkflowNotice>
       </Shell>
     );
   }
@@ -86,9 +80,7 @@ export default function MyImprovementPlanPage() {
   if (!plans) {
     return (
       <Shell>
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       </Shell>
     );
   }
@@ -198,7 +190,7 @@ export default function MyImprovementPlanPage() {
 
         {history.length > 0 && (
           <FormSection letter={open ? "D" : "A"} title="Earlier plans">
-            <ul className="grid gap-3">
+            <ul className="grid min-w-0 grid-cols-1 gap-3">
               {history.map((plan) => (
                 <li key={plan.id} className="rounded-lg border border-line p-4 text-sm">
                   <p className="font-medium text-ink">

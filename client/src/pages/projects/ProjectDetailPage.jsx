@@ -63,8 +63,7 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
 
   const closed = Boolean(project?.endDate);

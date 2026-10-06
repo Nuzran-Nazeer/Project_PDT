@@ -187,13 +187,10 @@ export default function CyclesPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
-  const primaryClass =
-    "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-  const secondaryClass =
-    "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+  const primaryClass = "workflow-primary";
+  const secondaryClass = "workflow-secondary";
 
   return (
     <>
@@ -233,7 +230,7 @@ export default function CyclesPage() {
             Created as a draft. Opening it starts the 30 days it can be cancelled in.
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="parGroup">
                 Appraisal group
@@ -317,7 +314,7 @@ export default function CyclesPage() {
         </form>
       )}
 
-      <div className="mt-8 grid gap-3">
+      <div className="mt-8 grid min-w-0 grid-cols-1 gap-3">
         {loading ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : cycles.length === 0 ? (
@@ -581,7 +578,7 @@ function MoveOutcome({ outcome }) {
       </p>
 
       {waiting.length > 0 && (
-        <ul className="mt-2 grid gap-1 text-ink">
+        <ul className="mt-2 grid min-w-0 grid-cols-1 gap-1 text-ink">
           {waiting.map((item) => (
             <li key={item.reviewId}>
               <span className="font-medium">{item.employee?.name}</span>

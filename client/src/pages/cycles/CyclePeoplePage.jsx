@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -99,16 +100,9 @@ export default function CyclePeoplePage() {
       </Link>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : loading ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : (
         <>
           {actionError && (
@@ -133,7 +127,7 @@ export default function CyclePeoplePage() {
               Nobody belongs to the {cycle.parGroup} group yet.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+            <div className="workflow-table">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left">

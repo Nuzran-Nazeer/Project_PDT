@@ -195,8 +195,7 @@ export default function EmployeeFormPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none";
+  const inputClass = "workflow-field w-full";
   const labelClass = "mb-1.5 block text-[13px] font-semibold text-ink";
 
   const field = (name, label, extra = {}) => (
@@ -239,7 +238,11 @@ export default function EmployeeFormPage() {
           : "The record is created without a password. The employee sets their own from an invite."}
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-8 grid gap-5 sm:grid-cols-2" noValidate>
+      <form
+        onSubmit={handleSubmit}
+        className="mt-8 grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2"
+        noValidate
+      >
         {!isEdit && (
           <div>
             <label htmlFor="employeeIdDigits" className={labelClass}>
@@ -470,11 +473,7 @@ export default function EmployeeFormPage() {
         )}
 
         <div className="flex gap-3 sm:col-span-2">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="cursor-pointer rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <button type="submit" disabled={submitting} className="workflow-primary">
             {submitting ? "Saving…" : isEdit ? "Save changes" : "Create record"}
           </button>
           <button

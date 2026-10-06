@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPlanForCoverage, getImprovementPlansForCoverage } from "../../services/plans";
@@ -53,12 +54,7 @@ export default function CoveragePlanPage() {
     return (
       <>
         <PageHeader title="Plans" backTo={`/employees/${id}`} />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       </>
     );
   }
@@ -67,9 +63,7 @@ export default function CoveragePlanPage() {
     return (
       <>
         <PageHeader title="Plans" backTo={`/employees/${id}`} />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       </>
     );
   }
@@ -94,12 +88,12 @@ export default function CoveragePlanPage() {
       <SuspensionNotice plan={plan} />
 
       <FormSection letter="A" title="Actions">
-        <ul className="grid gap-3">
+        <ul className="grid min-w-0 grid-cols-1 gap-3">
           {plan.actions.map((action) => (
             <li key={action.id} className="rounded-lg border border-line p-4 text-sm">
               <p className="font-medium text-ink">{action.description}</p>
 
-              <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
+              <dl className="mt-3 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
                 <Row label="Category">{categoryLabel(action.category)}</Row>
                 <Row label="From competency">{action.competencyName}</Row>
                 <Row label="Owner">{action.owner?.name || "Not recorded"}</Row>
@@ -119,7 +113,7 @@ export default function CoveragePlanPage() {
               <CarriedMarker action={action} />
 
               {action.progressNotes.length > 0 && (
-                <ul className="mt-3 grid gap-2 border-t border-line pt-3">
+                <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2 border-t border-line pt-3">
                   {action.progressNotes.map((note, i) => (
                     <li key={i} className="text-[13px] text-muted">
                       <span className="whitespace-pre-line">{note.note}</span>
@@ -136,7 +130,7 @@ export default function CoveragePlanPage() {
       </FormSection>
 
       {/* Read only, the same as the actions above: this page offers no control. */}
-      <div className="mt-5 grid gap-5">
+      <div className="mt-5 grid min-w-0 grid-cols-1 gap-5">
         <FormSection letter="B" title="Check-ins">
           <CheckInSchedule summary={plan.checkIns} />
 
@@ -151,7 +145,7 @@ export default function CoveragePlanPage() {
             title="Improvement plans"
             note="Open and closed, newest first."
           >
-            <div className="grid gap-5">
+            <div className="grid min-w-0 grid-cols-1 gap-5">
               {improvement.map((one) => (
                 <div key={one.id}>
                   <ImprovementPlanSummary plan={one} />
