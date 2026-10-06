@@ -87,7 +87,7 @@ export default function SelfAssessmentPage() {
             <h2 className="font-semibold text-ink">
               {cycle.parGroup} group · {cycle.year}
             </h2>
-            <span className="rounded-lg border border-brand/40 px-2.5 py-1 text-[12px] text-brand">
+            <span className="rounded-lg border border-brand/40 px-2.5 py-1 text-[12px] text-ink">
               {cycle.status.replace(/_/g, " ")}
             </span>
           </div>

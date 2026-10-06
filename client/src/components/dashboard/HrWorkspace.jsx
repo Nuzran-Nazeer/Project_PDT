@@ -41,6 +41,8 @@ const QUEUES = [
   },
 ];
 
+const ATTENTION_PAGE_SIZE = 6;
+
 function useWorkspaceData(tabs) {
   const [resources, setResources] = useState({});
   const [revision, setRevision] = useState(0);
@@ -82,13 +84,17 @@ function useWorkspaceData(tabs) {
 }
 
 export default function HrWorkspace({ groups }) {
-  const tabs = groups.flatMap((group) => TABS_BY_GROUP[group] || []);
+  const tabs = groups
+    .flatMap((group) => TABS_BY_GROUP[group] || [])
+    .filter(
+      (tab, index, all) => all.findIndex((item) => item.path === tab.path) === index,
+    );
   const queues = QUEUES.filter((queue) =>
     tabs.some((tab) => tab.id === queue.id && tab.built),
   );
   const [resources, refresh] = useWorkspaceData(tabs);
   const [filter, setFilter] = useState("all");
-  const [showAll, setShowAll] = useState(false);
+  const [attentionPage, setAttentionPage] = useState(0);
   const tasks = queues.flatMap((queue) =>
     (resources[queue.id]?.data?.[queue.field] || []).map((item, index) => ({
       key: `${queue.id}-${item.reviewId || item.id || item._id || index}`,
@@ -102,9 +108,15 @@ export default function HrWorkspace({ groups }) {
     })),
   );
   const filtered = tasks.filter((task) => filter === "all" || task.category === filter);
+  const page = Math.min(
+    attentionPage,
+    Math.max(0, Math.ceil(filtered.length / ATTENTION_PAGE_SIZE) - 1),
+  );
+  const firstItem = page * ATTENTION_PAGE_SIZE;
+  const visibleTasks = filtered.slice(firstItem, firstItem + ATTENTION_PAGE_SIZE);
+  const hasMore = firstItem + ATTENTION_PAGE_SIZE < filtered.length;
   const ready = queues.every((queue) => resources[queue.id]?.data);
   const pending = queues.some((queue) => !resources[queue.id]);
-  const quick = tabs.filter((tab) => tab.section === "People data" && tab.built);
 
   return (
     <div className="mb-8 space-y-6">
@@ -112,7 +124,10 @@ export default function HrWorkspace({ groups }) {
         <p className="text-sm text-muted">Your operational workspace</p>
         <button
           type="button"
-          onClick={refresh}
+          onClick={() => {
+            setAttentionPage(0);
+            refresh();
+          }}
           className="rounded-lg border border-line bg-raised px-3 py-2 text-sm"
         >
           Refresh workspace
@@ -141,7 +156,7 @@ export default function HrWorkspace({ groups }) {
           </Link>
         ))}
       </div>
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="space-y-6">
         <Panel
           title="Needs your attention"
           action={
@@ -166,7 +181,7 @@ export default function HrWorkspace({ groups }) {
                 aria-pressed={filter === queue.id}
                 onClick={() => {
                   setFilter(queue.id);
-                  setShowAll(false);
+                  setAttentionPage(0);
                 }}
                 className={`shrink-0 border-b-2 py-3 text-xs ${filter === queue.id ? "border-brand font-semibold text-ink" : "border-transparent text-muted"}`}
               >
@@ -198,7 +213,7 @@ export default function HrWorkspace({ groups }) {
               Loading attention queues…
             </p>
           )}
-          {(showAll ? filtered : filtered.slice(0, 5)).map((task) => (
+          {visibleTasks.map((task) => (
             <div
               key={task.key}
               className="flex flex-wrap items-center gap-3 border-b border-line p-5 last:border-0"
@@ -226,17 +241,35 @@ export default function HrWorkspace({ groups }) {
                 : "No items loaded. Some queues are unavailable."}
             </p>
           )}
-          {filtered.length > 5 && (
-            <button
-              type="button"
-              onClick={() => setShowAll(!showAll)}
-              className="w-full p-4 text-sm text-ink"
-            >
-              {showAll ? "Show fewer" : `Show all ${filtered.length}`}
-            </button>
+          {filtered.length > ATTENTION_PAGE_SIZE && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
+              <p role="status" className="text-xs text-muted">
+                {firstItem + 1} to {firstItem + visibleTasks.length} of {filtered.length}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0}
+                  onClick={() => setAttentionPage(page - 1)}
+                  className="workflow-secondary"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={!hasMore}
+                  onClick={() => setAttentionPage(page + 1)}
+                  className="workflow-secondary"
+                >
+                  More
+                </button>
+              </div>
+            </div>
           )}
         </Panel>
-        <div className="min-w-0 space-y-6">
+        <div
+          className={`grid min-w-0 grid-cols-1 items-start gap-6 ${groups.includes("oversight") ? "lg:grid-cols-2" : ""}`}
+        >
           <Panel
             title="Appraisal cycles"
             action={
@@ -283,19 +316,6 @@ export default function HrWorkspace({ groups }) {
             </Panel>
           )}
         </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {quick.map((tab) => (
-          <Link
-            key={tab.id}
-            to={tab.path}
-            className="rounded-xl border border-line bg-raised p-5"
-          >
-            <Icon name={tab.icon} className="mb-3 h-5 w-5 text-muted" />
-            <p className="text-sm font-semibold">{tab.label}</p>
-            <p className="mt-2 text-xs text-muted">{tab.description}</p>
-          </Link>
-        ))}
       </div>
     </div>
   );

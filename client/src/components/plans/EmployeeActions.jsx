@@ -106,7 +106,7 @@ export default function EmployeeActions({
                     setNoteText("");
                     onStartNote?.();
                   }}
-                  className="mt-3 cursor-pointer text-[13px] text-brand transition-colors hover:underline"
+                  className="mt-3 cursor-pointer text-[13px] text-ink transition-colors hover:underline"
                 >
                   Add a progress note
                 </button>

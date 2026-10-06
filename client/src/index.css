@@ -12,6 +12,11 @@
   --color-brand-hover: #ed7b12;
   --color-brand-ink: #171717;
   --color-secondary: #ededed;
+  --color-chart-1: #dedede;
+  --color-chart-2: #b0b0b0;
+  --color-chart-3: #858585;
+  --color-chart-4: #5b5b5b;
+  --color-chart-5: #303030;
 
   --color-surface: #f5f5f5;
   --color-raised: oklch(1 0 0);
@@ -32,6 +37,11 @@
   --color-brand-hover: #ffa64e;
   --color-brand-ink: #101010;
   --color-secondary: #202020;
+  --color-chart-1: #444444;
+  --color-chart-2: #666666;
+  --color-chart-3: #8a8a8a;
+  --color-chart-4: #b0b0b0;
+  --color-chart-5: #dedede;
 
   --color-surface: #080808;
   --color-raised: #141414;

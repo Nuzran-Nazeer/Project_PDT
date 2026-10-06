@@ -237,7 +237,7 @@ export default function ProjectsPage() {
                   className={`rounded-lg border px-2.5 py-1 text-[12px] ${
                     project.endDate
                       ? "border-line text-muted"
-                      : "border-brand/40 text-brand"
+                      : "border-brand/40 text-ink"
                   }`}
                 >
                   {project.endDate ? "Closed" : "Running"}

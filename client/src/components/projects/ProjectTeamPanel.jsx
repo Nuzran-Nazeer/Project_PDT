@@ -234,10 +234,12 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
   const primaryClass = "workflow-primary";
   const secondaryClass = "workflow-secondary";
   const rowButtonClass =
-    "cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+    "cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
   const tabClass = (active) =>
     `cursor-pointer rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
-      active ? "bg-brand/10 text-brand" : "text-muted hover:text-brand"
+      active
+        ? "border-b-2 border-brand bg-secondary text-ink"
+        : "border-b-2 border-transparent text-muted hover:text-ink"
     }`;
 
   const awaitingPeriod = periodMode && !appliedPeriod;
@@ -485,7 +487,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
 
                   {/* Over a period the flag sits on each stretch instead. */}
                   {!periodMode && member.isTeamLead && (
-                    <span className="rounded-lg border border-brand/40 px-2 py-0.5 text-[12px] text-brand">
+                    <span className="rounded-lg border border-brand/40 px-2 py-0.5 text-[12px] text-ink">
                       Team lead
                     </span>
                   )}
@@ -524,7 +526,7 @@ export default function ProjectTeamPanel({ project, canManage, reloadKey }) {
                       {/* ⚠️ `to` is the first day not covered. */}
                       {period.to ? ` to ${formatDate(lastDayOf(period.to))}` : " onwards"}
                       {period.isTeamLead && (
-                        <span className="text-brand"> · team lead</span>
+                        <span className="text-ink"> · team lead</span>
                       )}
                     </li>
                   ))}

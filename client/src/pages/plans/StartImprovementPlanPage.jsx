@@ -98,7 +98,7 @@ export default function StartImprovementPlanPage() {
 
       <Link
         to={`/team-plans/${id}`}
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to the development plan
       </Link>

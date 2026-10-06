@@ -95,9 +95,9 @@ export default function MyPlanPage() {
   if (plan.state !== "plan") {
     return (
       <Shell>
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {NOTHING_TO_READ[plan.state] || NOTHING_TO_READ.no_review}
-        </p>
+        </WorkflowNotice>
       </Shell>
     );
   }

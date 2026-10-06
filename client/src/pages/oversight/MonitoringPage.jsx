@@ -26,8 +26,7 @@ const TYPE_RULES = {
 
 const primaryClass = "workflow-primary";
 const secondaryClass = "workflow-secondary";
-const selectClass =
-  "rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const selectClass = "workflow-field";
 
 export default function MonitoringPage() {
   const { user } = useAuth();
@@ -236,7 +235,7 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
               e.stopPropagation();
               onToggle();
             }}
-            className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <span className="sr-only">{expanded ? "Hide details" : "Show details"}</span>
             <Icon
@@ -302,7 +301,7 @@ function Flag({ flag, expanded, onToggle, isOwn, onDone }) {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="What you checked, and what it turned out to be."
-                  className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 />
 
                 {error && (

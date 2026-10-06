@@ -1,13 +1,13 @@
 import { percent } from "../../utils/reportScale";
+import WorkflowNotice from "../common/WorkflowNotice";
 
-const selectClass =
-  "rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const selectClass = "workflow-field";
 
 export function CycleSelect({ cycles, value, onChange }) {
   if (!cycles?.length) return null;
 
   return (
-    <div className="mb-6 flex items-center gap-3">
+    <div className="workflow-toolbar">
       <label htmlFor="cycle" className="text-sm text-muted">
         Cycle
       </label>
@@ -30,7 +30,7 @@ export function CycleSelect({ cycles, value, onChange }) {
 // ⚠️ Shown, never left out: a missing group reads as "nothing happened" and this one did.
 export function SuppressedCard({ name, floor }) {
   return (
-    <section className="rounded-xl border border-dashed border-line p-5">
+    <section className="rounded-xl border border-dashed border-line bg-secondary/40 p-5 sm:p-6">
       <h2 className="font-medium text-ink">{name}</h2>
       <p className="mt-1 text-sm text-muted">
         Fewer than {floor} people, so this group is too small to report without
@@ -48,7 +48,7 @@ export function SegmentBar({ segments, label }) {
   return (
     <div>
       <div
-        className="flex h-3 w-full gap-[2px] overflow-hidden rounded"
+        className="flex h-4 w-full gap-[2px] overflow-hidden rounded-lg"
         role="img"
         aria-label={`${label}: ${segments.map((s) => `${s.label} ${s.count}`).join(", ")}`}
       >
@@ -85,13 +85,10 @@ export function SegmentBar({ segments, label }) {
 
 export function Notice({ tone = "muted", children }) {
   return (
-    <p
-      role={tone === "danger" ? "alert" : undefined}
-      className={`rounded-xl border border-line bg-raised p-5 text-sm ${
-        tone === "danger" ? "text-danger" : "text-muted"
-      }`}
+    <WorkflowNotice
+      tone={tone === "danger" ? "error" : tone === "loading" ? "loading" : "empty"}
     >
       {children}
-    </p>
+    </WorkflowNotice>
   );
 }

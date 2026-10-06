@@ -91,9 +91,7 @@ export default function MyImprovementPlanPage() {
   if (!open && history.length === 0) {
     return (
       <Shell>
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          You have no improvement plan.
-        </p>
+        <WorkflowNotice>You have no improvement plan.</WorkflowNotice>
       </Shell>
     );
   }

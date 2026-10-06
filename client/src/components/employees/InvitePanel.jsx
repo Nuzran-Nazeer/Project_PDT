@@ -28,7 +28,7 @@ function CopyButton({ value, label }) {
     <button
       type="button"
       onClick={handleClick}
-      className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-brand"
+      className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-ink"
     >
       {state || label}
     </button>

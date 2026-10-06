@@ -111,7 +111,7 @@ export default function SummaryCheckPage() {
 
       <Link
         to="/summaries-to-check"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
       >
         <Icon name="arrowLeft" className="h-4 w-4" />
         Back to summaries to check
@@ -252,7 +252,7 @@ export default function SummaryCheckPage() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="The supervisor reads this at the top of their reopened review."
-                className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               />
               <p className="mt-2 max-w-prose text-[13px] text-muted">
                 The whole review reopens, not just the summary.
@@ -384,7 +384,7 @@ function Responses({ responses }) {
           </div>
 
           <details className="mt-3">
-            <summary className="cursor-pointer text-[13px] text-muted hover:text-brand">
+            <summary className="cursor-pointer text-[13px] text-muted hover:text-ink">
               Ratings and evidence
             </summary>
             <div className="mt-3 grid gap-3">

@@ -76,7 +76,7 @@ export default function EmployeeDetailPage() {
         <button
           type="button"
           onClick={() => navigate("/employees")}
-          className="mt-4 cursor-pointer text-sm font-medium text-brand hover:underline"
+          className="mt-4 cursor-pointer text-sm font-medium text-ink hover:underline"
         >
           Back to employees
         </button>
@@ -86,7 +86,7 @@ export default function EmployeeDetailPage() {
 
   return (
     <section>
-      <Link to="/employees" className="text-[13px] text-muted hover:text-brand">
+      <Link to="/employees" className="text-[13px] text-muted hover:text-ink">
         ← Employees
       </Link>
 
@@ -105,7 +105,7 @@ export default function EmployeeDetailPage() {
           {canAssign && (
             <Link
               to={`/employees/${person._id}/plan`}
-              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-brand"
+              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-ink"
             >
               Development plan
             </Link>
@@ -113,7 +113,7 @@ export default function EmployeeDetailPage() {
           {canManage && (
             <Link
               to={`/employees/${person._id}/edit`}
-              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-brand"
+              className="rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-ink"
             >
               Edit
             </Link>

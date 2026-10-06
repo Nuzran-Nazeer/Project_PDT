@@ -10,12 +10,9 @@ import Icon from "../../components/common/Icon";
 // ⚠️ Its own screen, not a control beside the feedback: asking for a name should take deciding to.
 // ⚠️ Whether this officer may reveal is the server's answer, never worked out here.
 
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const selectClass =
-  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
+const selectClass = "workflow-field w-full";
 
 export default function ReviewerIdentityPage() {
   const { user } = useAuth();
@@ -105,12 +102,12 @@ export default function ReviewerIdentityPage() {
         </p>
       )}
 
-      <div className="grid gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         <FormSection
           title="Which review"
           note="Only the people you cover are listed, and never yourself."
         >
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="cycle"
@@ -200,12 +197,12 @@ function Responses({ responses, reviewId }) {
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-1 gap-3">
       {responses.items.map((item) => (
         <div key={item.id} className="rounded-lg border border-line p-4">
           <p className="text-sm font-medium text-ink">{item.id}&rsquo;s feedback</p>
 
-          <div className="mt-2 grid gap-2 text-[13px]">
+          <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 text-[13px]">
             <p className="max-w-prose whitespace-pre-wrap text-muted">
               <span className="text-ink">Strength: </span>
               {item.freeText?.strengths || "Nothing written."}
@@ -246,8 +243,8 @@ function Reveal({ reviewId, label }) {
 
   if (revealed) {
     return (
-      <p className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand/40 bg-brand/5 px-3 py-2 text-[13px] text-ink">
-        <Icon name="user" className="h-4 w-4 shrink-0 text-brand" />
+      <p className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-secondary px-3 py-2 text-[13px] text-ink">
+        <Icon name="user" className="h-4 w-4 shrink-0 text-muted" />
         <span className="font-medium">{revealed.reviewerName}</span>
         <span className="text-muted">
           wrote this, {formatDateTime(revealed.submittedAt)}
@@ -295,7 +292,7 @@ function Reveal({ reviewId, label }) {
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         placeholder="What is being investigated, and why this response."
-        className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="workflow-field w-full"
       />
       {error && (
         <p

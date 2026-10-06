@@ -1,16 +1,13 @@
+﻿import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { useReportingLine } from "../../hooks/useReportingLine";
 import { useCurrentCycle } from "../../hooks/useCurrentCycle";
 import { useTeam } from "../../hooks/useTeam";
 import { sectionGroupsFor } from "../../utils/dashboardSections";
 import { GROUP_OVERVIEW, TABS_BY_GROUP } from "../../utils/dashboardTabs";
-import { formatDate } from "../../utils/dates";
 import PageHeader from "../../components/layout/PageHeader";
 import IdentityCard from "../../components/dashboard/IdentityCard";
 import CycleCard from "../../components/dashboard/CycleCard";
-import StatTile from "../../components/dashboard/StatTile";
 import ActionRow from "../../components/dashboard/ActionRow";
-import MySupervisorPanel from "../../components/org/MySupervisorPanel";
 import HrWorkspace from "../../components/dashboard/HrWorkspace";
 
 const WORKSPACE_CONTEXT = {
@@ -20,15 +17,14 @@ const WORKSPACE_CONTEXT = {
   supervisor: "Review your team and follow their development actions.",
   employee: "Your appraisal, assigned feedback and development plans.",
 };
+const WORKSPACE_LABELS = {
+  leadership: "Company reports",
+  supervisor: "Team workflows",
+  employee: "My appraisal",
+};
 
-// One dashboard for everybody; the sections come from dashboardSections.js.
 export default function Dashboard() {
   const { user, isSupervisor, sessionReady } = useAuth();
-  const { line, loading: lineLoading, error: lineError } = useReportingLine();
-  const { team } = useTeam();
-  const { cycle, parGroup: cycleGroup, loading: cycleLoading } = useCurrentCycle();
-
-  // `isSupervisor` is false until the server answers.
   if (!sessionReady) {
     return (
       <p className="p-10 text-center text-muted" role="status">
@@ -36,124 +32,132 @@ export default function Dashboard() {
       </p>
     );
   }
-
   const groups = sectionGroupsFor(user?.roles, isSupervisor);
   const primary = groups[0] || "employee";
   const overview = GROUP_OVERVIEW[primary];
-
-  const tiles = tilesFor(user, line, lineLoading, team);
-
   return (
     <>
       <PageHeader title={overview.pageTitle} context={WORKSPACE_CONTEXT[primary]} />
-
-      {groups.includes("hr") && <HrWorkspace groups={groups} />}
-
-      {groups.includes("hr") && (
-        <h2 className="mb-4 text-lg font-semibold">My personal workspace</h2>
-      )}
-
-      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
-        <IdentityCard
-          name={user?.name}
-          roleLabel={overview.roleLabel}
-          employeeId={user?.employeeId}
-        />
-        <CycleCard
-          cycle={cycle}
-          parGroup={cycleGroup || user?.parGroup}
-          loading={cycleLoading}
-        />
+      <IdentityCard
+        wide
+        name={user?.name}
+        roleLabel={overview.roleLabel}
+        employeeId={user?.employeeId}
+      />
+      <div className="mt-6">
+        {groups.includes("hr") ? (
+          <HrWorkspace groups={groups} />
+        ) : (
+          <RoleWorkspace groups={groups} />
+        )}
       </div>
-
-      {tiles.length > 0 && (
-        <Section heading="Quick overview">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {tiles.map((tile) => (
-              <StatTile key={tile.label} {...tile} />
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <Section heading="Your reporting line">
-        <MySupervisorPanel line={line} loading={lineLoading} error={lineError} />
-      </Section>
-
-      {groups.map((group, index) => {
-        const tabs = TABS_BY_GROUP[group] || [];
-        if (tabs.length === 0) return null;
-
-        const headings = GROUP_OVERVIEW[group] || GROUP_OVERVIEW.employee;
-
-        return (
-          <Section
-            key={group}
-            heading={index === 0 ? headings.primaryHeading : headings.secondaryHeading}
-          >
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {tabs.map((tab) => (
-                <ActionRow key={tab.id} tab={tab} status={rowStatus(tab.id, team)} />
-              ))}
-            </div>
-          </Section>
-        );
-      })}
     </>
   );
 }
 
-// A tile is left out rather than shown empty.
-function tilesFor(user, line, lineLoading, team) {
-  const unit = lineLoading ? "…" : line?.unit?.name;
-
-  return [
-    team && {
-      value: String(team.total),
-      label: team.total === 1 ? "Person you supervise" : "People you supervise",
-      icon: "users",
-      tone: "blue",
-    },
-    {
-      value: unit || "No unit",
-      label: unit ? "Your unit" : "You are in no unit, so you are not appraised",
-      icon: "sitemap",
-      tone: "blue",
-    },
-    user?.jobFamily && {
-      value: user.jobFamily,
-      label: "Your job family, which selects your review form",
-      icon: "clipboard",
-      tone: "violet",
-    },
-    user?.joinedDate && {
-      value: formatDate(user.joinedDate),
-      label: "At Altrium since",
-      icon: "calendar",
-      tone: "amber",
-    },
-  ].filter(Boolean);
-}
-
-function rowStatus(tabId, team) {
-  if (tabId !== "my-team" || !team) return undefined;
-
-  return [
-    {
-      text: `${team.total} ${team.total === 1 ? "person" : "people"}`,
-      tone: "muted",
-      icon: "users",
-    },
-  ];
-}
-
-function Section({ heading, children }) {
+function RoleWorkspace({ groups }) {
+  const { team, loading: teamLoading, error: teamError } = useTeam();
+  const { cycle, parGroup, loading, error } = useCurrentCycle();
+  const [filter, setFilter] = useState(groups[0] || "employee");
+  const [page, setPage] = useState(0);
+  const tabs = (TABS_BY_GROUP[filter] || []).filter(
+    (tab) => tab.built && tab.section !== "People data",
+  );
+  const visible = tabs.slice(page * 6, (page + 1) * 6);
   return (
-    <section className="mt-8">
-      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted">
-        {heading}
-      </h2>
-      {children}
-    </section>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-xl border border-line bg-raised">
+        <div className="border-b border-line p-5">
+          <h2 className="text-base font-semibold">Your workspace</h2>
+          <p className="mt-1 text-sm text-muted">
+            Open a workflow to review its current status and next steps.
+          </p>
+        </div>
+        <div
+          aria-label="Workspace filters"
+          className="flex gap-5 overflow-x-auto border-b border-line px-5"
+        >
+          {groups.map((group) => (
+            <button
+              key={group}
+              type="button"
+              aria-pressed={filter === group}
+              onClick={() => {
+                setFilter(group);
+                setPage(0);
+              }}
+              className={`shrink-0 border-b-2 py-3 text-xs ${filter === group ? "border-brand font-semibold text-ink" : "border-transparent text-muted"}`}
+            >
+              {WORKSPACE_LABELS[group]}
+            </button>
+          ))}
+        </div>
+        <div className="grid gap-3 p-4 lg:grid-cols-2">
+          {visible.map((tab) => (
+            <ActionRow key={tab.id} tab={tab} />
+          ))}
+        </div>
+        {tabs.length > 6 && (
+          <div className="flex items-center justify-between border-t border-line p-4">
+            <p className="text-xs text-muted">
+              {page * 6 + 1} to {page * 6 + visible.length} of {tabs.length}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="workflow-secondary"
+                disabled={page === 0}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="workflow-secondary"
+                disabled={(page + 1) * 6 >= tabs.length}
+                onClick={() => setPage(page + 1)}
+              >
+                More
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+      <div
+        className={`grid items-start gap-6 ${groups.includes("supervisor") ? "lg:grid-cols-2" : ""}`}
+      >
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
+          >
+            Appraisal cycle: {error}
+          </p>
+        ) : (
+          <CycleCard cycle={cycle} parGroup={parGroup} loading={loading} />
+        )}
+        {groups.includes("supervisor") && (
+          <section className="rounded-xl border border-line bg-raised p-5">
+            <h2 className="text-base font-semibold">Team overview</h2>
+            {teamError ? (
+              <p role="alert" className="mt-3 text-sm text-danger">
+                {teamError}
+              </p>
+            ) : (
+              <p
+                role={teamLoading ? "status" : undefined}
+                className="mt-3 text-sm text-muted"
+              >
+                {teamLoading
+                  ? "Loading team…"
+                  : team
+                    ? `${team.total} ${team.total === 1 ? "person" : "people"} you supervise`
+                    : "No team information available."}
+              </p>
+            )}
+          </section>
+        )}
+      </div>
+    </div>
   );
 }

@@ -19,12 +19,12 @@ export default function NormalisationShell() {
 
       <Link
         to="/normalisation"
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to normalisation
       </Link>
 
-      <div className="grid gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5">
         <FormSection letter="A" title="What the system would compare">
           <Empty>Not built yet.</Empty>
         </FormSection>
@@ -38,7 +38,7 @@ export default function NormalisationShell() {
         </FormSection>
 
         <FormSection letter="C" title="Your decision">
-          <ul className="grid gap-2 text-sm text-muted">
+          <ul className="grid min-w-0 grid-cols-1 gap-2 text-sm text-muted">
             <li>
               <strong className="text-ink">Confirm</strong>: you are satisfied, and it
               goes to HR.

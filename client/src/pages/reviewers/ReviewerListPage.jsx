@@ -1,3 +1,4 @@
+import WorkflowNotice from "../../components/common/WorkflowNotice";
 import { Fragment, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import Icon from "../../components/common/Icon";
@@ -13,12 +14,9 @@ import { formatDate } from "../../utils/dates";
 
 // ⚠️ Every rule here is the server's. The buttons only follow the `can…` flags it sends.
 
-const inputClass =
-  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
-const primaryClass =
-  "cursor-pointer rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryClass =
-  "cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60";
+const inputClass = "workflow-field w-full";
+const primaryClass = "workflow-primary";
+const secondaryClass = "workflow-secondary";
 
 const CHANGE_STATUS = {
   pending: "Waiting for HR",
@@ -70,23 +68,16 @@ export default function ReviewerListPage() {
     <>
       <Link
         to={backTo}
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
       >
         <Icon name="arrowLeft" className="h-4 w-4" />
         Back
       </Link>
 
       {error ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {error}
-        </p>
+        <WorkflowNotice tone="error">{error}</WorkflowNotice>
       ) : !data ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Loading…
-        </p>
+        <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : (
         <ListView
           data={data}
@@ -194,7 +185,7 @@ function CandidateTable({ candidates, changes, removals, onToggleRemoval, onReas
     changes.find((c) => c.type === "remove" && c.person?.id === id);
 
   return (
-    <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-raised">
+    <div className="workflow-table mt-6">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left">
@@ -449,7 +440,7 @@ function AddPeople({ reviewId, additions, setAdditions }) {
       )}
 
       {additions.length > 0 && (
-        <ul className="mt-4 grid gap-3">
+        <ul className="mt-4 grid min-w-0 grid-cols-1 gap-3">
           {additions.map((a) => (
             <li key={a.person.id} className="rounded-lg border border-line p-3.5">
               <div className="flex items-center justify-between gap-3">
@@ -496,7 +487,7 @@ function Changes({ data, busy, run }) {
       <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
         Requested changes
       </h2>
-      <ul className="mt-4 grid gap-3">
+      <ul className="mt-4 grid min-w-0 grid-cols-1 gap-3">
         {data.changes.map((change) => (
           <li key={change.id} className="rounded-lg border border-line p-3.5">
             <div className="flex flex-wrap items-center justify-between gap-3">

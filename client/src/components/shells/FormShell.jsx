@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 export function FormShell({ children }) {
-  return <div className="grid gap-5">{children}</div>;
+  return <div className="grid min-w-0 grid-cols-1 gap-5">{children}</div>;
 }
 
 export function FormSection({ letter, title, note, children }) {
@@ -43,7 +43,7 @@ export function FormActions({ backTo, backLabel }) {
         {backTo && (
           <Link
             to={backTo}
-            className="text-sm text-muted transition-colors hover:text-brand"
+            className="text-sm text-muted transition-colors hover:text-ink"
           >
             {backLabel || "Back"}
           </Link>

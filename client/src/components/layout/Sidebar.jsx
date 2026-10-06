@@ -4,13 +4,22 @@ import { GROUP_LABELS, DASHBOARD_TAB, TABS_BY_GROUP } from "../../utils/dashboar
 
 // A collapsing rail on a wide window, a drawer below `md`.
 export default function Sidebar({ groups, collapsed, drawer = false, onNavigate }) {
+  const seenPaths = new Set();
+  const sections = groups.map((group) => ({
+    group,
+    tabs: (TABS_BY_GROUP[group] || []).filter((tab) => {
+      if (seenPaths.has(tab.path)) return false;
+      seenPaths.add(tab.path);
+      return true;
+    }),
+  }));
   return (
     <nav
       // Two nav landmarks exist; unlabelled, a screen reader cannot tell them apart.
       aria-label="Sections"
       className={
         drawer
-          ? "flex h-full w-60 flex-col gap-6 overflow-y-auto border-r border-line bg-raised py-6"
+          ? "flex min-h-0 w-60 flex-1 flex-col gap-6 overflow-y-auto border-r border-line bg-raised py-6"
           : // A second scrollbar beside the page's own reads as a defect.
             "no-scrollbar sticky top-16 flex max-h-[calc(100svh-4rem)] flex-col gap-6 overflow-y-auto py-6"
       }
@@ -37,10 +46,9 @@ export default function Sidebar({ groups, collapsed, drawer = false, onNavigate 
         </div>
       )}
 
-      {groups.map((group, index) => {
+      {sections.map(({ group, tabs }, index) => {
         const isFirst = index === 0;
         const label = GROUP_LABELS[group]?.[isFirst ? "primary" : "secondary"] || group;
-        const tabs = TABS_BY_GROUP[group] || [];
         const narrow = collapsed && !drawer;
 
         return (
@@ -83,7 +91,7 @@ function SidebarLink({ tab, narrow, onNavigate }) {
       to={tab.path}
       onClick={onNavigate}
       // As well as the label, never instead of it: `title` never reaches a touch device.
-      title={narrow ? tab.label : undefined}
+      title={narrow ? `${tab.label}${tab.built ? "" : " (Pending)"}` : undefined}
       className={({ isActive }) =>
         `mx-3 my-1 flex items-center gap-3 rounded-r-lg border-l-2 py-2.5 text-[13px] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${
           narrow ? "justify-center px-0" : "px-4"
@@ -98,6 +106,17 @@ function SidebarLink({ tab, narrow, onNavigate }) {
       <Icon name={tab.icon} className="h-4 w-4 shrink-0" />
       {/* Always rendered: unmounting leaves the link with no accessible name. */}
       <span className={narrow ? "sr-only" : "truncate"}>{tab.label}</span>
+      {!tab.built && (
+        <span
+          className={
+            narrow
+              ? "sr-only"
+              : "ml-auto rounded border border-line px-1.5 py-0.5 text-[9px] text-muted"
+          }
+        >
+          Pending
+        </span>
+      )}
     </NavLink>
   );
 }

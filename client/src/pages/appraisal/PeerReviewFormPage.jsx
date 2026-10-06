@@ -169,12 +169,9 @@ export default function PeerReviewFormPage() {
     return (
       <>
         <PageHeader title="Colleague feedback" backTo="/feedback-i-owe" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error">
           {loadError || "That review could not be found."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }

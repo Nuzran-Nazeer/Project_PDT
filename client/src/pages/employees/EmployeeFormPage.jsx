@@ -224,7 +224,7 @@ export default function EmployeeFormPage() {
     <section className="max-w-2xl">
       <Link
         to={isEdit ? `/employees/${id}` : "/employees"}
-        className="text-[13px] text-muted hover:text-brand"
+        className="text-[13px] text-muted hover:text-ink"
       >
         ← {isEdit ? "Back to record" : "Employees"}
       </Link>

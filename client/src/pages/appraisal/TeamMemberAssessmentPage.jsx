@@ -56,12 +56,7 @@ export default function TeamMemberAssessmentPage() {
     return (
       <>
         <PageHeader title="Self-assessment" backTo={backTo} />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {problem}
-        </p>
+        <WorkflowNotice tone="error">{problem}</WorkflowNotice>
       </>
     );
   }
@@ -75,11 +70,11 @@ export default function TeamMemberAssessmentPage() {
     return (
       <>
         <PageHeader title="Self-assessment" context={person.name} backTo={backTo} />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {assessment.reason === "in_window"
             ? "Submitted. Opens once their five-hour correction window closes."
             : "Not submitted yet."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }

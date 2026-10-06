@@ -13,7 +13,7 @@ export default function ActionRow({ tab, status = [] }) {
   return (
     <Link
       to={tab.path}
-      className="flex items-center gap-4 rounded-xl border border-line bg-raised p-4 transition-colors hover:border-muted focus-visible:border-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      className="flex items-center gap-4 rounded-xl border border-line bg-raised p-4 transition-colors hover:border-muted focus-visible:border-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-secondary text-muted">
         <Icon name={tab.icon} className="h-[18px] w-[18px]" />

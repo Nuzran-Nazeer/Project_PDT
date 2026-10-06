@@ -69,12 +69,9 @@ export default function TeamMemberPage() {
     return (
       <>
         <PageHeader title="Team member" backTo="/my-team" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error">
           {error || "That person is not in the team you lead today."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -90,7 +87,7 @@ export default function TeamMemberPage() {
 
       <Link
         to="/my-team"
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to my team
       </Link>
@@ -176,7 +173,7 @@ export default function TeamMemberPage() {
           >
             <Link
               to="/team-plans"
-              className="inline-block rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-surface"
+              className="inline-block rounded-lg border border-line px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface"
             >
               Go to team plans
             </Link>

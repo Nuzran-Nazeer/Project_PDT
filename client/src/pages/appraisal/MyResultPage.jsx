@@ -90,9 +90,9 @@ export default function MyResultPage() {
     return (
       <>
         <PageHeader title="My result" backTo="/dashboard" />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {NOTHING_PUBLISHED[result.state] || NOTHING_PUBLISHED.none}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -162,7 +162,7 @@ export default function MyResultPage() {
         >
           <Link
             to="/my-self-assessment"
-            className="text-sm font-medium text-brand transition-colors hover:underline"
+            className="text-sm font-medium text-ink transition-colors hover:underline"
           >
             Open your self-assessment
           </Link>

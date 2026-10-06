@@ -212,7 +212,7 @@ export default function PlanPage() {
 
       <Link
         to="/team-plans"
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to team plans
       </Link>
@@ -282,7 +282,7 @@ export default function PlanPage() {
                           onClick={() =>
                             run(() => setActionStatus(id, action.id, status))
                           }
-                          className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-[13px] text-muted transition-colors hover:text-brand disabled:cursor-default disabled:border-brand disabled:text-brand disabled:opacity-100"
+                          className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-[13px] text-muted transition-colors hover:text-ink disabled:cursor-default disabled:border-brand disabled:text-ink disabled:opacity-100"
                         >
                           {actionStatusLabel(status)}
                         </button>
@@ -295,7 +295,7 @@ export default function PlanPage() {
                       <button
                         type="button"
                         onClick={() => startEditing(action)}
-                        className="text-[13px] text-brand transition-colors hover:underline"
+                        className="text-[13px] text-ink transition-colors hover:underline"
                       >
                         Edit
                       </button>
@@ -454,7 +454,7 @@ export default function PlanPage() {
                   <button
                     type="button"
                     onClick={reset}
-                    className="text-sm text-muted transition-colors hover:text-brand"
+                    className="text-sm text-muted transition-colors hover:text-ink"
                   >
                     Cancel
                   </button>
@@ -746,7 +746,7 @@ export default function PlanPage() {
           >
             <Link
               to={`/team-plans/${id}/improvement`}
-              className="text-sm text-brand transition-colors hover:underline"
+              className="text-sm text-ink transition-colors hover:underline"
             >
               Start one from the published result
             </Link>
@@ -757,7 +757,7 @@ export default function PlanPage() {
                   <li key={entry.number} className="text-[13px]">
                     <Link
                       to={`/team-plans/${id}/improvement?checkIn=${entry.number}`}
-                      className="text-brand transition-colors hover:underline"
+                      className="text-ink transition-colors hover:underline"
                     >
                       Start one from check-in {entry.number}
                     </Link>

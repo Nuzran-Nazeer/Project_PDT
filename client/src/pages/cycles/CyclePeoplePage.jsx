@@ -93,7 +93,7 @@ export default function CyclePeoplePage() {
 
       <Link
         to="/cycles"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
       >
         <Icon name="arrowLeft" className="h-4 w-4" />
         Back to appraisal cycles
@@ -145,7 +145,7 @@ export default function CyclePeoplePage() {
                       <td className="px-4 py-3 font-medium text-ink">
                         <Link
                           to={`/employees/${person._id}`}
-                          className="transition-colors hover:text-brand"
+                          className="transition-colors hover:text-ink"
                         >
                           {person.name}
                         </Link>
@@ -175,7 +175,7 @@ export default function CyclePeoplePage() {
                               type="button"
                               disabled={busyId === person._id}
                               onClick={() => publishOne(person)}
-                              className="mt-1.5 block cursor-pointer text-[12px] font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                              className="mt-1.5 block cursor-pointer text-[12px] font-medium text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {busyId === person._id
                                 ? "Publishing…"

@@ -172,12 +172,9 @@ export default function SelfAssessmentFormPage() {
     return (
       <>
         <PageHeader title="My self-assessment" backTo="/my-self-assessment" />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error">
           {loadError || "Your self-assessment could not be loaded."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -188,11 +185,11 @@ export default function SelfAssessmentFormPage() {
     return (
       <>
         <PageHeader title="My self-assessment" backTo="/my-self-assessment" />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {cycle
             ? `The ${cycle.parGroup} ${cycle.year} cycle is running, but you have no review in it.`
             : "No cycle is running for your group."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }

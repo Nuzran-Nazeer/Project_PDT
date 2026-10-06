@@ -1,6 +1,6 @@
 export default function ShellTable({ heading, columns, rows, empty }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+    <div className="workflow-table">
       {heading && (
         <h2 className="px-5 pt-5 text-[15px] font-semibold text-ink">{heading}</h2>
       )}

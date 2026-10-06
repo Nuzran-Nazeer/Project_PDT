@@ -294,7 +294,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                 <button
                   type="button"
                   onClick={startAppoint}
-                  className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   {lead ? "Change lead" : "Appoint a lead"}
                 </button>
@@ -437,7 +437,7 @@ export default function UnitDetail({ unit, units, canAssign, canManage, onChange
                       <button
                         type="button"
                         onClick={() => startAssignCoverage(role)}
-                        className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                        className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         {holder && !inheritedFrom
                           ? `Change ${label.toLowerCase()}`

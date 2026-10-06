@@ -99,7 +99,7 @@ export default function SummariesToCheckPage() {
                   <td className="px-4 py-3">
                     <Link
                       to={`/summaries-to-check/${item.reviewId}`}
-                      className="text-sm text-brand transition-colors hover:underline"
+                      className="text-sm text-ink transition-colors hover:underline"
                     >
                       Open
                     </Link>

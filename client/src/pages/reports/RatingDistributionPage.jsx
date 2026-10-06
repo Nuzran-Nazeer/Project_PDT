@@ -45,14 +45,14 @@ export default function RatingDistributionPage() {
       {error ? (
         <Notice tone="danger">{error}</Notice>
       ) : loading ? (
-        <Notice>Loading…</Notice>
+        <Notice tone="loading">Loading…</Notice>
       ) : !data.cycle ? (
         <Notice>No cycle has published results yet.</Notice>
       ) : (
         <>
           <CycleSelect cycles={data.cycles} value={data.cycle.id} onChange={setCycle} />
 
-          <div className="grid gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-4">
             {data.groups.map((group) =>
               group.suppressed ? (
                 <SuppressedCard key={group.key} name={group.name} floor={data.floor} />
@@ -85,11 +85,11 @@ function GroupCard({ group, floor }) {
       />
 
       <details className="mt-4">
-        <summary className="cursor-pointer text-sm font-medium text-brand">
+        <summary className="cursor-pointer text-sm font-medium text-ink">
           By competency
         </summary>
 
-        <div className="mt-3 overflow-x-auto">
+        <div className="workflow-table mt-3">
           <table className="w-full text-left text-sm">
             <thead className="text-[12px] uppercase tracking-wide text-muted">
               <tr>

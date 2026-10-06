@@ -42,7 +42,7 @@ export default function FeedbackOwedPage() {
       <Link
         key="action"
         to={`/feedback-i-owe/${item.id}`}
-        className="text-sm text-brand transition-colors hover:underline"
+        className="text-sm text-ink transition-colors hover:underline"
       >
         {item.status === "assigned"
           ? "Review"

@@ -78,9 +78,7 @@ export default function TeamPlansPage() {
       {!people ? (
         <WorkflowNotice tone="loading">Loading…</WorkflowNotice>
       ) : people.length === 0 ? (
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
-          Nobody you supervise has a published review yet.
-        </p>
+        <WorkflowNotice>Nobody you supervise has a published review yet.</WorkflowNotice>
       ) : (
         <div className="workflow-table">
           <table className="w-full text-sm">
@@ -132,7 +130,7 @@ export default function TeamPlansPage() {
                       type="button"
                       onClick={() => open(person)}
                       disabled={starting === person.id}
-                      className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-brand transition-colors hover:bg-surface disabled:opacity-60"
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-surface disabled:opacity-60"
                     >
                       {starting === person.id
                         ? "Opening…"

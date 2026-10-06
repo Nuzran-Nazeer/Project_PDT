@@ -58,12 +58,7 @@ export default function CollectedResponsePage() {
     return (
       <>
         <PageHeader title="Colleague feedback" backTo={backTo} />
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
-          {problem}
-        </p>
+        <WorkflowNotice tone="error">{problem}</WorkflowNotice>
       </>
     );
   }
@@ -80,11 +75,11 @@ export default function CollectedResponsePage() {
     return (
       <>
         <PageHeader title="Colleague feedback" backTo={backTo} />
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {collected.released
             ? "That response is not in the released batch."
             : "Nothing is released yet."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }

@@ -117,7 +117,7 @@ export default function UnitHistoryPanel({ person, canAssign }) {
           <button
             type="button"
             onClick={startMove}
-            className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="ml-auto cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {current ? "Move to another unit" : "Place in a unit"}
           </button>

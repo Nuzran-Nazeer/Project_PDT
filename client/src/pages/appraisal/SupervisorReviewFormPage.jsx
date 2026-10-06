@@ -193,7 +193,7 @@ export default function SupervisorReviewFormPage() {
 
       <Link
         to={backTo}
-        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-brand"
+        className="mb-6 inline-block text-sm text-muted transition-colors hover:text-ink"
       >
         ← Back to {person ? person.name : "my team"}
       </Link>
@@ -204,11 +204,11 @@ export default function SupervisorReviewFormPage() {
     return (
       <>
         {header}
-        <p className="rounded-xl border border-line bg-raised p-5 text-sm text-muted">
+        <WorkflowNotice>
           {person
             ? `No review exists for ${person.name} yet.`
             : "That person is not in the team you lead today."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }
@@ -229,12 +229,9 @@ export default function SupervisorReviewFormPage() {
     return (
       <>
         {header}
-        <p
-          role="alert"
-          className="rounded-xl border border-line bg-raised p-5 text-sm text-danger"
-        >
+        <WorkflowNotice tone="error">
           {loadError || "That review could not be loaded."}
-        </p>
+        </WorkflowNotice>
       </>
     );
   }

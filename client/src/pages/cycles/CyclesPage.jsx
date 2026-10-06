@@ -338,7 +338,7 @@ export default function CyclesPage() {
 
                   <span
                     className={`rounded-lg border px-2.5 py-1 text-[12px] ${
-                      STAGE_TONE[cycle.status] || "border-brand/40 text-brand"
+                      STAGE_TONE[cycle.status] || "border-brand/40 text-ink"
                     }`}
                   >
                     {STAGE_LABELS[cycle.status] || cycle.status}

@@ -145,7 +145,7 @@ export default function EmployeeListPage() {
                   <td className="px-4 py-3">
                     <Link
                       to={`/employees/${person._id}`}
-                      className="font-medium text-ink hover:text-brand"
+                      className="font-medium text-ink hover:text-ink"
                     >
                       {person.name}
                     </Link>

@@ -127,7 +127,7 @@ export default function ActivatePage() {
             </p>
             <Link
               to="/login"
-              className="mt-6 block w-full cursor-pointer rounded-lg border border-line py-3 text-center text-sm font-semibold text-ink transition-colors hover:text-brand"
+              className="mt-6 block w-full cursor-pointer rounded-lg border border-line py-3 text-center text-sm font-semibold text-ink transition-colors hover:text-ink"
             >
               Go to sign in
             </Link>
@@ -192,7 +192,7 @@ export default function ActivatePage() {
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 cursor-pointer text-muted hover:text-brand"
+                  className="absolute right-3 cursor-pointer text-muted hover:text-ink"
                 >
                   <EyeIcon open={showPassword} />
                 </button>
@@ -241,7 +241,7 @@ export default function ActivatePage() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 w-full cursor-pointer rounded-lg bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Setting up…" : "Set password and continue"}
             </button>

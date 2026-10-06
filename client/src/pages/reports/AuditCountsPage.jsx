@@ -27,11 +27,11 @@ export default function AuditCountsPage() {
       {error ? (
         <Notice tone="danger">{error}</Notice>
       ) : loading ? (
-        <Notice>Loading…</Notice>
+        <Notice tone="loading">Loading…</Notice>
       ) : data.cycles.length === 0 ? (
         <Notice>No cycle has opened yet.</Notice>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-raised">
+        <div className="workflow-table">
           <table className="w-full text-left text-sm">
             <thead className="text-[12px] uppercase tracking-wide text-muted">
               <tr>
